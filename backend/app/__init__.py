@@ -1,0 +1,1 @@
+"""GharTak backend application package."""
