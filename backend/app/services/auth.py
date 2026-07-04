@@ -12,6 +12,9 @@ from app.schemas.auth import (
     TokenResponse,
 )
 from app.services.notifications import NotificationService
+from app.core.logger import setup_logger
+
+logger = setup_logger("ghartak.auth")
 
 class AuthService:
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
@@ -37,6 +40,7 @@ class AuthService:
             "updated_at": datetime.now(UTC)
         }
         await self.db.users.insert_one(user_doc)
+        logger.info(f"Customer registered successfully: {user_id} ({payload.email or payload.phone})")
         return self._token_for_user(user_doc)
 
     async def register_provider(self, payload: ProviderRegisterRequest) -> TokenResponse:
@@ -85,19 +89,23 @@ class AuthService:
             related_entity_id=user_id,
         )
         
+        logger.info(f"Provider registered successfully: {user_id} ({payload.email or payload.phone})")
         return self._token_for_user(user_doc)
 
     async def login(self, payload: LoginRequest) -> TokenResponse:
         user = await self._find_by_contact(email=payload.email, phone=payload.phone)
         if not user or not verify_password(payload.password, user["password_hash"]):
+            logger.warning(f"Failed login attempt for {payload.email or payload.phone}: Invalid credentials")
             raise app_http_error(
                 401,
                 AppErrorCode.INVALID_CREDENTIALS,
                 "Invalid email/phone or password.",
             )
         if not user.get("is_active"):
+            logger.warning(f"Failed login attempt for {payload.email or payload.phone}: Account disabled")
             raise app_http_error(403, AppErrorCode.ACCOUNT_DISABLED, "Account is disabled.")
 
+        logger.info(f"User logged in successfully: {user['id']} ({user['role']})")
         return self._token_for_user(user)
 
     async def create_admin_user(
@@ -131,6 +139,7 @@ class AuthService:
     async def _ensure_unique_contact(self, *, email: str | None, phone: str | None) -> None:
         existing_user = await self._find_by_contact(email=email, phone=phone)
         if existing_user:
+            logger.warning(f"Registration conflict: Account already exists for email={email}, phone={phone}")
             raise app_http_error(
                 409,
                 AppErrorCode.DUPLICATE_ACCOUNT,

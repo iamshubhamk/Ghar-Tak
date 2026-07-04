@@ -15,6 +15,9 @@ from app.schemas.provider import (
     ProviderVerificationActionRequest,
 )
 from app.services.providers import ProviderService
+from app.core.logger import setup_logger
+
+logger = setup_logger("ghartak.api.providers")
 
 router = APIRouter(tags=["providers"])
 
@@ -60,6 +63,7 @@ async def upload_provider_documents(
 
     if update_data:
         await db.users.update_one({"id": current_user["id"]}, {"$set": update_data})
+        logger.info(f"Provider {current_user['id']} uploaded new documents.")
 
     provider = await ProviderService(db).get_provider_profile_for_user(current_user)
     return ProviderService.serialize(provider)
