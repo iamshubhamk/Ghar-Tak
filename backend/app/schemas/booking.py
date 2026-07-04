@@ -9,6 +9,7 @@ from app.schemas.auth import clean_optional
 
 class BookingCreateRequest(BaseModel):
     category_id: str = Field(min_length=1)
+    provider_id: str | None = Field(default=None)
     address: str | None = Field(default=None, max_length=1000)
     locality: str = Field(min_length=2, max_length=120)
     preferred_datetime: datetime

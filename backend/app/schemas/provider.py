@@ -48,21 +48,29 @@ class ProviderPublicResponse(BaseModel):
     bio: str | None = None
     experience_years: int
     verification_status: VerificationStatus
+    rejection_reason: str | None = None
+    profile_photo_url: str | None = None
     availability_status: AvailabilityStatus
     price_note: str | None = None
     average_rating: float
     total_reviews: int
     is_public: bool
-    categories: list[str]
-    localities: list[str]
+    categories: list[str] = Field(default_factory=list)
+    localities: list[str] = Field(default_factory=list)
+    profile_photo_url: str | None = None
+    adhaar_card_url: str | None = None
+    rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ProviderVerificationActionRequest(BaseModel):
     note: str | None = Field(default=None, max_length=500)
+    rejection_reason: str | None = Field(default=None, max_length=1000)
 
-    @field_validator("note", mode="before")
+    @field_validator("note", "rejection_reason", mode="before")
     @classmethod
     def strip_note(cls, value: str | None) -> str | None:
         return clean_optional(value)

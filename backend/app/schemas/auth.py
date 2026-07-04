@@ -81,18 +81,20 @@ class LoginRequest(ContactMixin):
 
 
 class CustomerProfileResponse(BaseModel):
-    id: str
     default_address: str | None = None
     default_locality: str | None = None
+    profile_photo_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
 
 class ProviderProfileResponse(BaseModel):
-    id: str
     bio: str | None = None
     experience_years: int
     verification_status: VerificationStatus
+    rejection_reason: str | None = None
+    profile_photo_url: str | None = None
+    adhaar_card_url: str | None = None
     availability_status: AvailabilityStatus
     price_note: str | None = None
     average_rating: float

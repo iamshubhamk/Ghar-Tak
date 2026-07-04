@@ -1,20 +1,17 @@
-from fastapi import APIRouter
-from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
-
-from app.db.session import engine
+from fastapi import APIRouter, Depends
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from app.db.session import get_db
 
 router = APIRouter(tags=["health"])
 
 
 @router.get("/health")
-def health_check() -> dict[str, str]:
+async def health_check(db: AsyncIOMotorDatabase = Depends(get_db)) -> dict[str, str]:
     database_status = "ok"
 
     try:
-        with engine.connect() as connection:
-            connection.execute(text("SELECT 1"))
-    except SQLAlchemyError:
+        await db.command("ping")
+    except Exception:
         database_status = "unavailable"
 
     overall_status = "ok" if database_status == "ok" else "degraded"

@@ -11,17 +11,20 @@ export type Category = {
 
 export type ProviderProfile = {
   id: string;
-  user_id: string;
+  user_id?: string;
   name: string;
-  phone: string | null;
+  phone?: string | null;
   bio: string | null;
   experience_years: number;
-  verification_status: "PENDING_VERIFICATION" | "VERIFIED" | "REJECTED" | "DISABLED";
-  availability_status: "AVAILABLE" | "UNAVAILABLE";
+  verification_status: "PENDING_VERIFICATION" | "VERIFIED" | "REJECTED" | "DISABLED" | "SUSPENDED";
+  availability_status: "AVAILABLE" | "UNAVAILABLE" | "BUSY" | "OFFLINE";
   price_note: string | null;
   average_rating: number;
   total_reviews: number;
   is_public: boolean;
   categories: string[];
   localities: string[];
+  profile_photo_url?: string | null;
+  adhaar_card_url?: string | null;
+  rejection_reason?: string | null;
 };

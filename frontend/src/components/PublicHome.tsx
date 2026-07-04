@@ -17,23 +17,13 @@ type PublicHomeProps = {
   onLogin: () => void;
 };
 
-const showcaseItems = [
-  {
-    title: "Verified local services",
-    body: "Find nearby providers for essential home services in Patna.",
-    icon: Wrench
-  },
-  {
-    title: "Happy customers",
-    body: "Simple booking, clear status, and cash on service for MVP.",
-    icon: Star
-  },
-  {
-    title: "GharTak operations",
-    body: "Provider verification and admin oversight keep trust at the center.",
-    icon: Users
-  }
-];
+import acMechanic from "../../static/AC Mechanic.png";
+import carpenter from "../../static/Carpenter.png";
+import electrician from "../../static/Electrician.png";
+import painter from "../../static/Painter.png";
+import plumber from "../../static/Plumber.png";
+
+const marqueeImages = [acMechanic, carpenter, electrician, painter, plumber];
 
 export function PublicHome({ onBookService, onJoinProvider, onLogin }: PublicHomeProps) {
   return (
@@ -75,6 +65,25 @@ export function PublicHome({ onBookService, onJoinProvider, onLogin }: PublicHom
         </div>
       </section>
 
+      <section className="showcase-section" aria-labelledby="showcase-heading">
+        <div className="section-heading">
+          <p className="eyebrow">Why GharTak</p>
+          <h2 id="showcase-heading">Built for local trust before scale</h2>
+        </div>
+        <div className="marquee-container">
+          <div className="marquee-track">
+            {marqueeImages.map((src, idx) => (
+              <img key={`track1-${idx}`} src={src} alt="GharTak Service" />
+            ))}
+          </div>
+          <div className="marquee-track">
+            {marqueeImages.map((src, idx) => (
+              <img key={`track2-${idx}`} src={src} alt="GharTak Service" />
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="category-section" aria-labelledby="categories-heading">
         <div className="section-heading">
           <p className="eyebrow">Services</p>
@@ -97,33 +106,10 @@ export function PublicHome({ onBookService, onJoinProvider, onLogin }: PublicHom
         </div>
       </section>
 
-      <section className="showcase-section" aria-labelledby="showcase-heading">
-        <div className="section-heading">
-          <p className="eyebrow">Why GharTak</p>
-          <h2 id="showcase-heading">Built for local trust before scale</h2>
-        </div>
-        <div className="showcase-grid">
-          {showcaseItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <article className="showcase-panel" key={item.title}>
-                <Icon size={28} aria-hidden="true" />
-                <h3>{item.title}</h3>
-                <p>{item.body}</p>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
       <footer className="site-footer">
         <div>
           <strong>GharTak</strong>
           <span>All Services at One Place</span>
-        </div>
-        <div>
-          <Headphones size={18} aria-hidden="true" />
-          <span>Contact: 8102909835</span>
         </div>
         <button className="secondary-action" onClick={onLogin} type="button">
           Login

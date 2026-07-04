@@ -1,112 +1,119 @@
-from sqlalchemy import select
-from sqlalchemy.orm import Session, selectinload
-
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from typing import Any
 from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
 from app.core.errors import AppErrorCode, app_http_error
-from app.models.catalog import Category, ProviderCategory, ProviderLocality
-from app.models.user import ProviderProfile, User
 from app.schemas.provider import ProviderProfileUpdateRequest
 from app.services.notifications import NotificationService
 
-
 class ProviderService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self.db = db
 
-    def get_provider_profile_for_user(self, user: User) -> ProviderProfile:
-        if user.role != UserRole.PROVIDER.value or not user.provider_profile:
+    async def get_provider_profile_for_user(self, user: dict[str, Any]) -> dict[str, Any]:
+        if user.get("role") != UserRole.PROVIDER.value or not user.get("provider_profile"):
             raise app_http_error(404, AppErrorCode.NOT_FOUND, "Provider profile not found.")
+        return user
 
-        return self._get(user.provider_profile.id)
-
-    def update_provider_profile(
+    async def update_provider_profile(
         self,
-        user: User,
+        user: dict[str, Any],
         payload: ProviderProfileUpdateRequest,
-    ) -> ProviderProfile:
-        provider = self.get_provider_profile_for_user(user)
-
+    ) -> dict[str, Any]:
+        user = await self.get_provider_profile_for_user(user)
+        update_data = {}
+        
         if payload.bio is not None:
-            provider.bio = payload.bio
+            update_data["provider_profile.bio"] = payload.bio
         if payload.experience_years is not None:
-            provider.experience_years = payload.experience_years
+            update_data["provider_profile.experience_years"] = payload.experience_years
         if payload.price_note is not None:
-            provider.price_note = payload.price_note
+            update_data["provider_profile.price_note"] = payload.price_note
+            
         if payload.category_ids is not None:
-            self._replace_categories(provider, payload.category_ids)
+            if payload.category_ids:
+                categories = await self.db.categories.find({"id": {"$in": payload.category_ids}, "is_active": True}).to_list(length=None)
+                update_data["provider_profile.category_names"] = [c["name"] for c in categories]
+            else:
+                update_data["provider_profile.category_names"] = []
+                
         if payload.localities is not None:
-            self._replace_localities(provider, payload.localities)
+            update_data["provider_profile.locality_names"] = payload.localities
 
-        self.db.commit()
-        return self._get(provider.id)
+        if update_data:
+            await self.db.users.update_one({"id": user["id"]}, {"$set": update_data})
 
-    def update_availability(
+        return await self._get(user["id"])
+
+    async def update_availability(
         self,
-        user: User,
+        user: dict[str, Any],
         availability_status: AvailabilityStatus,
-    ) -> ProviderProfile:
-        provider = self.get_provider_profile_for_user(user)
-        provider.availability_status = availability_status.value
-        self.db.commit()
-        return self._get(provider.id)
+    ) -> dict[str, Any]:
+        user = await self.get_provider_profile_for_user(user)
+        await self.db.users.update_one(
+            {"id": user["id"]},
+            {"$set": {"provider_profile.availability_status": availability_status.value}}
+        )
+        return await self._get(user["id"])
 
-    def list_admin(
+    async def list_admin(
         self,
         verification_status: VerificationStatus | None = None,
-    ) -> list[ProviderProfile]:
-        statement = self._base_query()
+    ) -> list[dict[str, Any]]:
+        query = {"role": UserRole.PROVIDER.value}
         if verification_status:
-            statement = statement.where(
-                ProviderProfile.verification_status == verification_status.value
-            )
+            query["provider_profile.verification_status"] = verification_status.value
+            
+        cursor = self.db.users.find(query).sort("created_at", -1)
+        return await cursor.to_list(length=None)
 
-        statement = statement.order_by(ProviderProfile.created_at.desc())
-        return list(self.db.execute(statement).scalars())
-
-    def list_public(
+    async def list_public(
         self,
         category_id: str | None = None,
         locality: str | None = None,
-    ) -> list[ProviderProfile]:
-        statement = self._base_query().where(
-            ProviderProfile.verification_status == VerificationStatus.VERIFIED.value,
-            ProviderProfile.is_public.is_(True),
-        )
-
+    ) -> list[dict[str, Any]]:
+        query = {
+            "role": UserRole.PROVIDER.value,
+            "provider_profile.verification_status": VerificationStatus.VERIFIED.value,
+            "provider_profile.is_public": True,
+            "is_active": True
+        }
+        
         if category_id:
-            statement = statement.join(ProviderCategory).where(
-                ProviderCategory.category_id == category_id
-            )
-
-        providers = list(self.db.execute(statement).scalars().unique())
-
+            category = await self.db.categories.find_one({"id": category_id})
+            if category:
+                query["provider_profile.category_names"] = category["name"]
+            else:
+                return []
+                
         if locality:
-            normalized = locality.lower().strip()
-            providers = [
-                provider
-                for provider in providers
-                if any(item.locality.lower() == normalized for item in provider.localities)
-            ]
+            query["provider_profile.locality_names"] = {"$regex": f"^{locality.strip()}$", "$options": "i"}
 
-        return [provider for provider in providers if provider.user.is_active]
+        cursor = self.db.users.find(query).sort("created_at", -1)
+        return await cursor.to_list(length=None)
 
-    def get_public(self, provider_id: str) -> ProviderProfile:
-        provider = self._get(provider_id)
+    async def get_public(self, provider_id: str) -> dict[str, Any]:
+        user = await self._get(provider_id)
+        profile = user.get("provider_profile", {})
         if (
-            provider.verification_status != VerificationStatus.VERIFIED.value
-            or not provider.is_public
-            or not provider.user.is_active
+            profile.get("verification_status") != VerificationStatus.VERIFIED.value
+            or not profile.get("is_public")
+            or not user.get("is_active")
         ):
             raise app_http_error(404, AppErrorCode.NOT_FOUND, "Provider not found.")
-        return provider
+        return user
 
-    def approve(self, provider_id: str) -> ProviderProfile:
-        provider = self._get(provider_id)
-        provider.verification_status = VerificationStatus.VERIFIED.value
-        provider.is_public = True
-        provider.user.is_active = True
-        NotificationService(self.db).notify_user(
-            user_id=provider.user_id,
+    async def approve(self, provider_id: str) -> dict[str, Any]:
+        user = await self._get(provider_id)
+        update_data = {
+            "provider_profile.verification_status": VerificationStatus.VERIFIED.value,
+            "provider_profile.is_public": True,
+            "is_active": True
+        }
+        await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        
+        await NotificationService(self.db).notify_user(
+            user_id=provider_id,
             title="Profile approved",
             message=(
                 "Your GharTak provider profile is approved. "
@@ -114,100 +121,87 @@ class ProviderService:
             ),
             event_type="PROVIDER_APPROVED",
             related_entity_type="provider",
-            related_entity_id=provider.id,
+            related_entity_id=provider_id,
         )
-        self.db.commit()
-        return self._get(provider.id)
+        return await self._get(provider_id)
 
-    def reject(self, provider_id: str) -> ProviderProfile:
-        provider = self._get(provider_id)
-        provider.verification_status = VerificationStatus.REJECTED.value
-        provider.is_public = False
-        NotificationService(self.db).notify_user(
-            user_id=provider.user_id,
+    async def reject(self, provider_id: str, rejection_reason: str | None = None) -> dict[str, Any]:
+        user = await self._get(provider_id)
+        update_data = {
+            "provider_profile.verification_status": VerificationStatus.REJECTED.value,
+            "provider_profile.is_public": False,
+            "provider_profile.rejection_reason": rejection_reason,
+        }
+        await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        
+        await NotificationService(self.db).notify_user(
+            user_id=provider_id,
             title="Profile needs review",
             message=(
-                "Your GharTak provider profile was not approved yet. "
-                "Please contact admin for next steps."
+                f"Your GharTak provider profile was not approved yet. Reason: {rejection_reason or 'None provided'}."
             ),
             event_type="PROVIDER_REJECTED",
             related_entity_type="provider",
-            related_entity_id=provider.id,
+            related_entity_id=provider_id,
         )
-        self.db.commit()
-        return self._get(provider.id)
+        return await self._get(provider_id)
 
-    def disable(self, provider_id: str) -> ProviderProfile:
-        provider = self._get(provider_id)
-        provider.verification_status = VerificationStatus.DISABLED.value
-        provider.is_public = False
-        provider.availability_status = AvailabilityStatus.UNAVAILABLE.value
-        provider.user.is_active = False
-        NotificationService(self.db).notify_user(
-            user_id=provider.user_id,
+    async def reraise_verification(self, user: dict[str, Any]) -> dict[str, Any]:
+        user = await self.get_provider_profile_for_user(user)
+        update_data = {
+            "provider_profile.verification_status": VerificationStatus.PENDING_VERIFICATION.value,
+            "provider_profile.rejection_reason": None,
+        }
+        await self.db.users.update_one({"id": user["id"]}, {"$set": update_data})
+        return await self._get(user["id"])
+
+    async def disable(self, provider_id: str) -> dict[str, Any]:
+        user = await self._get(provider_id)
+        update_data = {
+            "provider_profile.verification_status": VerificationStatus.DISABLED.value,
+            "provider_profile.is_public": False,
+            "provider_profile.availability_status": AvailabilityStatus.UNAVAILABLE.value,
+            "is_active": False
+        }
+        await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        
+        await NotificationService(self.db).notify_user(
+            user_id=provider_id,
             title="Profile disabled",
             message="Your GharTak provider profile has been disabled by admin.",
             event_type="PROVIDER_DISABLED",
             related_entity_type="provider",
-            related_entity_id=provider.id,
+            related_entity_id=provider_id,
         )
-        self.db.commit()
-        return self._get(provider.id)
+        return await self._get(provider_id)
 
-    def _get(self, provider_id: str) -> ProviderProfile:
-        statement = self._base_query().where(ProviderProfile.id == provider_id)
-        provider = self.db.execute(statement).scalar_one_or_none()
-        if not provider:
+    async def _get(self, provider_id: str) -> dict[str, Any]:
+        user = await self.db.users.find_one({"id": provider_id, "role": UserRole.PROVIDER.value})
+        if not user or not user.get("provider_profile"):
             raise app_http_error(404, AppErrorCode.NOT_FOUND, "Provider not found.")
-        return provider
-
-    def _replace_categories(self, provider: ProviderProfile, category_ids: list[str]) -> None:
-        provider.category_links.clear()
-        self.db.flush()
-
-        if not category_ids:
-            return
-
-        active_categories = self.db.execute(
-            select(Category).where(Category.id.in_(category_ids), Category.is_active.is_(True))
-        ).scalars()
-        active_category_ids = {category.id for category in active_categories}
-
-        for category_id in active_category_ids:
-            provider.category_links.append(ProviderCategory(category_id=category_id))
-
-    def _replace_localities(self, provider: ProviderProfile, localities: list[str]) -> None:
-        provider.localities.clear()
-        self.db.flush()
-
-        for locality in localities:
-            provider.localities.append(ProviderLocality(locality=locality))
+        return user
 
     @staticmethod
-    def serialize(provider: ProviderProfile) -> dict:
+    def serialize(user: dict[str, Any]) -> dict:
+        profile = user.get("provider_profile", {})
         return {
-            "id": provider.id,
-            "user_id": provider.user_id,
-            "name": provider.user.name,
-            "phone": provider.user.phone,
-            "bio": provider.bio,
-            "experience_years": provider.experience_years,
-            "verification_status": provider.verification_status,
-            "availability_status": provider.availability_status,
-            "price_note": provider.price_note,
-            "average_rating": float(provider.average_rating),
-            "total_reviews": provider.total_reviews,
-            "is_public": provider.is_public,
-            "categories": provider.category_names,
-            "localities": provider.locality_names,
-            "created_at": provider.created_at,
-            "updated_at": provider.updated_at,
+            "id": user["id"],
+            "user_id": user["id"],
+            "name": user["name"],
+            "phone": user.get("phone"),
+            "bio": profile.get("bio"),
+            "experience_years": profile.get("experience_years", 0),
+            "verification_status": profile.get("verification_status", VerificationStatus.PENDING_VERIFICATION.value),
+            "rejection_reason": profile.get("rejection_reason"),
+            "profile_photo_url": profile.get("profile_photo_url"),
+            "adhaar_card_url": profile.get("adhaar_card_url"),
+            "availability_status": profile.get("availability_status", AvailabilityStatus.UNAVAILABLE.value),
+            "price_note": profile.get("price_note"),
+            "average_rating": float(profile.get("average_rating", 0)),
+            "total_reviews": profile.get("total_reviews", 0),
+            "is_public": profile.get("is_public", False),
+            "categories": profile.get("category_names", []),
+            "localities": profile.get("locality_names", []),
+            "created_at": user.get("created_at"),
+            "updated_at": user.get("updated_at"),
         }
-
-    @staticmethod
-    def _base_query():
-        return select(ProviderProfile).options(
-            selectinload(ProviderProfile.user),
-            selectinload(ProviderProfile.category_links).selectinload(ProviderCategory.category),
-            selectinload(ProviderProfile.localities),
-        )

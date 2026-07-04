@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     frontend_origin: str = "http://localhost:5173"
     cors_origins: str = "http://localhost:5173"
 
-    database_url: str = "postgresql+psycopg://ghartak:ghartak@localhost:5432/ghartak"
+    mongodb_url: str = "mongodb+srv://user_1:slimD12@cluster0.autallc.mongodb.net/ghartak?retryWrites=true&w=majority"
 
     jwt_secret_key: str = "change-this-local-secret"
     jwt_algorithm: str = "HS256"

@@ -17,6 +17,7 @@ function App() {
   const [health, setHealth] = useState<HealthState>("checking");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<AppView>("home");
+  const [showSplash, setShowSplash] = useState(true);
   const [pendingCategoryName, setPendingCategoryName] = useState<string | undefined>(() => {
     return sessionStorage.getItem(bookingIntentStorageKey) ?? undefined;
   });
@@ -48,6 +49,13 @@ function App() {
       });
   }, []);
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
   const logout = () => {
     localStorage.removeItem("ghartak_token");
     setCurrentUser(null);
@@ -74,6 +82,13 @@ function App() {
 
   return (
     <main className="app-shell">
+      {showSplash && (
+        <div className="splash-overlay">
+          <div className="splash-logo-container">
+            <img className="splash-logo" src={ghartakLogo} alt="GharTak Logo" />
+          </div>
+        </div>
+      )}
       <header className="topbar">
         <button className="brand brand-button" onClick={goHome} type="button" aria-label="GharTak home">
           <span className="brand-mark">
@@ -107,7 +122,16 @@ function App() {
                 Login
               </button>
             </>
-          ) : null}
+          ) : (
+            <>
+              <span className="nav-action" style={{ border: "none", background: "transparent" }}>
+                Welcome, {currentUser.name}
+              </span>
+              <button className="nav-action" onClick={() => setView("customer-auth")} type="button">
+                Dashboard
+              </button>
+            </>
+          )}
           <div className={`api-pill api-pill--${health}`}>
             <span />
             API {health}
@@ -115,11 +139,11 @@ function App() {
         </nav>
       </header>
 
-      {currentUser ? (
+      {currentUser && view !== "home" ? (
         <RoleDashboard user={currentUser} onLogout={logout} pendingCategoryName={pendingCategoryName} />
       ) : null}
 
-      {!currentUser && view === "home" ? (
+      {view === "home" ? (
         <PublicHome
           onBookService={startBookingIntent}
           onJoinProvider={() => setView("provider-auth")}
@@ -132,7 +156,10 @@ function App() {
           allowedModes={["customer", "login"]}
           heading="Book a service"
           initialMode="customer"
-          onAuthenticated={setCurrentUser}
+          onAuthenticated={(user) => {
+            setCurrentUser(user);
+            setView("home");
+          }}
           subheading="Create a customer account or log in to search verified providers and request service."
         />
       ) : null}
@@ -142,7 +169,10 @@ function App() {
           allowedModes={["provider", "login"]}
           heading="Join as provider"
           initialMode="provider"
-          onAuthenticated={setCurrentUser}
+          onAuthenticated={(user) => {
+            setCurrentUser(user);
+            setView("home");
+          }}
           subheading="Register your service profile. Your account stays under review until admin approval."
         />
       ) : null}
@@ -152,7 +182,10 @@ function App() {
           allowedModes={["login", "customer", "provider"]}
           heading="Login to GharTak"
           initialMode="login"
-          onAuthenticated={setCurrentUser}
+          onAuthenticated={(user) => {
+            setCurrentUser(user);
+            setView("home");
+          }}
           subheading="Use your customer, provider, or admin credentials to continue."
         />
       ) : null}

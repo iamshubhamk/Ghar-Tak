@@ -19,29 +19,41 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
   const [locality, setLocality] = useState("");
   const [preferredDateTime, setPreferredDateTime] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
-  const [reviewByBooking, setReviewByBooking] = useState<Record<string, { rating: string; comment: string }>>({});
+  const [selectedProviderId, setSelectedProviderId] = useState("");
+  const [isBooking, setIsBooking] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [customerPhotoUrl, setCustomerPhotoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState("");
+  const [reviewByBooking, setReviewByBooking] = useState<Record<string, {rating: string, comment: string}>>({});
 
   const loadInitialData = async () => {
     try {
-      const [categoryResponse, bookingResponse, providerResponse] = await Promise.all([
+      const [categoryResponse, bookingResponse, providerResponse, authResponse] = await Promise.all([
         apiRequest<Category[]>("/categories"),
         apiRequest<Booking[]>("/bookings/my"),
-        apiRequest<ProviderProfile[]>("/providers")
+        apiRequest<ProviderProfile[]>("/providers"),
+        apiRequest<any>("/auth/me")
       ]);
       setCategories(categoryResponse);
       setBookings(bookingResponse);
       setProviders(providerResponse);
+      if (authResponse?.customer_profile?.profile_photo_url) {
+        setCustomerPhotoUrl(authResponse.customer_profile.profile_photo_url);
+      }
       if (!categoryId) {
         const requestedCategoryName = pendingCategoryName?.trim().toLowerCase();
         const pendingCategory = categoryResponse.find(
           (category) => category.name.toLowerCase() === requestedCategoryName
         );
         setCategoryId((pendingCategory ?? categoryResponse[0])?.id ?? "");
-        if (requestedCategoryName && !pendingCategory) {
-          setStatus(
-            `${pendingCategoryName} is not available yet. Choose another service or ask admin to check categories.`
-          );
+        
+        if (requestedCategoryName) {
+          setIsBooking(true);
+          if (!pendingCategory) {
+            setStatus(
+              `${pendingCategoryName} is not available yet. Choose another service or ask admin to check categories.`
+            );
+          }
         }
       }
     } catch (error) {
@@ -61,20 +73,62 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
     setStatus("");
 
     try {
+      const payload: Record<string, any> = {
+        category_id: categoryId,
+        locality,
+        preferred_datetime: new Date(preferredDateTime).toISOString(),
+        issue_description: issueDescription
+      };
+      if (selectedProviderId) {
+        payload.provider_id = selectedProviderId;
+      }
+
       const booking = await apiRequest<Booking>("/bookings", {
         method: "POST",
-        body: JSON.stringify({
-          category_id: categoryId,
-          locality,
-          preferred_datetime: new Date(preferredDateTime).toISOString(),
-          issue_description: issueDescription
-        })
+        body: JSON.stringify(payload)
       });
       setBookings((current) => [booking, ...current]);
       setIssueDescription("");
-      setStatus("Booking requested. Admin will review it and assign a verified provider.");
+      setSelectedProviderId("");
+      setIsBooking(false); // Return to dashboard
+      setStatus(
+        selectedProviderId 
+          ? "Booking requested. The selected provider will be notified." 
+          : "Booking requested. Admin will review it and assign a verified provider."
+      );
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Booking failed.");
+    }
+  };
+
+  const uploadCustomerPhoto = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!photoFile) return;
+    setStatus("");
+
+    const formData = new FormData();
+    formData.append("profile_photo", photoFile);
+
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1"}/customer/me/photo`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("ghartak_token")}`
+        },
+        body: formData
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail ?? "Upload failed");
+      }
+      
+      const data = await response.json();
+      setCustomerPhotoUrl(data.customer_profile?.profile_photo_url);
+      setStatus("Profile photo updated successfully.");
+      setPhotoFile(null);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Upload failed.");
     }
   };
 
@@ -99,20 +153,145 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
     }
   };
 
-  const loadProviderReviews = async (providerId: string) => {
-    try {
-      const reviews = await apiRequest<Review[]>(`/providers/${providerId}/reviews`);
-      setReviewsByProvider((current) => ({ ...current, [providerId]: reviews }));
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Provider reviews unavailable.");
-    }
-  };
+  // Filter providers that serve the selected category
+  const availableProviders = providers.filter((p) => 
+    !selectedCategory || p.categories.includes(selectedCategory.name)
+  );
+
+  if (!isBooking) {
+    return (
+      <section className="dashboard-section" aria-labelledby="customer-dashboard-heading">
+        <div className="section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <p className="eyebrow">Customer dashboard</p>
+            <h2 id="customer-dashboard-heading">Overview</h2>
+          </div>
+          <button 
+            className="primary-action" 
+            onClick={() => {
+              setIsBooking(true);
+              setStatus("");
+            }} 
+            type="button"
+          >
+            Book New Service
+          </button>
+        </div>
+
+        <div className="dashboard-grid">
+          <NotificationPanel />
+
+          <form className="operation-panel" onSubmit={uploadCustomerPhoto}>
+            <h3>
+              <UserRound size={20} aria-hidden="true" />
+              My Profile
+            </h3>
+            {customerPhotoUrl && (
+              <div style={{ marginBottom: "16px" }}>
+                <img 
+                  src={`http://127.0.0.1:8000${customerPhotoUrl}`} 
+                  alt="Profile" 
+                  style={{ width: "100px", height: "100px", borderRadius: "50%", objectFit: "cover" }} 
+                />
+              </div>
+            )}
+            <label>
+              Update Profile Photo (JPG/JPEG/PNG)
+              <input 
+                type="file" 
+                accept="image/*"
+                onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
+              />
+            </label>
+            <button className="primary-action" type="submit" disabled={!photoFile}>
+              Upload Photo
+            </button>
+          </form>
+
+          <div className="operation-panel booking-history">
+            <h3>
+              <CalendarClock size={20} aria-hidden="true" />
+              My bookings
+            </h3>
+
+            <div className="booking-list">
+              {bookings.length === 0 ? <p className="muted-copy">No bookings yet.</p> : null}
+              {bookings.map((booking) => (
+                <article className="booking-item" key={booking.id}>
+                  <div>
+                    <strong>{booking.category_name}</strong>
+                    <span>{booking.provider_name ?? "Awaiting admin assignment"}</span>
+                    <small>{new Date(booking.preferred_datetime).toLocaleString()}</small>
+                    <small>Payment: {booking.payment_status}</small>
+                  </div>
+                  <span className="status-badge">{booking.status}</span>
+                  {booking.status === "COMPLETED" ? (
+                    <div className="review-inline">
+                      <select
+                        aria-label={`Rating for ${booking.category_name}`}
+                        onChange={(event) =>
+                          setReviewByBooking((current) => ({
+                            ...current,
+                            [booking.id]: {
+                              rating: event.target.value,
+                              comment: current[booking.id]?.comment ?? ""
+                            }
+                          }))
+                        }
+                        value={reviewByBooking[booking.id]?.rating ?? "5"}
+                      >
+                        <option value="5">5 stars</option>
+                        <option value="4">4 stars</option>
+                        <option value="3">3 stars</option>
+                        <option value="2">2 stars</option>
+                        <option value="1">1 star</option>
+                      </select>
+                      <input
+                        aria-label={`Review comment for ${booking.category_name}`}
+                        onChange={(event) =>
+                          setReviewByBooking((current) => ({
+                            ...current,
+                            [booking.id]: {
+                              rating: current[booking.id]?.rating ?? "5",
+                              comment: event.target.value
+                            }
+                          }))
+                        }
+                        placeholder="Share feedback"
+                        value={reviewByBooking[booking.id]?.comment ?? ""}
+                      />
+                      <button onClick={() => void submitReview(booking.id)} type="button">
+                        Review
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          </div>
+        </div>
+        {status ? <p className="form-status operations-status">{status}</p> : null}
+      </section>
+    );
+  }
 
   return (
     <section className="dashboard-section" aria-labelledby="customer-dashboard-heading">
-      <div className="section-heading">
-        <p className="eyebrow">Customer dashboard</p>
-        <h2 id="customer-dashboard-heading">Request a service</h2>
+      <div className="section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <p className="eyebrow">Customer dashboard</p>
+          <h2 id="customer-dashboard-heading">Request a service</h2>
+        </div>
+        <button 
+          className="secondary-action" 
+          onClick={() => {
+            setIsBooking(false);
+            setStatus("");
+          }} 
+          type="button"
+        >
+          Cancel Booking
+        </button>
       </div>
 
       <div className="booking-stepper" aria-label="Booking steps">
@@ -126,13 +305,11 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
         </div>
         <div className={canCreateBooking ? "step-item complete" : "step-item"}>
           <span>3</span>
-          Submit for admin assignment
+          Submit request
         </div>
       </div>
 
       <div className="dashboard-grid">
-        <NotificationPanel />
-
         <div className="operation-panel">
           <h3>
             <MapPin size={20} aria-hidden="true" />
@@ -143,7 +320,10 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
             Category
             <select
               disabled={categories.length === 0}
-              onChange={(event) => setCategoryId(event.target.value)}
+              onChange={(event) => {
+                setCategoryId(event.target.value);
+                setSelectedProviderId(""); // reset provider on category change
+              }}
               value={categoryId}
             >
               {categories.length === 0 ? <option value="">No categories available</option> : null}
@@ -166,20 +346,31 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
             />
           </label>
 
+          <label>
+            Select Provider (Optional)
+            <select
+              onChange={(event) => setSelectedProviderId(event.target.value)}
+              value={selectedProviderId}
+            >
+              <option value="">
+                {availableProviders.length === 0 
+                  ? "No providers available for now, admin will assign after reviewing your request" 
+                  : "Any verified provider (Admin assigns)"}
+              </option>
+              {availableProviders.map((provider) => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.name} (★ {provider.average_rating.toFixed(1)})
+                </option>
+              ))}
+            </select>
+          </label>
+
           {categories.length === 0 ? (
             <p className="empty-state">
-              No services are available yet. Ask admin to run the seed categories script or create
-              categories.
+              No services are available yet. Admin needs to run the seed categories script or create categories.
             </p>
           ) : null}
 
-          <p className="empty-state">
-            GharTak admin request review karke verified provider assign karega for{" "}
-            {selectedCategory?.name ?? "the selected service"}.{" "}
-            {selectedCategory
-              ? selectedCategory.price_label ?? "Final amount will be quoted after review."
-              : null}
-          </p>
         </div>
 
         <form className="operation-panel" onSubmit={createBooking}>
@@ -190,7 +381,11 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
 
           <div className="selected-provider-summary">
             <span>Assignment</span>
-            <strong>Admin assigns provider after review</strong>
+            <strong>
+              {selectedProviderId 
+                ? providers.find(p => p.id === selectedProviderId)?.name 
+                : "Admin assigns provider after review"}
+            </strong>
           </div>
 
           <label>
@@ -218,115 +413,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
             Request Booking
           </button>
         </form>
-      </div>
-
-      <div className="operation-panel booking-history">
-        <h3>
-          <CalendarClock size={20} aria-hidden="true" />
-          My bookings
-        </h3>
-
-        <div className="booking-list">
-          {bookings.length === 0 ? <p className="muted-copy">No bookings yet.</p> : null}
-          {bookings.map((booking) => (
-            <article className="booking-item" key={booking.id}>
-              <div>
-                <strong>{booking.category_name}</strong>
-                <span>{booking.provider_name ?? "Awaiting admin assignment"}</span>
-                <small>{new Date(booking.preferred_datetime).toLocaleString()}</small>
-                <small>Payment: {booking.payment_status}</small>
-              </div>
-              <span className="status-badge">{booking.status}</span>
-              {booking.status === "COMPLETED" ? (
-                <div className="review-inline">
-                  <select
-                    aria-label={`Rating for ${booking.category_name}`}
-                    onChange={(event) =>
-                      setReviewByBooking((current) => ({
-                        ...current,
-                        [booking.id]: {
-                          rating: event.target.value,
-                          comment: current[booking.id]?.comment ?? ""
-                        }
-                      }))
-                    }
-                    value={reviewByBooking[booking.id]?.rating ?? "5"}
-                  >
-                    <option value="5">5 stars</option>
-                    <option value="4">4 stars</option>
-                    <option value="3">3 stars</option>
-                    <option value="2">2 stars</option>
-                    <option value="1">1 star</option>
-                  </select>
-                  <input
-                    aria-label={`Review comment for ${booking.category_name}`}
-                    onChange={(event) =>
-                      setReviewByBooking((current) => ({
-                        ...current,
-                        [booking.id]: {
-                          rating: current[booking.id]?.rating ?? "5",
-                          comment: event.target.value
-                        }
-                      }))
-                    }
-                    placeholder="Share feedback"
-                    value={reviewByBooking[booking.id]?.comment ?? ""}
-                  />
-                  <button onClick={() => void submitReview(booking.id)} type="button">
-                    Review
-                  </button>
-                </div>
-              ) : null}
-            </article>
-          ))}
-        </div>
-      </div>
-
-      <div className="operation-panel booking-history provider-directory">
-        <h3>
-          <UserRound size={20} aria-hidden="true" />
-          Verified providers
-        </h3>
-
-        <div className="provider-directory-grid">
-          {providers.length === 0 ? <p className="muted-copy">No verified providers yet.</p> : null}
-          {providers.map((provider) => (
-            <article className="provider-profile-card" key={provider.id}>
-              <div>
-                <strong>{provider.name}</strong>
-                <span>{provider.bio ?? "Verified local provider"}</span>
-                <small>{provider.categories.join(", ") || "Services updating"}</small>
-                <small>{provider.localities.join(", ") || "Patna"}</small>
-                <small>{provider.price_note ?? "Service price confirmed after inspection"}</small>
-              </div>
-              <div className="rating-line">
-                <Star size={16} aria-hidden="true" />
-                <span>
-                  {provider.average_rating.toFixed(1)} ({provider.total_reviews})
-                </span>
-              </div>
-              <button
-                className="secondary-action"
-                onClick={() => void loadProviderReviews(provider.id)}
-                type="button"
-              >
-                Reviews
-              </button>
-              {reviewsByProvider[provider.id] ? (
-                <div className="review-snippets">
-                  {reviewsByProvider[provider.id].length === 0 ? (
-                    <small>No reviews yet.</small>
-                  ) : null}
-                  {reviewsByProvider[provider.id].slice(0, 3).map((review) => (
-                    <small key={review.id}>
-                      {review.rating}/5 - {review.comment ?? "No comment"}
-                    </small>
-                  ))}
-                </div>
-              ) : null}
-            </article>
-          ))}
-        </div>
       </div>
 
       {status ? <p className="form-status operations-status">{status}</p> : null}

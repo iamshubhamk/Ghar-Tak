@@ -1,113 +1,111 @@
 import re
-
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+import uuid
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from typing import Any
+from datetime import UTC, datetime
 
 from app.core.default_categories import DEFAULT_SERVICE_CATEGORIES
 from app.core.errors import AppErrorCode, app_http_error
-from app.models.catalog import Category
 from app.schemas.category import CategoryCreateRequest, CategoryStatusRequest, CategoryUpdateRequest
 
-
 class CategoryService:
-    def __init__(self, db: Session) -> None:
+    def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self.db = db
 
-    def list_active(self) -> list[Category]:
-        self.ensure_default_categories()
-        statement = (
-            select(Category)
-            .where(Category.is_active.is_(True))
-            .order_by(Category.display_order.asc(), Category.name.asc())
-        )
-        return list(self.db.execute(statement).scalars())
+    async def list_active(self) -> list[dict[str, Any]]:
+        await self.ensure_default_categories()
+        cursor = self.db.categories.find({"is_active": True}).sort([("display_order", 1), ("name", 1)])
+        return await cursor.to_list(length=None)
 
-    def list_all(self) -> list[Category]:
-        self.ensure_default_categories()
-        statement = select(Category).order_by(Category.display_order.asc(), Category.name.asc())
-        return list(self.db.execute(statement).scalars())
+    async def list_all(self) -> list[dict[str, Any]]:
+        await self.ensure_default_categories()
+        cursor = self.db.categories.find({}).sort([("display_order", 1), ("name", 1)])
+        return await cursor.to_list(length=None)
 
-    def ensure_default_categories(self) -> list[Category]:
-        existing_categories = list(self.db.execute(select(Category)).scalars())
-        existing_slugs = {category.slug for category in existing_categories}
-        created_categories: list[Category] = []
+    async def ensure_default_categories(self) -> list[dict[str, Any]]:
+        cursor = self.db.categories.find({})
+        existing_categories = await cursor.to_list(length=None)
+        existing_slugs = {category["slug"] for category in existing_categories}
+        created_categories = []
 
         for display_order, category_definition in enumerate(DEFAULT_SERVICE_CATEGORIES, start=1):
             slug = self._normalize_slug(category_definition["name"])
             if slug in existing_slugs:
                 continue
 
-            category = Category(
-                name=category_definition["name"],
-                slug=slug,
-                description=category_definition["description"],
-                icon=category_definition["icon"],
-                display_order=display_order,
-            )
-            self.db.add(category)
-            created_categories.append(category)
+            now = datetime.now(UTC)
+            category_doc = {
+                "id": str(uuid.uuid4()),
+                "name": category_definition["name"],
+                "slug": slug,
+                "description": category_definition["description"],
+                "icon": category_definition["icon"],
+                "price_label": category_definition.get("price_label"),
+                "display_order": display_order,
+                "is_active": True,
+                "created_at": now,
+                "updated_at": now,
+            }
+            await self.db.categories.insert_one(category_doc)
+            created_categories.append(category_doc)
             existing_slugs.add(slug)
-
-        if created_categories:
-            self.db.commit()
-            for category in created_categories:
-                self.db.refresh(category)
 
         return created_categories
 
-    def create(self, payload: CategoryCreateRequest) -> Category:
+    async def create(self, payload: CategoryCreateRequest) -> dict[str, Any]:
         slug = self._normalize_slug(payload.slug or payload.name)
-        self._ensure_unique_slug(slug)
+        await self._ensure_unique_slug(slug)
 
-        category = Category(
-            name=payload.name,
-            slug=slug,
-            description=payload.description,
-            icon=payload.icon,
-            display_order=payload.display_order,
-        )
-        self.db.add(category)
-        self.db.commit()
-        self.db.refresh(category)
-        return category
+        category_doc = {
+            "id": str(uuid.uuid4()),
+            "name": payload.name,
+            "slug": slug,
+            "description": payload.description,
+            "icon": payload.icon,
+            "display_order": payload.display_order,
+            "is_active": True,
+        }
+        await self.db.categories.insert_one(category_doc)
+        return category_doc
 
-    def update(self, category_id: str, payload: CategoryUpdateRequest) -> Category:
-        category = self._get(category_id)
+    async def update(self, category_id: str, payload: CategoryUpdateRequest) -> dict[str, Any]:
+        category = await self._get(category_id)
+        update_data = {}
 
         if payload.name is not None:
-            category.name = payload.name
+            update_data["name"] = payload.name
         if payload.slug is not None:
             slug = self._normalize_slug(payload.slug)
-            self._ensure_unique_slug(slug, exclude_id=category.id)
-            category.slug = slug
+            await self._ensure_unique_slug(slug, exclude_id=category["id"])
+            update_data["slug"] = slug
         if payload.description is not None:
-            category.description = payload.description
+            update_data["description"] = payload.description
         if payload.icon is not None:
-            category.icon = payload.icon
+            update_data["icon"] = payload.icon
         if payload.display_order is not None:
-            category.display_order = payload.display_order
+            update_data["display_order"] = payload.display_order
 
-        self.db.commit()
-        self.db.refresh(category)
+        if update_data:
+            await self.db.categories.update_one({"id": category_id}, {"$set": update_data})
+            category.update(update_data)
+
         return category
 
-    def update_status(self, category_id: str, payload: CategoryStatusRequest) -> Category:
-        category = self._get(category_id)
-        category.is_active = payload.is_active
-        self.db.commit()
-        self.db.refresh(category)
+    async def update_status(self, category_id: str, payload: CategoryStatusRequest) -> dict[str, Any]:
+        category = await self._get(category_id)
+        await self.db.categories.update_one({"id": category_id}, {"$set": {"is_active": payload.is_active}})
+        category["is_active"] = payload.is_active
         return category
 
-    def _get(self, category_id: str) -> Category:
-        category = self.db.get(Category, category_id)
+    async def _get(self, category_id: str) -> dict[str, Any]:
+        category = await self.db.categories.find_one({"id": category_id})
         if not category:
             raise app_http_error(404, AppErrorCode.NOT_FOUND, "Category not found.")
         return category
 
-    def _ensure_unique_slug(self, slug: str, exclude_id: str | None = None) -> None:
-        statement = select(Category).where(Category.slug == slug)
-        existing = self.db.execute(statement).scalar_one_or_none()
-        if existing and existing.id != exclude_id:
+    async def _ensure_unique_slug(self, slug: str, exclude_id: str | None = None) -> None:
+        existing = await self.db.categories.find_one({"slug": slug})
+        if existing and existing["id"] != exclude_id:
             raise app_http_error(
                 409,
                 AppErrorCode.VALIDATION_ERROR,

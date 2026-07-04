@@ -46,7 +46,7 @@ export function NotificationPanel() {
       <p className="empty-state">
         {unreadCount > 0
           ? `${unreadCount} unread update${unreadCount === 1 ? "" : "s"}`
-          : "No unread updates. Naye updates yahin dikhengi."}
+          : "No unread updates."}
       </p>
 
       <div className="notification-list">

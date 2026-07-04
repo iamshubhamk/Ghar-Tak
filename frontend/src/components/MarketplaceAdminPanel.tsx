@@ -32,22 +32,24 @@ export function MarketplaceAdminPanel() {
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState("");
 
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+
   const loadAdminData = async () => {
     try {
-      const [categoryResponse, providerResponse, bookingResponse, summaryResponse, customerResponse, reviewResponse] =
+      const [categoryResponse, providerResponse, bookingResponse, summaryResponse, reviewResponse] =
         await Promise.all([
           apiRequest<Category[]>("/admin/categories"),
           apiRequest<ProviderProfile[]>("/admin/providers"),
           apiRequest<Booking[]>("/admin/bookings"),
           apiRequest<AdminDashboardSummary>("/admin/summary"),
-          apiRequest<AdminCustomer[]>("/admin/customers"),
           apiRequest<Review[]>("/admin/reviews")
         ]);
       setCategories(categoryResponse);
       setProviders(providerResponse);
       setBookings(bookingResponse);
       setSummary(summaryResponse);
-      setCustomers(customerResponse);
       setReviews(reviewResponse);
       setStatus("");
     } catch (error) {
@@ -82,11 +84,18 @@ export function MarketplaceAdminPanel() {
 
   const verifyProvider = async (providerId: string, action: "approve" | "reject") => {
     setStatus("");
+    
+    let rejection_reason: string | undefined = undefined;
+    if (action === "reject") {
+      const reason = window.prompt("Please provide a reason for rejecting this provider:");
+      if (reason === null) return; // User cancelled
+      rejection_reason = reason || "No reason provided";
+    }
 
     try {
       await apiRequest<ProviderProfile>(`/admin/providers/${providerId}/${action}`, {
         method: "PATCH",
-        body: JSON.stringify({})
+        body: JSON.stringify(action === "reject" ? { rejection_reason } : {})
       });
       await loadAdminData();
       setStatus(action === "approve" ? "Provider approved." : "Provider rejected.");
@@ -158,6 +167,21 @@ export function MarketplaceAdminPanel() {
       setStatus(action === "hide" ? "Review hidden." : "Review visible again.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not moderate review.");
+    }
+  };
+
+  const searchUsers = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchQuery.trim()) return;
+    setIsSearching(true);
+    setStatus("");
+    try {
+      const results = await apiRequest<any[]>(`/admin/users/search?q=${encodeURIComponent(searchQuery)}`);
+      setSearchResults(results);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Search failed.");
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -264,6 +288,22 @@ export function MarketplaceAdminPanel() {
                 <div>
                   <strong>{provider.name}</strong>
                   <span>{provider.bio ?? "No bio added"}</span>
+                  <div style={{ marginTop: '8px', display: 'flex', gap: '12px', fontSize: '14px' }}>
+                    {provider.profile_photo_url ? (
+                      <a href={`http://localhost:8000${provider.profile_photo_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
+                        View Photo
+                      </a>
+                    ) : (
+                      <span style={{ color: '#999' }}>No photo</span>
+                    )}
+                    {provider.adhaar_card_url ? (
+                      <a href={`http://localhost:8000${provider.adhaar_card_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
+                        View Adhaar
+                      </a>
+                    ) : (
+                      <span style={{ color: '#999' }}>No Adhaar</span>
+                    )}
+                  </div>
                 </div>
                 <div className="inline-actions">
                   <button
@@ -421,18 +461,62 @@ export function MarketplaceAdminPanel() {
         <div className="operation-panel booking-history">
           <h3>
             <UsersRound size={20} aria-hidden="true" />
-            Customers
+            User & Provider Search
           </h3>
 
-          <div className="compact-table">
-            {customers.length === 0 ? <p className="muted-copy">No customers yet.</p> : null}
-            {customers.slice(0, 8).map((customer) => (
-              <article key={customer.id}>
-                <strong>{customer.name}</strong>
-                <span>{customer.phone ?? customer.email ?? "No contact"}</span>
-                <small>{customer.default_locality ?? "Locality pending"}</small>
-              </article>
-            ))}
+          <form onSubmit={searchUsers} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <input 
+              type="text" 
+              placeholder="Search by name or ID..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              style={{ flex: 1 }}
+            />
+            <button className="primary-action" type="submit" disabled={isSearching || !searchQuery.trim()}>
+              {isSearching ? "Searching..." : "Search"}
+            </button>
+          </form>
+
+          <div className="booking-list">
+            {searchResults.length === 0 && !isSearching && searchQuery ? (
+              <p className="muted-copy">No users found.</p>
+            ) : null}
+            {searchResults.map((user) => {
+              const photoUrl = user.role === 'PROVIDER' 
+                ? user.provider_profile?.profile_photo_url 
+                : user.customer_profile?.profile_photo_url;
+              const adhaarUrl = user.provider_profile?.adhaar_card_url;
+
+              return (
+                <article className="booking-item" key={user.id}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                    {photoUrl ? (
+                      <img 
+                        src={`http://127.0.0.1:8000${photoUrl}`} 
+                        alt={user.name} 
+                        style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover" }} 
+                      />
+                    ) : (
+                      <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <UserCheck size={24} color="#94a3b8" />
+                      </div>
+                    )}
+                    <div>
+                      <strong>{user.name}</strong>
+                      <span className="status-badge" style={{ marginLeft: "8px", fontSize: "0.75rem", padding: "2px 6px" }}>{user.role}</span>
+                      <small>ID: {user.id}</small>
+                      {user.role === 'PROVIDER' && adhaarUrl && (
+                        <div style={{ marginTop: "4px" }}>
+                          <a href={`http://127.0.0.1:8000${adhaarUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline', fontSize: '0.8rem' }}>
+                            View Adhaar Card
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         </div>
 

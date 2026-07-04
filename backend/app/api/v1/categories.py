@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends
-from sqlalchemy.orm import Session
+from motor.motor_asyncio import AsyncIOMotorDatabase
+from typing import Any
 
 from app.api.deps import require_roles
 from app.core.enums import UserRole
 from app.db.session import get_db
-from app.models.user import User
 from app.schemas.category import (
     CategoryCreateRequest,
     CategoryResponse,
@@ -17,8 +17,8 @@ router = APIRouter(tags=["categories"])
 
 
 @router.get("/categories", response_model=list[CategoryResponse])
-def list_categories(db: Session = Depends(get_db)) -> list:
-    return CategoryService(db).list_active()
+async def list_categories(db: AsyncIOMotorDatabase = Depends(get_db)) -> list:
+    return await CategoryService(db).list_active()
 
 
 @router.get(
@@ -26,34 +26,34 @@ def list_categories(db: Session = Depends(get_db)) -> list:
     response_model=list[CategoryResponse],
     dependencies=[Depends(require_roles(UserRole.ADMIN))],
 )
-def admin_list_categories(db: Session = Depends(get_db)) -> list:
-    return CategoryService(db).list_all()
+async def admin_list_categories(db: AsyncIOMotorDatabase = Depends(get_db)) -> list:
+    return await CategoryService(db).list_all()
 
 
 @router.post("/admin/categories", response_model=CategoryResponse, status_code=201)
-def create_category(
+async def create_category(
     payload: CategoryCreateRequest,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    _: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
 ):
-    return CategoryService(db).create(payload)
+    return await CategoryService(db).create(payload)
 
 
 @router.patch("/admin/categories/{category_id}", response_model=CategoryResponse)
-def update_category(
+async def update_category(
     category_id: str,
     payload: CategoryUpdateRequest,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    _: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
 ):
-    return CategoryService(db).update(category_id, payload)
+    return await CategoryService(db).update(category_id, payload)
 
 
 @router.patch("/admin/categories/{category_id}/status", response_model=CategoryResponse)
-def update_category_status(
+async def update_category_status(
     category_id: str,
     payload: CategoryStatusRequest,
-    db: Session = Depends(get_db),
-    _: User = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    _: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
 ):
-    return CategoryService(db).update_status(category_id, payload)
+    return await CategoryService(db).update_status(category_id, payload)
