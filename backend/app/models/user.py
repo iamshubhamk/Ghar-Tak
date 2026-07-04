@@ -1,5 +1,6 @@
 from datetime import UTC, datetime
 from decimal import Decimal
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text
@@ -7,6 +8,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.catalog import ProviderCategory, ProviderDocument, ProviderLocality
 
 
 def new_uuid() -> str:
@@ -155,3 +159,23 @@ class ProviderProfile(Base):
     )
 
     user: Mapped[User] = relationship(back_populates="provider_profile")
+    category_links: Mapped[list["ProviderCategory"]] = relationship(
+        back_populates="provider",
+        cascade="all, delete-orphan",
+    )
+    localities: Mapped[list["ProviderLocality"]] = relationship(
+        back_populates="provider",
+        cascade="all, delete-orphan",
+    )
+    documents: Mapped[list["ProviderDocument"]] = relationship(
+        back_populates="provider",
+        cascade="all, delete-orphan",
+    )
+
+    @property
+    def category_names(self) -> list[str]:
+        return [link.category.name for link in self.category_links if link.category]
+
+    @property
+    def locality_names(self) -> list[str]:
+        return [locality.locality for locality in self.localities]

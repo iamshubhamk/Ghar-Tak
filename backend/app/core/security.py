@@ -1,3 +1,4 @@
+import logging
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -5,6 +6,8 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 
 from app.core.config import get_settings
+
+logging.getLogger("passlib").setLevel(logging.ERROR)
 
 password_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

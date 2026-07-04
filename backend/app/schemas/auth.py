@@ -53,11 +53,27 @@ class ProviderRegisterRequest(ContactMixin):
     bio: str | None = Field(default=None, max_length=1000)
     experience_years: int = Field(default=0, ge=0, le=60)
     price_note: str | None = Field(default=None, max_length=255)
+    category_ids: list[str] = Field(default_factory=list, max_length=12)
+    localities: list[str] = Field(default_factory=list, max_length=20)
 
     @field_validator("name", "bio", "price_note", mode="before")
     @classmethod
     def strip_text(cls, value: str | None) -> str | None:
         return clean_optional(value)
+
+    @field_validator("category_ids", "localities")
+    @classmethod
+    def clean_lists(cls, values: list[str]) -> list[str]:
+        cleaned: list[str] = []
+        seen: set[str] = set()
+
+        for value in values:
+            item = clean_optional(value)
+            if item and item.lower() not in seen:
+                cleaned.append(item)
+                seen.add(item.lower())
+
+        return cleaned
 
 
 class LoginRequest(ContactMixin):
@@ -82,6 +98,8 @@ class ProviderProfileResponse(BaseModel):
     average_rating: float
     total_reviews: int
     is_public: bool
+    categories: list[str] = Field(default_factory=list, validation_alias="category_names")
+    localities: list[str] = Field(default_factory=list, validation_alias="locality_names")
 
     model_config = ConfigDict(from_attributes=True)
 

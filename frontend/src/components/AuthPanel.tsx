@@ -1,5 +1,5 @@
 import { BriefcaseBusiness, LogIn, UserPlus } from "lucide-react";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 
 import { apiRequest } from "../lib/api";
 import { AuthResponse, User } from "../types/auth";
@@ -12,8 +12,22 @@ const modeLabels: Record<Mode, string> = {
   provider: "Provider Signup"
 };
 
-export function AuthPanel() {
-  const [mode, setMode] = useState<Mode>("customer");
+type AuthPanelProps = {
+  onAuthenticated: (user: User) => void;
+  initialMode?: Mode;
+  allowedModes?: Mode[];
+  heading?: string;
+  subheading?: string;
+};
+
+export function AuthPanel({
+  onAuthenticated,
+  initialMode = "customer",
+  allowedModes = ["customer", "provider", "login"],
+  heading = "Login or create account",
+  subheading = "Customers can book services. Providers register into pending verification before becoming public."
+}: AuthPanelProps) {
+  const [mode, setMode] = useState<Mode>(initialMode);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -23,6 +37,7 @@ export function AuthPanel() {
   const [status, setStatus] = useState<string>("");
   const [user, setUser] = useState<User | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const visibleModes = useMemo(() => allowedModes, [allowedModes]);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -38,7 +53,7 @@ export function AuthPanel() {
 
     const payload =
       mode === "login"
-        ? { email, phone, password }
+        ? { email, password }
         : mode === "customer"
           ? { name, email, phone, password }
           : {
@@ -57,6 +72,7 @@ export function AuthPanel() {
       });
       localStorage.setItem("ghartak_token", response.access_token);
       setUser(response.user);
+      onAuthenticated(response.user);
       setStatus(`${response.user.role} account ready.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Something went wrong.");
@@ -68,17 +84,14 @@ export function AuthPanel() {
   return (
     <section className="auth-section" aria-labelledby="auth-heading">
       <div className="section-heading">
-        <p className="eyebrow">Phase 1 implementation</p>
-        <h2 id="auth-heading">Authentication entry point</h2>
+        <p className="eyebrow">Account access</p>
+        <h2 id="auth-heading">{heading}</h2>
       </div>
 
       <div className="auth-layout">
         <div className="auth-copy">
           <h3>Start validating real users</h3>
-          <p>
-            Customers can create accounts immediately. Providers register into pending verification so
-            admin quality control stays in place from day one.
-          </p>
+          <p>{subheading}</p>
           {user ? (
             <div className="signed-in-card">
               <strong>{user.name}</strong>
@@ -88,35 +101,43 @@ export function AuthPanel() {
         </div>
 
         <form className="auth-form" onSubmit={submit}>
-          <div className="mode-tabs" role="tablist" aria-label="Authentication mode">
-            <button
-              aria-selected={mode === "customer"}
-              className={mode === "customer" ? "active" : ""}
-              onClick={() => setMode("customer")}
-              type="button"
-            >
-              <UserPlus size={16} aria-hidden="true" />
-              Customer
-            </button>
-            <button
-              aria-selected={mode === "provider"}
-              className={mode === "provider" ? "active" : ""}
-              onClick={() => setMode("provider")}
-              type="button"
-            >
-              <BriefcaseBusiness size={16} aria-hidden="true" />
-              Provider
-            </button>
-            <button
-              aria-selected={mode === "login"}
-              className={mode === "login" ? "active" : ""}
-              onClick={() => setMode("login")}
-              type="button"
-            >
-              <LogIn size={16} aria-hidden="true" />
-              Login
-            </button>
-          </div>
+          {visibleModes.length > 1 ? (
+            <div className="mode-tabs" role="tablist" aria-label="Authentication mode">
+              {visibleModes.includes("customer") ? (
+                <button
+                  aria-selected={mode === "customer"}
+                  className={mode === "customer" ? "active" : ""}
+                  onClick={() => setMode("customer")}
+                  type="button"
+                >
+                  <UserPlus size={16} aria-hidden="true" />
+                  Customer
+                </button>
+              ) : null}
+              {visibleModes.includes("provider") ? (
+                <button
+                  aria-selected={mode === "provider"}
+                  className={mode === "provider" ? "active" : ""}
+                  onClick={() => setMode("provider")}
+                  type="button"
+                >
+                  <BriefcaseBusiness size={16} aria-hidden="true" />
+                  Provider
+                </button>
+              ) : null}
+              {visibleModes.includes("login") ? (
+                <button
+                  aria-selected={mode === "login"}
+                  className={mode === "login" ? "active" : ""}
+                  onClick={() => setMode("login")}
+                  type="button"
+                >
+                  <LogIn size={16} aria-hidden="true" />
+                  Login
+                </button>
+              ) : null}
+            </div>
+          ) : null}
 
           <h3>{modeLabels[mode]}</h3>
 
@@ -139,18 +160,22 @@ export function AuthPanel() {
               <input
                 autoComplete="email"
                 onChange={(event) => setEmail(event.target.value)}
+                required
                 type="email"
                 value={email}
               />
             </label>
-            <label>
-              Phone
-              <input
-                autoComplete="tel"
-                onChange={(event) => setPhone(event.target.value)}
-                value={phone}
-              />
-            </label>
+            {mode !== "login" ? (
+              <label>
+                Phone
+                <input
+                  autoComplete="tel"
+                  onChange={(event) => setPhone(event.target.value)}
+                  required
+                  value={phone}
+                />
+              </label>
+            ) : null}
           </div>
 
           <label>

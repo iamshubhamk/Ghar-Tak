@@ -77,6 +77,13 @@ cd backend
 python -m scripts.create_tables
 ```
 
+Seed default service categories:
+
+```powershell
+cd backend
+python -m scripts.seed_categories
+```
+
 Seed the first admin account:
 
 ```powershell
