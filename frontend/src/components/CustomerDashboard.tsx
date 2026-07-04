@@ -2,6 +2,7 @@ import { CalendarClock, MapPin, Star, UserRound, Wrench } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { apiRequest } from "../lib/api";
+import { apiBaseUrl, backendBaseUrl } from "../lib/config";
 import { Booking, Review } from "../types/booking";
 import { Category, ProviderProfile } from "../types/marketplace";
 import { NotificationPanel } from "./NotificationPanel";
@@ -110,7 +111,7 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
     formData.append("profile_photo", photoFile);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000/api/v1"}/customer/me/photo`, {
+      const response = await fetch(`${apiBaseUrl}/customer/me/photo`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("ghartak_token")}`
@@ -189,7 +190,7 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
             {customerPhotoUrl && (
               <div style={{ marginBottom: "16px" }}>
                 <img 
-                  src={`http://127.0.0.1:8000${customerPhotoUrl}`} 
+                  src={`${backendBaseUrl}${customerPhotoUrl}`} 
                   alt="Profile" 
                   style={{ width: "100px", height: "100px", borderRadius: "50%", objectFit: "cover" }} 
                 />
