@@ -14,6 +14,9 @@ from app.core.enums import (
 from app.core.errors import AppErrorCode, app_http_error
 from app.schemas.booking import BookingCreateRequest
 from app.services.notifications import NotificationService
+from app.core.logger import setup_logger
+
+logger = setup_logger("ghartak.bookings")
 
 class BookingService:
     provider_transitions = {
@@ -94,6 +97,8 @@ class BookingService:
                 related_entity_type="booking",
                 related_entity_id=booking["id"],
             )
+        
+        logger.info(f"Booking {booking_id} created successfully by customer {customer['id']}")
         return await self._get(booking["id"])
 
     async def list_customer(self, customer: dict[str, Any]) -> list[dict[str, Any]]:
@@ -186,6 +191,8 @@ class BookingService:
             related_entity_type="booking",
             related_entity_id=booking["id"],
         )
+        
+        logger.info(f"Provider {provider['id']} assigned to booking {booking_id} by admin {admin['id']}")
         return await self._get(booking["id"])
 
     async def list_provider(self, provider_user: dict[str, Any]) -> list[dict[str, Any]]:
@@ -316,6 +323,8 @@ class BookingService:
             actor["id"],
             note or "Cash payment marked paid.",
         )
+        
+        logger.info(f"Cash payment recorded for booking {booking_id} by {actor['role']} {actor['id']}")
         return await self._get(booking["id"])
 
     @staticmethod
@@ -359,6 +368,8 @@ class BookingService:
         booking["updated_at"] = now
         await self._record_history(booking, previous_status, next_status, actor_user_id, note)
         await self._notify_booking_status_change(booking, next_status)
+        
+        logger.info(f"Booking {booking['id']} status changed from {previous_status.value} to {next_status.value} by user {actor_user_id}")
 
     async def _record_history(
         self,

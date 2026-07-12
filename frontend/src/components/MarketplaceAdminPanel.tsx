@@ -12,6 +12,7 @@ import {
 import { FormEvent, useEffect, useState } from "react";
 
 import { apiRequest } from "../lib/api";
+import { backendBaseUrl } from "../lib/config";
 import { AdminCustomer, AdminDashboardSummary } from "../types/admin";
 import { Booking, BookingStatus, Review } from "../types/booking";
 import { Category, ProviderProfile } from "../types/marketplace";
@@ -290,14 +291,14 @@ export function MarketplaceAdminPanel() {
                   <span>{provider.bio ?? "No bio added"}</span>
                   <div style={{ marginTop: '8px', display: 'flex', gap: '12px', fontSize: '14px' }}>
                     {provider.profile_photo_url ? (
-                      <a href={`http://localhost:8000${provider.profile_photo_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
+                      <a href={`${backendBaseUrl}${provider.profile_photo_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
                         View Photo
                       </a>
                     ) : (
                       <span style={{ color: '#999' }}>No photo</span>
                     )}
                     {provider.adhaar_card_url ? (
-                      <a href={`http://localhost:8000${provider.adhaar_card_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
+                      <a href={`${backendBaseUrl}${provider.adhaar_card_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
                         View Adhaar
                       </a>
                     ) : (
@@ -492,7 +493,7 @@ export function MarketplaceAdminPanel() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                     {photoUrl ? (
                       <img 
-                        src={`http://127.0.0.1:8000${photoUrl}`} 
+                        src={`${backendBaseUrl}${photoUrl}`} 
                         alt={user.name} 
                         style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover" }} 
                       />
@@ -507,7 +508,7 @@ export function MarketplaceAdminPanel() {
                       <small>ID: {user.id}</small>
                       {user.role === 'PROVIDER' && adhaarUrl && (
                         <div style={{ marginTop: "4px" }}>
-                          <a href={`http://127.0.0.1:8000${adhaarUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline', fontSize: '0.8rem' }}>
+                          <a href={`${backendBaseUrl}${adhaarUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline', fontSize: '0.8rem' }}>
                             View Adhaar Card
                           </a>
                         </div>

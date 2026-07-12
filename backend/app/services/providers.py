@@ -4,6 +4,9 @@ from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
 from app.core.errors import AppErrorCode, app_http_error
 from app.schemas.provider import ProviderProfileUpdateRequest
 from app.services.notifications import NotificationService
+from app.core.logger import setup_logger
+
+logger = setup_logger("ghartak.providers")
 
 class ProviderService:
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
@@ -54,6 +57,7 @@ class ProviderService:
             {"id": user["id"]},
             {"$set": {"provider_profile.availability_status": availability_status.value}}
         )
+        logger.info(f"Provider {user['id']} updated availability to {availability_status.value}")
         return await self._get(user["id"])
 
     async def list_admin(
@@ -123,6 +127,7 @@ class ProviderService:
             related_entity_type="provider",
             related_entity_id=provider_id,
         )
+        logger.info(f"Provider {provider_id} approved by admin.")
         return await self._get(provider_id)
 
     async def reject(self, provider_id: str, rejection_reason: str | None = None) -> dict[str, Any]:
@@ -144,6 +149,7 @@ class ProviderService:
             related_entity_type="provider",
             related_entity_id=provider_id,
         )
+        logger.info(f"Provider {provider_id} rejected by admin. Reason: {rejection_reason}")
         return await self._get(provider_id)
 
     async def reraise_verification(self, user: dict[str, Any]) -> dict[str, Any]:
@@ -173,6 +179,7 @@ class ProviderService:
             related_entity_type="provider",
             related_entity_id=provider_id,
         )
+        logger.info(f"Provider {provider_id} disabled by admin.")
         return await self._get(provider_id)
 
     async def _get(self, provider_id: str) -> dict[str, Any]:

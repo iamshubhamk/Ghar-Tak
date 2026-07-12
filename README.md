@@ -18,7 +18,7 @@ The MVP is a modular monolith:
 
 - Frontend: React, TypeScript, Vite
 - Backend: FastAPI, Python
-- Database: PostgreSQL
+- Database: MongoDB (via Motor)
 - Storage: local filesystem during MVP, S3-ready adapter later
 - Notifications: in-app during MVP, SMS/email adapters later
 - Payments: Cash on Service during MVP, online payment adapter later
@@ -51,11 +51,12 @@ backend/.venv/Scripts/Activate.ps1
 pip install -r backend/requirements.txt
 ```
 
-Start PostgreSQL:
+Start MongoDB (if running locally instead of Atlas):
 
 ```powershell
-docker compose up -d postgres
+docker compose up -d mongodb
 ```
+*(Alternatively, update `MONGODB_URL` in `.env` to point to a MongoDB Atlas cluster)*
 
 Run the API:
 
@@ -70,19 +71,7 @@ Health check:
 http://localhost:8000/api/v1/health
 ```
 
-Create local database tables:
-
-```powershell
-cd backend
-python -m scripts.create_tables
-```
-
-Seed default service categories:
-
-```powershell
-cd backend
-python -m scripts.seed_categories
-```
+*Note: Database indexes and default categories are automatically initialized on server startup.*
 
 Seed the first admin account:
 
