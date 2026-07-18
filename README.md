@@ -4,6 +4,25 @@ GharTak is a Patna-first hyperlocal service marketplace for verified local servi
 
 Current phase: Phase 7 Development Execution, Foundation implementation.
 
+## 🚀 Live Demo & Quick Start
+
+**Live Application:** [https://ghar-tak-frontend.onrender.com/](https://ghar-tak-frontend.onrender.com/)
+
+To quickly test the platform's core workflows, you can use the following roles:
+
+### 1. Test as an Admin
+- **Email:** `admin@ghartak.local`
+- **Password:** `ChangeMe@123`
+- *What you can do:* View the dashboard statistics, search for users, and approve/reject/disable pending Provider accounts.
+
+### 2. Test as a Customer
+- Simply click "Register" on the live app and create a new Customer account using any email.
+- *What you can do:* Browse verified providers by category/locality and create new booking requests.
+
+### 3. Test as a Provider
+- Click "Register" and create a new Provider account.
+- *What you can do:* Upload your profile photo and Aadhar card. Note that your profile will remain in "Pending Verification" until an Admin approves it.
+
 ## Product Documents
 
 - [Phase 1 BRD](docs/phase-1-brd.md)
