@@ -35,6 +35,46 @@ class NotificationService:
             "read_at": None,
         }
         await self.db.notifications.insert_one(notification)
+        await self.send_expo_push(
+            user_id,
+            title,
+            message,
+            data={"related_entity_type": related_entity_type, "related_entity_id": related_entity_id},
+        )
+
+    async def send_expo_push(
+        self, user_id: str, title: str, message: str, data: dict[str, Any] | None = None
+    ) -> None:
+        user = await self.db.users.find_one({"id": user_id})
+        if not user or not user.get("push_tokens"):
+            return
+        tokens = user.get("push_tokens", [])
+        if not tokens:
+            return
+
+        import httpx
+
+        messages = [
+            {
+                "to": token,
+                "sound": "default",
+                "title": title,
+                "body": message,
+                "data": data or {},
+            }
+            for token in tokens
+        ]
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "https://exp.host/--/api/v2/push/send",
+                    json=messages,
+                    headers={"Accept": "application/json", "Content-Type": "application/json"},
+                    timeout=5.0,
+                )
+        except Exception:
+            pass
+
 
     async def notify_role(
         self,

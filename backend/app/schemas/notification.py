@@ -16,3 +16,8 @@ class NotificationResponse(BaseModel):
     created_at: datetime
     read_at: datetime | None
 
+
+class PushTokenRequest(BaseModel):
+    push_token: str
+
+
