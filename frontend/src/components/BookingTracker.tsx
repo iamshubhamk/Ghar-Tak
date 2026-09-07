@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import {
   CheckCircle2,
   Clock,
@@ -41,7 +40,7 @@ const STATUS_STEPS = [
   { key: 'completed', label: 'Completed', icon: CheckCircle2 },
 ];
 
-export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking, onCancelBooking }) => {
+export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
   const currentStatusIndex = Math.max(
     0,
     STATUS_STEPS.findIndex((s) => s.key === (booking.status || 'pending'))
@@ -49,7 +48,6 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking, onCance
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
-      {/* Top Header */}
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2 text-xs font-black uppercase text-brand-orange">
@@ -67,14 +65,12 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking, onCance
         </div>
       </div>
 
-      {/* Status Timeline */}
       <div>
         <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-4">
           Live Status Timeline
         </div>
 
         <div className="relative flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          {/* Connecting Line */}
           <div className="hidden sm:block absolute top-5 left-8 right-8 h-1 bg-slate-100 -z-0">
             <div
               className="h-full bg-brand-orange transition-all duration-500"
@@ -122,7 +118,6 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking, onCance
         </div>
       </div>
 
-      {/* OTP Display Card */}
       {booking.status !== 'completed' && (
         <div className="p-4 bg-orange-50/80 border border-orange-200 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -142,7 +137,6 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking, onCance
         </div>
       )}
 
-      {/* Assigned Provider Details */}
       <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-brand-navy text-white rounded-2xl flex items-center justify-center font-black text-lg">
@@ -170,7 +164,6 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking, onCance
         </a>
       </div>
 
-      {/* Date & Address details */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-slate-600">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-slate-400" />
@@ -184,4 +177,3 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking, onCance
     </div>
   );
 };
-

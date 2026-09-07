@@ -65,7 +65,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -74,7 +73,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({
             className="fixed inset-0 bg-brand-navy/60 backdrop-blur-sm"
           />
 
-          {/* Modal Card */}
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -82,7 +80,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="relative w-full max-w-lg bg-white rounded-3xl shadow-floating overflow-hidden z-10 border border-brand-border"
           >
-            {/* Header */}
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-orange-50 rounded-2xl text-brand-orange">
@@ -101,9 +98,7 @@ export const LocationModal: React.FC<LocationModalProps> = ({
               </button>
             </div>
 
-            {/* Content */}
             <div className="p-6 space-y-6">
-              {/* Search Bar */}
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
@@ -115,7 +110,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({
                 />
               </div>
 
-              {/* Auto Detect Button */}
               <button
                 onClick={handleDetectLocation}
                 disabled={isDetecting}
@@ -139,7 +133,6 @@ export const LocationModal: React.FC<LocationModalProps> = ({
                 </div>
               )}
 
-              {/* Popular Cities */}
               <div>
                 <h4 className="text-xs font-bold uppercase tracking-wider text-brand-muted mb-3">
                   Popular Cities
@@ -174,4 +167,3 @@ export const LocationModal: React.FC<LocationModalProps> = ({
     </AnimatePresence>
   );
 };
-

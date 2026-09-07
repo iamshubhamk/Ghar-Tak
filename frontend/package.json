@@ -15,7 +15,6 @@
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "typescript": "^5.7.2"
     "tailwind-merge": "^3.0.1",
     "typescript": "^5.7.2",
     "vaul": "^1.1.2"

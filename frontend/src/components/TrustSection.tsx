@@ -32,8 +32,6 @@ export const TrustSection: React.FC = () => {
   return (
     <section className="bg-gradient-to-b from-slate-50 to-white py-14 border-t border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-14">
-        
-        {/* Safety & Trust Pillars */}
         <div>
           <div className="text-center max-w-2xl mx-auto mb-10">
             <h2 className="text-2xl sm:text-3xl font-black text-brand-navy tracking-tight">
@@ -95,7 +93,6 @@ export const TrustSection: React.FC = () => {
           </div>
         </div>
 
-        {/* Customer Review Cards */}
         <div>
           <div className="flex items-center justify-between mb-8">
             <div>
@@ -141,9 +138,7 @@ export const TrustSection: React.FC = () => {
             ))}
           </div>
         </div>
-
       </div>
     </section>
   );
 };
-

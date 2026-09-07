@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Clock, Plus, Minus, Check, Flame } from 'lucide-react';
+import { Star, Clock, Plus, Minus, Flame } from 'lucide-react';
 
 interface ServiceItem {
   id: string;
@@ -33,7 +33,6 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
 }) => {
   return (
     <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* Title */}
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand-orange mb-1">
           <Flame className="w-4 h-4 fill-brand-orange text-brand-orange" />
@@ -43,7 +42,6 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
         {subtitle && <p className="text-sm font-semibold text-slate-500 mt-1">{subtitle}</p>}
       </div>
 
-      {/* Horizontal Scrollable Row */}
       <div className="flex gap-5 overflow-x-auto pb-6 pt-2 no-scrollbar">
         {services.map((svc) => {
           const qty = cartItems[svc.id] || 0;
@@ -54,7 +52,6 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
               className="min-w-[280px] sm:min-w-[320px] max-w-[340px] bg-white rounded-3xl border border-slate-200 p-5 shadow-card hover:shadow-soft flex flex-col justify-between shrink-0 transition-all"
             >
               <div>
-                {/* Header Tag & Rating */}
                 <div className="flex items-center justify-between mb-3">
                   <span className="px-2.5 py-1 bg-orange-50 border border-orange-100 text-brand-orange text-[10px] font-extrabold rounded-full">
                     {svc.badge || 'Popular Choice'}
@@ -66,7 +63,6 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
                   </div>
                 </div>
 
-                {/* Title */}
                 <h4 className="font-extrabold text-base text-brand-navy leading-snug mb-1">
                   {svc.name}
                 </h4>
@@ -74,7 +70,6 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
                   {svc.description}
                 </p>
 
-                {/* Duration & Features */}
                 <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold mb-4">
                   <div className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
@@ -85,7 +80,6 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
                 </div>
               </div>
 
-              {/* Footer Price & Add Button */}
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div>
                   <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
@@ -94,7 +88,6 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
                   <div className="text-xl font-black text-brand-navy">₹{svc.price}</div>
                 </div>
 
-                {/* Quantity Add / Counter */}
                 {qty === 0 ? (
                   <button
                     onClick={() => onAddToCart(svc)}
@@ -128,4 +121,3 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
     </section>
   );
 };
-

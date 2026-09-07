@@ -169,7 +169,7 @@ function App() {
         onOpenCart={() => setIsDrawerOpen(true)}
         onSearch={setSearchQuery}
         activeRole={activeRole}
-        onRoleChange={(r) => setActiveRole(r)}
+        onRoleChange={(r: 'customer' | 'provider' | 'admin') => setActiveRole(r)}
         userSession={currentUser ? { user: { full_name: currentUser.name } } : null}
         onOpenAuth={() => (currentUser ? setView("dashboard") : setView("login"))}
       />
