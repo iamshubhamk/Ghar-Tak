@@ -1,5 +1,4 @@
 import { CalendarClock, MapPin, Star, UserRound, Wrench } from "lucide-react";
-import { CalendarClock, MapPin, Star, UserRound, Wrench, Plus, Sparkles } from "lucide-react";
 import { FormEvent, useEffect, useState } from "react";
 
 import { apiRequest } from "../lib/api";
@@ -7,7 +6,6 @@ import { apiBaseUrl, backendBaseUrl } from "../lib/config";
 import { Booking, Review } from "../types/booking";
 import { Category, ProviderProfile } from "../types/marketplace";
 import { NotificationPanel } from "./NotificationPanel";
-import { BookingTracker } from "./BookingTracker";
 
 type CustomerDashboardProps = {
   pendingCategoryName?: string;
@@ -28,7 +26,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
   const [customerPhotoUrl, setCustomerPhotoUrl] = useState<string | null>(null);
   const [status, setStatus] = useState("");
   const [reviewByBooking, setReviewByBooking] = useState<Record<string, {rating: string, comment: string}>>({});
-  const [reviewByBooking, setReviewByBooking] = useState<Record<string, { rating: string; comment: string }>>({});
 
   const loadInitialData = async () => {
     try {
@@ -51,7 +48,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
         );
         setCategoryId((pendingCategory ?? categoryResponse[0])?.id ?? "");
         
-
         if (requestedCategoryName) {
           setIsBooking(true);
           if (!pendingCategory) {
@@ -101,8 +97,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
           ? "Booking requested. The selected provider will be notified." 
           : "Booking requested. Admin will review it and assign a verified provider."
       );
-      setIsBooking(false);
-      setStatus("Booking requested successfully! You can track live status below.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Booking failed.");
     }
@@ -125,13 +119,11 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
         body: formData
       });
       
-
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.detail ?? "Upload failed");
       }
       
-
       const data = await response.json();
       setCustomerPhotoUrl(data.customer_profile?.profile_photo_url);
       setStatus("Profile photo updated successfully.");
@@ -166,66 +158,29 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
   const availableProviders = providers.filter((p) => 
     !selectedCategory || p.categories.includes(selectedCategory.name)
   );
-  const activeBooking = bookings.find((b) => b.status !== "COMPLETED" && !b.status.startsWith("CANCELLED"));
 
   if (!isBooking) {
     return (
       <section className="dashboard-section" aria-labelledby="customer-dashboard-heading">
         <div className="section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
-        {/* Top Bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200 shadow-card">
           <div>
             <p className="eyebrow">Customer dashboard</p>
             <h2 id="customer-dashboard-heading">Overview</h2>
-            <div className="text-xs font-black uppercase text-brand-orange tracking-wider">
-              Customer Hub
-            </div>
-            <h1 className="text-2xl font-black text-brand-navy">Welcome back to Ghar-Tak</h1>
-            <p className="text-xs font-semibold text-slate-400 mt-0.5">
-              Manage your active service requests and profile
-            </p>
           </div>
           <button 
             className="primary-action" 
-          <button
             onClick={() => {
               setIsBooking(true);
               setStatus("");
             }} 
             type="button"
-            }}
-            className="flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-2xl text-xs font-extrabold shadow-md hover:shadow-lg transition-all shrink-0"
           >
             Book New Service
-            <Plus className="w-4 h-4" />
-            <span>Book New Service</span>
           </button>
         </div>
 
         <div className="dashboard-grid">
           <NotificationPanel />
-        {/* Live Active Booking Tracker */}
-        {activeBooking && (
-          <div>
-            <h3 className="text-lg font-black text-brand-navy mb-3 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-brand-orange" />
-              <span>Live Order Tracking</span>
-            </h3>
-            <BookingTracker
-              booking={{
-                id: activeBooking.id,
-                service_name: activeBooking.category_name,
-                status: activeBooking.status.toLowerCase(),
-                scheduled_at: new Date(activeBooking.preferred_datetime).toLocaleString(),
-                address: activeBooking.locality,
-                provider: activeBooking.provider_name
-                  ? { name: activeBooking.provider_name, phone: '9876543210', rating: 4.9 }
-                  : undefined,
-              }}
-            />
-          </div>
-        )}
 
           <form className="operation-panel" onSubmit={uploadCustomerPhoto}>
             <h3>
@@ -239,19 +194,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
                   alt="Profile" 
                   style={{ width: "100px", height: "100px", borderRadius: "50%", objectFit: "cover" }} 
                 />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Notifications */}
-          <div className="lg:col-span-2 space-y-6">
-            <NotificationPanel />
-
-            {/* Booking History Table / Cards */}
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-black text-brand-navy flex items-center gap-2">
-                  <CalendarClock className="w-5 h-5 text-brand-orange" />
-                  <span>My Booking History</span>
-                </h3>
-                <span className="text-xs font-bold text-slate-400">{bookings.length} total</span>
               </div>
             )}
             <label>
@@ -272,26 +214,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
               <CalendarClock size={20} aria-hidden="true" />
               My bookings
             </h3>
-              <div className="space-y-3">
-                {bookings.length === 0 && (
-                  <div className="py-8 text-center text-xs font-semibold text-slate-400">
-                    No bookings found. Click "Book New Service" to get started!
-                  </div>
-                )}
-                {bookings.map((b) => (
-                  <div
-                    key={b.id}
-                    className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                  >
-                    <div>
-                      <div className="font-extrabold text-sm text-brand-navy">{b.category_name}</div>
-                      <div className="text-xs text-slate-500 font-semibold mt-0.5">
-                        {b.provider_name ? `Assigned: ${b.provider_name}` : 'Awaiting admin assignment'}
-                      </div>
-                      <div className="text-[11px] text-slate-400 mt-1">
-                        {new Date(b.preferred_datetime).toLocaleString()} • {b.locality}
-                      </div>
-                    </div>
 
             <div className="booking-list">
               {bookings.length === 0 ? <p className="muted-copy">No bookings yet.</p> : null}
@@ -302,15 +224,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
                     <span>{booking.provider_name ?? "Awaiting admin assignment"}</span>
                     <small>{new Date(booking.preferred_datetime).toLocaleString()}</small>
                     <small>Payment: {booking.payment_status}</small>
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className={`px-3 py-1 rounded-full text-xs font-extrabold capitalize ${
-                        b.status === 'COMPLETED'
-                          ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-amber-100 text-amber-700'
-                      }`}>
-                        {b.status}
-                      </span>
-                    </div>
                   </div>
                   <span className="status-badge">{booking.status}</span>
                   {booking.status === "COMPLETED" ? (
@@ -355,87 +268,30 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
                   ) : null}
                 </article>
               ))}
-                ))}
-              </div>
             </div>
-          </div>
-
-          {/* Profile Card */}
-          <div className="space-y-6">
-            <form onSubmit={uploadCustomerPhoto} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-4">
-              <h3 className="text-base font-black text-brand-navy flex items-center gap-2">
-                <UserRound className="w-5 h-5 text-brand-orange" />
-                <span>My Profile</span>
-              </h3>
-
-              {customerPhotoUrl && (
-                <div className="flex justify-center py-2">
-                  <img
-                    src={`${backendBaseUrl}${customerPhotoUrl}`}
-                    alt="Profile"
-                    className="w-24 h-24 rounded-full object-cover border-4 border-orange-100 shadow-md"
-                  />
-                </div>
-              )}
-
-              <div className="space-y-2">
-                <label className="block text-xs font-extrabold text-brand-navy">
-                  Upload Profile Photo
-                </label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setPhotoFile(e.target.files?.[0] || null)}
-                  className="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-orange-50 file:text-brand-orange hover:file:bg-orange-100"
-                />
-              </div>
-
-              <button
-                type="submit"
-                disabled={!photoFile}
-                className="w-full py-3 bg-brand-navy hover:bg-brand-navy-dark text-white rounded-2xl text-xs font-extrabold shadow-sm transition-all disabled:opacity-50"
-              >
-                Save Photo
-              </button>
-            </form>
           </div>
         </div>
         {status ? <p className="form-status operations-status">{status}</p> : null}
       </section>
-
-        {status && (
-          <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl text-xs font-bold text-brand-navy">
-            {status}
-          </div>
-        )}
-      </div>
     );
   }
 
   return (
     <section className="dashboard-section" aria-labelledby="customer-dashboard-heading">
       <div className="section-heading" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
-      <div className="flex items-center justify-between">
         <div>
           <p className="eyebrow">Customer dashboard</p>
           <h2 id="customer-dashboard-heading">Request a service</h2>
-          <div className="text-xs font-black uppercase text-brand-orange">New Service Request</div>
-          <h2 className="text-2xl font-black text-brand-navy">Configure your booking</h2>
         </div>
         <button 
           className="secondary-action" 
-        <button
           onClick={() => {
             setIsBooking(false);
             setStatus("");
           }} 
           type="button"
-          }}
-          className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl text-xs font-bold transition-all"
         >
           Cancel Booking
-          Cancel
         </button>
       </div>
 
@@ -443,49 +299,14 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
         <div className={categoryId ? "step-item complete" : "step-item active"}>
           <span>1</span>
           Choose service
-      <form onSubmit={createBooking} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-5">
-        <div className="space-y-2">
-          <label className="block text-xs font-extrabold text-brand-navy">Select Service Category</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-brand-ink focus:outline-none focus:border-brand-orange"
-          >
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name} {c.price_label ? `(${c.price_label})` : ''}
-              </option>
-            ))}
-          </select>
         </div>
         <div className={locality.trim() && preferredDateTime ? "step-item complete" : "step-item"}>
           <span>2</span>
           Add locality and time
-
-        <div className="space-y-2">
-          <label className="block text-xs font-extrabold text-brand-navy">Locality / Address</label>
-          <input
-            type="text"
-            placeholder="e.g. Connaught Place, New Delhi"
-            value={locality}
-            onChange={(e) => setLocality(e.target.value)}
-            required
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
-          />
         </div>
         <div className={canCreateBooking ? "step-item complete" : "step-item"}>
           <span>3</span>
           Submit request
-
-        <div className="space-y-2">
-          <label className="block text-xs font-extrabold text-brand-navy">Preferred Date & Time</label>
-          <input
-            type="datetime-local"
-            value={preferredDateTime}
-            onChange={(e) => setPreferredDateTime(e.target.value)}
-            required
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
-          />
         </div>
       </div>
 
@@ -495,17 +316,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
             <MapPin size={20} aria-hidden="true" />
             Service details
           </h3>
-        <div className="space-y-2">
-          <label className="block text-xs font-extrabold text-brand-navy">Issue / Requirement Details</label>
-          <textarea
-            rows={3}
-            placeholder="Describe what work needs to be done..."
-            value={issueDescription}
-            onChange={(e) => setIssueDescription(e.target.value)}
-            required
-            className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
-          />
-        </div>
 
           <label>
             Category
@@ -526,14 +336,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
               ))}
             </select>
           </label>
-        <button
-          type="submit"
-          disabled={!canCreateBooking}
-          className="w-full py-4 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-2xl font-extrabold text-sm shadow-md transition-all disabled:opacity-50"
-        >
-          Submit Service Booking
-        </button>
-      </form>
 
           <label>
             Locality
@@ -570,9 +372,6 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
             </p>
           ) : null}
 
-      {status && (
-        <div className="p-4 bg-orange-50 border border-orange-200 rounded-2xl text-xs font-bold text-brand-navy">
-          {status}
         </div>
 
         <form className="operation-panel" onSubmit={createBooking}>
@@ -619,7 +418,5 @@ export function CustomerDashboard({ pendingCategoryName }: CustomerDashboardProp
 
       {status ? <p className="form-status operations-status">{status}</p> : null}
     </section>
-      )}
-    </div>
   );
 }

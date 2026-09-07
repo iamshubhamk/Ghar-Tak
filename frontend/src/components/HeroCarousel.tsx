@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Star, Clock, ArrowRight, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { ShieldCheck, Star, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface HeroCarouselProps {
   onSelectCategory?: (category: string) => void;
@@ -57,8 +57,6 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
   return (
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="relative overflow-hidden rounded-3xl shadow-floating min-h-[360px] sm:min-h-[420px] flex items-center">
-        
-        {/* Background Animation */}
         <AnimatePresence mode="wait">
           <motion.div
             key={slide.id}
@@ -68,12 +66,10 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
             transition={{ duration: 0.6 }}
             className={`absolute inset-0 bg-gradient-to-br ${slide.bgGradient}`}
           >
-            {/* Subtle overlay elements */}
             <div className="absolute right-0 top-0 w-1/2 h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-brand-orange/20 via-transparent to-transparent pointer-events-none" />
           </motion.div>
         </AnimatePresence>
 
-        {/* Content */}
         <div className="relative z-10 p-6 sm:p-12 max-w-2xl text-white">
           <AnimatePresence mode="wait">
             <motion.div
@@ -84,7 +80,6 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
               transition={{ duration: 0.4 }}
               className="space-y-4"
             >
-              {/* Tag & Rating */}
               <div className="flex flex-wrap items-center gap-3">
                 <span className="px-3.5 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full text-xs font-extrabold uppercase tracking-wide text-brand-orange">
                   {slide.tag}
@@ -95,7 +90,6 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
                 </span>
               </div>
 
-              {/* Title & Subtitle */}
               <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-none text-white">
                 {slide.title}
               </h1>
@@ -103,7 +97,6 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
                 {slide.subtitle}
               </p>
 
-              {/* CTA & Trust badges */}
               <div className="pt-2 flex flex-wrap items-center gap-4">
                 <button
                   onClick={() => onSelectCategory?.(slide.categoryName)}
@@ -122,7 +115,6 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
           </AnimatePresence>
         </div>
 
-        {/* Carousel Controls */}
         <div className="absolute bottom-6 right-6 z-20 flex items-center gap-3">
           <div className="flex gap-1.5 mr-2">
             {HERO_SLIDES.map((_, idx) => (
@@ -153,4 +145,3 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
     </div>
   );
 };
-

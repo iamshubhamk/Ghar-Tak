@@ -5,7 +5,6 @@ import {
   Plus,
   Minus,
   Calendar,
-  Clock,
   MapPin,
   CreditCard,
   CheckCircle2,
@@ -58,7 +57,7 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const platformFee = subtotal > 0 ? 49 : 0;
-  const taxes = Math.round(subtotal * 0.05); // 5% GST
+  const taxes = Math.round(subtotal * 0.05);
   const discount = subtotal > 1000 ? 100 : 0;
   const grandTotal = Math.max(0, subtotal + platformFee + taxes - discount);
 
@@ -78,7 +77,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
     <AnimatePresence>
       {isOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden flex justify-end">
-          {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -87,7 +85,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
             className="fixed inset-0 bg-brand-navy/60 backdrop-blur-sm"
           />
 
-          {/* Drawer Container */}
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
@@ -95,7 +92,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
             transition={{ type: 'spring', damping: 25, stiffness: 250 }}
             className="relative w-full max-w-md bg-white h-full shadow-2xl z-10 flex flex-col justify-between"
           >
-            {/* Drawer Header */}
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-orange-50 rounded-2xl text-brand-orange">
@@ -114,7 +110,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
               </button>
             </div>
 
-            {/* Drawer Body */}
             <div className="flex-1 overflow-y-auto p-5 space-y-6">
               {cartItems.length === 0 ? (
                 <div className="py-16 text-center space-y-3">
@@ -128,7 +123,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                 </div>
               ) : (
                 <>
-                  {/* Selected Cart Items */}
                   <div className="space-y-3">
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
                       Selected Services
@@ -145,7 +139,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                           </div>
                         </div>
 
-                        {/* Quantity Counter */}
                         <div className="flex items-center bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
                           <button
                             onClick={() => onUpdateQuantity(item.id, -1)}
@@ -165,14 +158,12 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                     ))}
                   </div>
 
-                  {/* Date & Slot Picker */}
                   <div className="space-y-3">
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-brand-orange" />
                       <span>Select Date & Time Slot</span>
                     </h4>
 
-                    {/* Date buttons */}
                     <div className="grid grid-cols-3 gap-2">
                       {['Today', 'Tomorrow', 'Day After'].map((d) => (
                         <button
@@ -189,7 +180,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                       ))}
                     </div>
 
-                    {/* Time slots */}
                     <div className="grid grid-cols-2 gap-2 pt-1">
                       {TIME_SLOTS.map((slot) => (
                         <button
@@ -207,7 +197,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                     </div>
                   </div>
 
-                  {/* Address Section */}
                   <div className="space-y-2">
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-brand-orange" />
@@ -222,7 +211,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                     />
                   </div>
 
-                  {/* Payment Mode */}
                   <div className="space-y-2">
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <CreditCard className="w-3.5 h-3.5 text-brand-orange" />
@@ -254,7 +242,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                     </div>
                   </div>
 
-                  {/* Price Breakdown Card */}
                   <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-2 text-xs font-semibold">
                     <div className="flex justify-between text-slate-600">
                       <span>Item Total</span>
@@ -285,7 +272,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
               )}
             </div>
 
-            {/* Drawer Footer CTA */}
             {cartItems.length > 0 && (
               <div className="p-5 border-t border-slate-100 bg-white space-y-3">
                 <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
@@ -317,4 +303,3 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
     </AnimatePresence>
   );
 };
-
