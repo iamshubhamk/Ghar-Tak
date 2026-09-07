@@ -1,23 +1,40 @@
-import { LogIn } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import ghartakLogo from "./assets/ghartak-logo.jpg";
 import { AuthPanel } from "./components/AuthPanel";
 import { PublicHome } from "./components/PublicHome";
 import { RoleDashboard } from "./components/RoleDashboard";
+import { Header } from "./components/Header";
+import { ServiceDrawer } from "./components/ServiceDrawer";
 import { apiRequest } from "./lib/api";
 import { apiBaseUrl } from "./lib/config";
 import { User } from "./types/auth";
+import { defaultServices } from "./lib/defaultServices";
 
 type HealthState = "checking" | "online" | "offline";
-type AppView = "home" | "customer-auth" | "provider-auth" | "login";
+type AppView = "home" | "customer-auth" | "provider-auth" | "login" | "dashboard";
 const bookingIntentStorageKey = "ghartak_booking_intent_category";
+
+interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
 
 function App() {
   const [health, setHealth] = useState<HealthState>("checking");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<AppView>("home");
   const [showSplash, setShowSplash] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState("Connaught Place, New Delhi");
+  const [activeRole, setActiveRole] = useState<'customer' | 'provider' | 'admin'>('customer');
+  
+  // Cart & Service Drawer State
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [pendingCategoryName, setPendingCategoryName] = useState<string | undefined>(() => {
     return sessionStorage.getItem(bookingIntentStorageKey) ?? undefined;
   });
@@ -38,9 +55,7 @@ function App() {
 
   useEffect(() => {
     const token = localStorage.getItem("ghartak_token");
-    if (!token) {
-      return;
-    }
+    if (!token) return;
 
     apiRequest<User>("/auth/me")
       .then(setCurrentUser)
@@ -52,7 +67,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 2500);
+    }, 1800);
     return () => clearTimeout(timer);
   }, []);
 
@@ -77,11 +92,66 @@ function App() {
     } else {
       sessionStorage.removeItem(bookingIntentStorageKey);
     }
-    setView("customer-auth");
+    if (currentUser) {
+      setView("dashboard");
+    } else {
+      setView("customer-auth");
+    }
+  };
+
+  // Cart Helper functions
+  const handleAddToCart = (service: any) => {
+    setCartItems((prev) => {
+      const existing = prev.find((item) => item.id === service.id);
+      if (existing) {
+        return prev.map((item) =>
+          item.id === service.id ? { ...item, quantity: item.quantity + 1 } : item
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: service.id,
+          name: service.name,
+          price: service.price || 499,
+          quantity: 1,
+        },
+      ];
+    });
+  };
+
+  const handleUpdateQuantity = (id: string, delta: number) => {
+    setCartItems((prev) =>
+      prev
+        .map((item) => {
+          if (item.id === id) {
+            const newQty = item.quantity + delta;
+            return newQty > 0 ? { ...item, quantity: newQty } : null;
+          }
+          return item;
+        })
+        .filter(Boolean) as CartItem[]
+    );
+  };
+
+  const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
+  const cartTotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
+  const cartRecord = cartItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.id] = item.quantity;
+    return acc;
+  }, {});
+
+  const handleConfirmBookingFromDrawer = (details: any) => {
+    setIsDrawerOpen(false);
+    if (!currentUser) {
+      setView("customer-auth");
+    } else {
+      setView("dashboard");
+    }
   };
 
   return (
-    <main className="app-shell">
+    <main className="min-h-screen bg-slate-50 font-sans text-brand-ink">
       {showSplash && (
         <div className="splash-overlay">
           <div className="splash-logo-container">
@@ -89,65 +159,44 @@ function App() {
           </div>
         </div>
       )}
-      <header className="topbar">
-        <button className="brand brand-button" onClick={goHome} type="button" aria-label="GharTak home">
-          <span className="brand-mark">
-            <img alt="" src={ghartakLogo} />
-          </span>
-          <span>
-            <strong>GharTak</strong>
-            <small>All Services at One Place</small>
-          </span>
-        </button>
 
-        <nav className="top-actions" aria-label="Primary navigation">
-          {!currentUser ? (
-            <>
-              <button
-                className="nav-action"
-                onClick={() => setView("customer-auth")}
-                type="button"
-              >
-                Book a Service
-              </button>
-              <button
-                className="nav-action"
-                onClick={() => setView("provider-auth")}
-                type="button"
-              >
-                Join as Provider
-              </button>
-              <button className="nav-action nav-action--icon" onClick={() => setView("login")} type="button">
-                <LogIn size={16} aria-hidden="true" />
-                Login
-              </button>
-            </>
-          ) : (
-            <>
-              <span className="nav-action" style={{ border: "none", background: "transparent" }}>
-                Welcome, {currentUser.name}
-              </span>
-              <button className="nav-action" onClick={() => setView("customer-auth")} type="button">
-                Dashboard
-              </button>
-            </>
-          )}
-          <div className={`api-pill api-pill--${health}`}>
-            <span />
-            API {health}
-          </div>
-        </nav>
-      </header>
+      {/* Urban Company Sticky Navigation Header */}
+      <Header
+        currentLocation={currentLocation}
+        onSelectLocation={setCurrentLocation}
+        cartCount={cartCount}
+        cartTotal={cartTotal}
+        onOpenCart={() => setIsDrawerOpen(true)}
+        onSearch={setSearchQuery}
+        activeRole={activeRole}
+        onRoleChange={(r) => setActiveRole(r)}
+        userSession={currentUser ? { user: { full_name: currentUser.name } } : null}
+        onOpenAuth={() => (currentUser ? setView("dashboard") : setView("login"))}
+      />
 
-      {currentUser && view !== "home" ? (
-        <RoleDashboard user={currentUser} onLogout={logout} pendingCategoryName={pendingCategoryName} />
+      {/* Page Routing Views */}
+      {currentUser && view === "dashboard" ? (
+        <RoleDashboard
+          user={currentUser}
+          onLogout={logout}
+          pendingCategoryName={pendingCategoryName}
+        />
       ) : null}
 
       {view === "home" ? (
         <PublicHome
+          categories={defaultServices}
+          selectedCategory={selectedCategory}
+          onSelectCategory={(name) => {
+            setSelectedCategory(name);
+            startBookingIntent(name);
+          }}
           onBookService={startBookingIntent}
           onJoinProvider={() => setView("provider-auth")}
           onLogin={() => setView("login")}
+          cartItems={cartRecord}
+          onAddToCart={handleAddToCart}
+          onRemoveFromCart={(id) => handleUpdateQuantity(id, -1)}
         />
       ) : null}
 
@@ -158,7 +207,7 @@ function App() {
           initialMode="customer"
           onAuthenticated={(user) => {
             setCurrentUser(user);
-            setView("home");
+            setView("dashboard");
           }}
           subheading="Create a customer account or log in to search verified providers and request service."
         />
@@ -171,7 +220,7 @@ function App() {
           initialMode="provider"
           onAuthenticated={(user) => {
             setCurrentUser(user);
-            setView("home");
+            setView("dashboard");
           }}
           subheading="Register your service profile. Your account stays under review until admin approval."
         />
@@ -184,11 +233,22 @@ function App() {
           initialMode="login"
           onAuthenticated={(user) => {
             setCurrentUser(user);
-            setView("home");
+            setView("dashboard");
           }}
           subheading="Use your customer, provider, or admin credentials to continue."
         />
       ) : null}
+
+      {/* Urban Company Dynamic Service Drawer */}
+      <ServiceDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        cartItems={cartItems}
+        onUpdateQuantity={handleUpdateQuantity}
+        onClearCart={() => setCartItems([])}
+        currentLocation={currentLocation}
+        onConfirmBooking={handleConfirmBookingFromDrawer}
+      />
     </main>
   );
 }

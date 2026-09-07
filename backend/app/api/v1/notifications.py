@@ -4,10 +4,25 @@ from typing import Any
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.schemas.notification import NotificationResponse
+from app.schemas.notification import NotificationResponse, PushTokenRequest
 from app.services.notifications import NotificationService
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
+
+
+@router.post("/push-token")
+async def register_push_token(
+    payload: PushTokenRequest,
+    current_user: dict[str, Any] = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    token = payload.push_token.strip()
+    if token:
+        await db.users.update_one(
+            {"id": current_user["id"]},
+            {"$addToSet": {"push_tokens": token}}
+        )
+    return {"message": "Push token registered successfully"}
 
 
 @router.get("", response_model=list[NotificationResponse])
@@ -27,4 +42,5 @@ async def mark_notification_read(
 ):
     notification = await NotificationService(db).mark_read(current_user, notification_id)
     return NotificationService.serialize(notification)
+
 
