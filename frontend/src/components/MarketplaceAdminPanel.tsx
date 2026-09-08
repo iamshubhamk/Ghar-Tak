@@ -1,41 +1,41 @@
+import React, { FormEvent, useEffect, useState } from "react";
 import {
-  Banknote,
-  CalendarClock,
-  CheckCircle2,
-  FolderPlus,
-  MessageSquareOff,
+  Users,
   ShieldCheck,
-  UsersRound,
+  FolderPlus,
+  CalendarClock,
+  BarChart3,
+  CheckCircle2,
+  XCircle,
+  Plus,
   UserCheck,
-  XCircle
+  Building,
+  RefreshCw,
+  Search,
 } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
 
 import { apiRequest } from "../lib/api";
-import { backendBaseUrl } from "../lib/config";
-import { AdminCustomer, AdminDashboardSummary } from "../types/admin";
+import { AdminDashboardSummary } from "../types/admin";
 import { Booking, BookingStatus, Review } from "../types/booking";
 import { Category, ProviderProfile } from "../types/marketplace";
-import { NotificationPanel } from "./NotificationPanel";
+
+type AdminTabKey = "overview" | "categories" | "providers" | "bookings";
 
 export function MarketplaceAdminPanel() {
+  const [activeTab, setActiveTab] = useState<AdminTabKey>("overview");
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
-  const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [reviews, setReviews] = useState<Review[]>([]);
   const [selectedProviderByBooking, setSelectedProviderByBooking] = useState<Record<string, string>>({});
   const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | "ALL">("ALL");
-  const [bookingCategoryFilter, setBookingCategoryFilter] = useState("");
-  const [bookingProviderFilter, setBookingProviderFilter] = useState("");
+
   const [categoryName, setCategoryName] = useState("");
   const [description, setDescription] = useState("");
+  const [priceLabel, setPriceLabel] = useState("");
   const [status, setStatus] = useState("");
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
 
   const loadAdminData = async () => {
     try {
@@ -45,7 +45,7 @@ export function MarketplaceAdminPanel() {
           apiRequest<ProviderProfile[]>("/admin/providers"),
           apiRequest<Booking[]>("/admin/bookings"),
           apiRequest<AdminDashboardSummary>("/admin/summary"),
-          apiRequest<Review[]>("/admin/reviews")
+          apiRequest<Review[]>("/admin/reviews"),
         ]);
       setCategories(categoryResponse);
       setProviders(providerResponse);
@@ -71,13 +71,15 @@ export function MarketplaceAdminPanel() {
         method: "POST",
         body: JSON.stringify({
           name: categoryName,
-          description
-        })
+          description,
+          price_label: priceLabel,
+        }),
       });
       setCategoryName("");
       setDescription("");
+      setPriceLabel("");
       await loadAdminData();
-      setStatus("Category created.");
+      setStatus("Category created successfully.");
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not create category.");
     }
@@ -85,39 +87,34 @@ export function MarketplaceAdminPanel() {
 
   const verifyProvider = async (providerId: string, action: "approve" | "reject") => {
     setStatus("");
-    
     let rejection_reason: string | undefined = undefined;
     if (action === "reject") {
-      const reason = window.prompt("Please provide a reason for rejecting this provider:");
-      if (reason === null) return; // User cancelled
+      const reason = window.prompt("Reason for rejection:");
+      if (reason === null) return;
       rejection_reason = reason || "No reason provided";
     }
 
     try {
       await apiRequest<ProviderProfile>(`/admin/providers/${providerId}/${action}`, {
         method: "PATCH",
-        body: JSON.stringify(action === "reject" ? { rejection_reason } : {})
+        body: JSON.stringify(action === "reject" ? { rejection_reason } : {}),
       });
       await loadAdminData();
-      setStatus(action === "approve" ? "Provider approved." : "Provider rejected.");
+      setStatus(`Provider ${action}d successfully.`);
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not update provider.");
+      setStatus(error instanceof Error ? error.message : `Could not ${action} provider.`);
     }
   };
 
   const assignProvider = async (bookingId: string) => {
     const providerId = selectedProviderByBooking[bookingId];
-    if (!providerId) {
-      setStatus("Select a verified provider first.");
-      return;
-    }
-
+    if (!providerId) return;
     setStatus("");
 
     try {
       await apiRequest<Booking>(`/admin/bookings/${bookingId}/assign`, {
         method: "PATCH",
-        body: JSON.stringify({ provider_id: providerId })
+        body: JSON.stringify({ provider_id: providerId }),
       });
       await loadAdminData();
       setStatus("Provider assigned to booking.");
@@ -126,445 +123,343 @@ export function MarketplaceAdminPanel() {
     }
   };
 
-  const markCashPaid = async (bookingId: string) => {
-    setStatus("");
-
-    try {
-      await apiRequest<Booking>(`/admin/bookings/${bookingId}/mark-cash-paid`, {
-        method: "PATCH",
-        body: JSON.stringify({})
-      });
-      await loadAdminData();
-      setStatus("Cash payment marked paid.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not mark cash paid.");
-    }
-  };
-
-  const updateBookingStatus = async (bookingId: string, nextStatus: BookingStatus) => {
-    setStatus("");
-
-    try {
-      await apiRequest<Booking>(`/admin/bookings/${bookingId}/status`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: nextStatus })
-      });
-      await loadAdminData();
-      setStatus("Booking status updated.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not update booking status.");
-    }
-  };
-
-  const moderateReview = async (reviewId: string, action: "hide" | "show") => {
-    setStatus("");
-
-    try {
-      await apiRequest<Review>(`/admin/reviews/${reviewId}/${action}`, {
-        method: "PATCH",
-        body: JSON.stringify({})
-      });
-      await loadAdminData();
-      setStatus(action === "hide" ? "Review hidden." : "Review visible again.");
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Could not moderate review.");
-    }
-  };
-
-  const searchUsers = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchQuery.trim()) return;
-    setIsSearching(true);
-    setStatus("");
-    try {
-      const results = await apiRequest<any[]>(`/admin/users/search?q=${encodeURIComponent(searchQuery)}`);
-      setSearchResults(results);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : "Search failed.");
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const verifiedProviders = providers.filter((provider) => provider.verification_status === "VERIFIED");
-  const pendingProviders = providers.filter(
-    (provider) => provider.verification_status === "PENDING_VERIFICATION"
+  const pendingProviders = providers.filter((p) => p.verification_status === "PENDING_VERIFICATION");
+  const filteredBookings = bookings.filter((b) =>
+    bookingStatusFilter === "ALL" ? true : b.status === bookingStatusFilter
   );
-  const filteredBookings = bookings.filter((booking) => {
-    const matchesStatus = bookingStatusFilter === "ALL" || booking.status === bookingStatusFilter;
-    const matchesCategory = !bookingCategoryFilter || booking.category_id === bookingCategoryFilter;
-    const matchesProvider = !bookingProviderFilter || booking.provider_id === bookingProviderFilter;
-    return matchesStatus && matchesCategory && matchesProvider;
-  });
-
-  const bookingStatusOptions: BookingStatus[] = [
-    "REQUESTED",
-    "ACCEPTED",
-    "REJECTED",
-    "IN_PROGRESS",
-    "COMPLETED",
-    "CANCELLED_BY_CUSTOMER",
-    "CANCELLED_BY_PROVIDER",
-    "CANCELLED_BY_ADMIN"
-  ];
 
   return (
-    <section className="operations-section" aria-labelledby="admin-heading">
-      <div className="section-heading">
-        <p className="eyebrow">Admin operations</p>
-        <h2 id="admin-heading">Categories, providers, and bookings</h2>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Top Banner Header */}
+      <div className="bg-gradient-to-r from-brand-navy via-slate-900 to-brand-navy-dark rounded-3xl p-6 sm:p-8 text-white shadow-floating mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="text-xs font-black uppercase text-brand-orange tracking-wider mb-1">
+            Platform Operator Hub
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-black">Ghar-Tak Admin Control Panel</h1>
+          <p className="text-xs text-slate-300 font-medium">
+            Manage Patna service categories, provider approvals, and system-wide bookings.
+          </p>
+        </div>
+
+        <button
+          onClick={() => void loadAdminData()}
+          className="flex items-center justify-center gap-2 px-5 py-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl text-xs font-extrabold shadow-sm transition-all shrink-0 border border-white/20"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Refresh Data</span>
+        </button>
       </div>
 
-      {summary ? (
-        <div className="summary-grid" aria-label="Admin dashboard summary">
-          <div className="summary-card">
-            <span>Customers</span>
-            <strong>{summary.total_customers}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Providers</span>
-            <strong>{summary.total_providers}</strong>
-            <small>{summary.pending_providers} pending</small>
-          </div>
-          <div className="summary-card">
-            <span>Open bookings</span>
-            <strong>{summary.open_bookings}</strong>
-          </div>
-          <div className="summary-card">
-            <span>Completed</span>
-            <strong>{summary.completed_bookings}</strong>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="operations-grid">
-        <NotificationPanel />
-
-        <form className="operation-panel" onSubmit={createCategory}>
-          <h3>
-            <FolderPlus size={20} aria-hidden="true" />
-            Service categories
-          </h3>
-
-          <label>
-            Category Name
-            <input
-              minLength={2}
-              onChange={(event) => setCategoryName(event.target.value)}
-              required
-              value={categoryName}
-            />
-          </label>
-
-          <label>
-            Description
-            <textarea
-              onChange={(event) => setDescription(event.target.value)}
-              rows={3}
-              value={description}
-            />
-          </label>
-
-          <button className="primary-action auth-submit" type="submit">
-            Create Category
-          </button>
-
-          <div className="compact-list">
-            {categories.map((category) => (
-              <span key={category.id}>{category.name}</span>
-            ))}
-          </div>
-        </form>
-
-        <div className="operation-panel">
-          <h3>
-            <ShieldCheck size={20} aria-hidden="true" />
-            Pending providers
-          </h3>
-
-          <div className="provider-review-list">
-            {pendingProviders.length === 0 ? <p className="muted-copy">No pending providers.</p> : null}
-            {pendingProviders.map((provider) => (
-              <article className="provider-review-item" key={provider.id}>
-                <div>
-                  <strong>{provider.name}</strong>
-                  <span>{provider.bio ?? "No bio added"}</span>
-                  <div style={{ marginTop: '8px', display: 'flex', gap: '12px', fontSize: '14px' }}>
-                    {provider.profile_photo_url ? (
-                      <a href={`${backendBaseUrl}${provider.profile_photo_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
-                        View Photo
-                      </a>
-                    ) : (
-                      <span style={{ color: '#999' }}>No photo</span>
-                    )}
-                    {provider.adhaar_card_url ? (
-                      <a href={`${backendBaseUrl}${provider.adhaar_card_url}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline' }}>
-                        View Adhaar
-                      </a>
-                    ) : (
-                      <span style={{ color: '#999' }}>No Adhaar</span>
-                    )}
-                  </div>
+      {/* 2-Column Sidebar Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        {/* Sidebar Navigation */}
+        <div className="lg:col-span-1 space-y-2">
+          {[
+            { key: "overview", label: "Platform Overview", icon: BarChart3, badge: summary?.total_bookings },
+            { key: "categories", label: "Category Management", icon: FolderPlus, badge: categories.length },
+            { key: "providers", label: "Provider Verification", icon: ShieldCheck, badge: pendingProviders.length },
+            { key: "bookings", label: "System Bookings", icon: CalendarClock, badge: bookings.length },
+          ].map((tab) => {
+            const IconComp = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key as AdminTabKey)}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl text-xs font-extrabold transition-all text-left ${
+                  isActive
+                    ? "bg-brand-navy text-white shadow-md"
+                    : "bg-white hover:bg-slate-100 text-slate-600 border border-slate-200"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  <IconComp className={`w-4 h-4 ${isActive ? "text-brand-orange" : "text-slate-400"}`} />
+                  <span>{tab.label}</span>
                 </div>
-                <div className="inline-actions">
-                  <button
-                    aria-label={`Approve ${provider.name}`}
-                    onClick={() => void verifyProvider(provider.id, "approve")}
-                    type="button"
+                {tab.badge !== undefined && (
+                  <span
+                    className={`px-2.5 py-0.5 rounded-full text-[10px] ${
+                      isActive ? "bg-white/20 text-white" : "bg-slate-100 text-slate-600"
+                    }`}
                   >
-                    <CheckCircle2 size={18} aria-hidden="true" />
-                  </button>
-                  <button
-                    aria-label={`Reject ${provider.name}`}
-                    onClick={() => void verifyProvider(provider.id, "reject")}
-                    type="button"
-                  >
-                    <XCircle size={18} aria-hidden="true" />
-                  </button>
+                    {tab.badge}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right Content Panel */}
+        <div className="lg:col-span-3">
+          {/* TAB 1: OVERVIEW & METRICS */}
+          {activeTab === "overview" && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-card">
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400">Total Customers</div>
+                  <div className="text-2xl font-black text-brand-navy mt-1">{summary?.total_customers ?? 0}</div>
                 </div>
-              </article>
-            ))}
-          </div>
-        </div>
-
-        <div className="operation-panel booking-history">
-          <h3>
-            <CalendarClock size={20} aria-hidden="true" />
-            Service requests
-          </h3>
-
-          <div className="filter-row" aria-label="Booking filters">
-            <select
-              aria-label="Filter bookings by status"
-              onChange={(event) => setBookingStatusFilter(event.target.value as BookingStatus | "ALL")}
-              value={bookingStatusFilter}
-            >
-              <option value="ALL">All statuses</option>
-              {bookingStatusOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filter bookings by category"
-              onChange={(event) => setBookingCategoryFilter(event.target.value)}
-              value={bookingCategoryFilter}
-            >
-              <option value="">All services</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <select
-              aria-label="Filter bookings by provider"
-              onChange={(event) => setBookingProviderFilter(event.target.value)}
-              value={bookingProviderFilter}
-            >
-              <option value="">All providers</option>
-              {verifiedProviders.map((provider) => (
-                <option key={provider.id} value={provider.id}>
-                  {provider.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="booking-list">
-            {filteredBookings.length === 0 ? <p className="muted-copy">No matching booking requests.</p> : null}
-            {filteredBookings.map((booking) => {
-              const eligibleProviders = verifiedProviders.filter((provider) =>
-                provider.categories.includes(booking.category_name)
-              );
-
-              return (
-                <article className="booking-item booking-item--with-actions" key={booking.id}>
-                  <div>
-                    <strong>{booking.category_name}</strong>
-                    <span>{booking.customer_name}</span>
-                    <small>
-                      {booking.locality} - {new Date(booking.preferred_datetime).toLocaleString()}
-                    </small>
-                    <small>{booking.provider_name ?? "Awaiting provider assignment"}</small>
-                    <small>
-                      Payment: {booking.payment_status}
-                      {booking.final_amount ? ` | INR ${booking.final_amount}` : ""}
-                    </small>
-                  </div>
-                  <span className="status-badge">{booking.status}</span>
-                  {booking.status === "REQUESTED" || booking.status === "REJECTED" ? (
-                    <div className="assignment-controls">
-                      <select
-                        aria-label={`Assign provider for ${booking.category_name}`}
-                        onChange={(event) =>
-                          setSelectedProviderByBooking((current) => ({
-                            ...current,
-                            [booking.id]: event.target.value
-                          }))
-                        }
-                        value={selectedProviderByBooking[booking.id] ?? ""}
-                      >
-                        <option value="">Select provider</option>
-                        {eligibleProviders.map((provider) => (
-                          <option key={provider.id} value={provider.id}>
-                            {provider.name}
-                          </option>
-                        ))}
-                      </select>
-                      <button
-                        aria-label="Assign provider"
-                        disabled={eligibleProviders.length === 0}
-                        onClick={() => void assignProvider(booking.id)}
-                        type="button"
-                      >
-                        <UserCheck size={18} aria-hidden="true" />
-                      </button>
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-card">
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400">Active Providers</div>
+                  <div className="text-2xl font-black text-brand-navy mt-1">{summary?.verified_providers ?? 0}</div>
+                  {pendingProviders.length > 0 && (
+                    <div className="text-[10px] text-brand-orange font-extrabold mt-1">
+                      {pendingProviders.length} pending review
                     </div>
-                  ) : null}
-                  {booking.status !== "COMPLETED" && booking.status !== "CANCELLED_BY_ADMIN" ? (
-                    <div className="assignment-controls">
-                      <select
-                        aria-label={`Update status for ${booking.category_name}`}
-                        onChange={(event) => {
-                          if (event.target.value) {
-                            void updateBookingStatus(booking.id, event.target.value as BookingStatus);
-                          }
-                        }}
-                        value=""
-                      >
-                        <option value="">Update status</option>
-                        <option value="ACCEPTED">Accepted</option>
-                        <option value="IN_PROGRESS">In progress</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="CANCELLED_BY_ADMIN">Cancel by admin</option>
-                      </select>
-                    </div>
-                  ) : null}
-                  {booking.status === "COMPLETED" && booking.payment_status !== "PAID_CASH" ? (
-                    <div className="assignment-controls">
-                      <button
-                        aria-label="Mark cash paid"
-                        onClick={() => void markCashPaid(booking.id)}
-                        type="button"
-                      >
-                        <Banknote size={18} aria-hidden="true" />
-                      </button>
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="operation-panel booking-history">
-          <h3>
-            <UsersRound size={20} aria-hidden="true" />
-            User & Provider Search
-          </h3>
-
-          <form onSubmit={searchUsers} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-            <input 
-              type="text" 
-              placeholder="Search by name or ID..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              style={{ flex: 1 }}
-            />
-            <button className="primary-action" type="submit" disabled={isSearching || !searchQuery.trim()}>
-              {isSearching ? "Searching..." : "Search"}
-            </button>
-          </form>
-
-          <div className="booking-list">
-            {searchResults.length === 0 && !isSearching && searchQuery ? (
-              <p className="muted-copy">No users found.</p>
-            ) : null}
-            {searchResults.map((user) => {
-              const photoUrl = user.role === 'PROVIDER' 
-                ? user.provider_profile?.profile_photo_url 
-                : user.customer_profile?.profile_photo_url;
-              const adhaarUrl = user.provider_profile?.adhaar_card_url;
-
-              return (
-                <article className="booking-item" key={user.id}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                    {photoUrl ? (
-                      <img 
-                        src={`${backendBaseUrl}${photoUrl}`} 
-                        alt={user.name} 
-                        style={{ width: "48px", height: "48px", borderRadius: "50%", objectFit: "cover" }} 
-                      />
-                    ) : (
-                      <div style={{ width: "48px", height: "48px", borderRadius: "50%", backgroundColor: "#e2e8f0", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <UserCheck size={24} color="#94a3b8" />
-                      </div>
-                    )}
-                    <div>
-                      <strong>{user.name}</strong>
-                      <span className="status-badge" style={{ marginLeft: "8px", fontSize: "0.75rem", padding: "2px 6px" }}>{user.role}</span>
-                      <small>ID: {user.id}</small>
-                      {user.role === 'PROVIDER' && adhaarUrl && (
-                        <div style={{ marginTop: "4px" }}>
-                          <a href={`${backendBaseUrl}${adhaarUrl}`} target="_blank" rel="noopener noreferrer" style={{ color: '#0066cc', textDecoration: 'underline', fontSize: '0.8rem' }}>
-                            View Adhaar Card
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="operation-panel booking-history">
-          <h3>
-            <MessageSquareOff size={20} aria-hidden="true" />
-            Review moderation
-          </h3>
-
-          <div className="booking-list">
-            {reviews.length === 0 ? <p className="muted-copy">No reviews yet.</p> : null}
-            {reviews.slice(0, 8).map((review) => (
-              <article className="booking-item booking-item--with-actions" key={review.id}>
-                <div>
-                  <strong>
-                    {review.rating}/5 from {review.customer_name}
-                  </strong>
-                  <span>{review.comment ?? "No comment"}</span>
-                  <small>{review.status}</small>
-                </div>
-                <span className="status-badge">{review.status}</span>
-                <div className="inline-actions">
-                  {review.status === "VISIBLE" ? (
-                    <button
-                      aria-label="Hide review"
-                      onClick={() => void moderateReview(review.id, "hide")}
-                      type="button"
-                    >
-                      <XCircle size={18} aria-hidden="true" />
-                    </button>
-                  ) : (
-                    <button
-                      aria-label="Show review"
-                      onClick={() => void moderateReview(review.id, "show")}
-                      type="button"
-                    >
-                      <CheckCircle2 size={18} aria-hidden="true" />
-                    </button>
                   )}
                 </div>
-              </article>
-            ))}
-          </div>
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-card">
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400">Open Bookings</div>
+                  <div className="text-2xl font-black text-brand-navy mt-1">{summary?.open_bookings ?? 0}</div>
+                </div>
+                <div className="p-5 bg-white rounded-3xl border border-slate-200 shadow-card">
+                  <div className="text-[10px] font-extrabold uppercase text-slate-400">Completed Jobs</div>
+                  <div className="text-2xl font-black text-emerald-600 mt-1">{summary?.completed_bookings ?? 0}</div>
+                </div>
+              </div>
+
+              {/* Quick Action Overview */}
+              <div className="p-6 bg-white rounded-3xl border border-slate-200 shadow-card space-y-4">
+                <h3 className="text-base font-black text-brand-navy">Patna Marketplace Status Summary</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Default City Scope</span>
+                    <span className="text-brand-navy font-extrabold text-sm block">Patna, Bihar</span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Service Categories</span>
+                    <span className="text-brand-navy font-extrabold text-sm block">{categories.length} Categories Live</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: CATEGORY MANAGEMENT */}
+          {activeTab === "categories" && (
+            <div className="space-y-6">
+              <form onSubmit={createCategory} className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-4">
+                <h3 className="text-base font-black text-brand-navy flex items-center gap-2">
+                  <FolderPlus className="w-5 h-5 text-brand-orange" />
+                  <span>Add New Service Category</span>
+                </h3>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-brand-navy">Category Name</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Electrician, Carpenter"
+                      value={categoryName}
+                      onChange={(e) => setCategoryName(e.target.value)}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-brand-navy">Price Label / Rate Card</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Starts at ₹199"
+                      value={priceLabel}
+                      onChange={(e) => setPriceLabel(e.target.value)}
+                      className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-extrabold text-brand-navy">Description</label>
+                  <textarea
+                    rows={2}
+                    required
+                    placeholder="Short category description..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  className="px-6 py-3 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-2xl text-xs font-extrabold shadow-sm transition-all"
+                >
+                  Create Category
+                </button>
+              </form>
+
+              {/* Active Categories List */}
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-4">
+                <h3 className="text-base font-black text-brand-navy">Live Service Categories ({categories.length})</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {categories.map((c) => (
+                    <div key={c.id} className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                      <div className="font-extrabold text-xs text-brand-navy">{c.name}</div>
+                      <div className="text-[11px] text-slate-500 font-medium mt-0.5">{c.description}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: PROVIDER VERIFICATION */}
+          {activeTab === "providers" && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-black text-brand-navy flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-brand-orange" />
+                    <span>Provider Approvals & Verification</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 font-medium">Review technician applications in Patna</p>
+                </div>
+                <span className="px-3 py-1 bg-orange-50 text-brand-orange rounded-full text-xs font-extrabold">
+                  {pendingProviders.length} Pending Approval
+                </span>
+              </div>
+
+              <div className="space-y-4">
+                {providers.length === 0 && (
+                  <div className="py-8 text-center text-xs font-semibold text-slate-400">No registered providers yet.</div>
+                )}
+                {providers.map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-sm text-brand-navy">{p.name}</span>
+                        <span
+                          className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                            p.verification_status === "VERIFIED"
+                              ? "bg-emerald-100 text-emerald-700"
+                              : p.verification_status === "REJECTED"
+                              ? "bg-rose-100 text-rose-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
+                        >
+                          {p.verification_status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 font-semibold mt-1">
+                        Experience: {p.experience_years} years • Categories: {p.categories.join(", ") || "General"}
+                      </div>
+                      {p.bio && <div className="text-[11px] text-slate-400 mt-0.5">"{p.bio}"</div>}
+                    </div>
+
+                    {p.verification_status === "PENDING_VERIFICATION" && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={() => verifyProvider(p.id, "approve")}
+                          className="flex items-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>Approve</span>
+                        </button>
+                        <button
+                          onClick={() => verifyProvider(p.id, "reject")}
+                          className="flex items-center gap-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Reject</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: SYSTEM BOOKINGS */}
+          {activeTab === "bookings" && (
+            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <h3 className="text-base font-black text-brand-navy flex items-center gap-2">
+                  <CalendarClock className="w-5 h-5 text-brand-orange" />
+                  <span>All System Bookings ({bookings.length})</span>
+                </h3>
+
+                <select
+                  value={bookingStatusFilter}
+                  onChange={(e) => setBookingStatusFilter(e.target.value as any)}
+                  className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="REQUESTED">Requested / Pending</option>
+                  <option value="ACCEPTED">Accepted</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+
+              <div className="space-y-3">
+                {filteredBookings.length === 0 && (
+                  <div className="py-8 text-center text-xs font-semibold text-slate-400">No bookings match filter.</div>
+                )}
+                {filteredBookings.map((b) => (
+                  <div
+                    key={b.id}
+                    className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-extrabold text-xs text-brand-navy">{b.category_name}</span>
+                        <span className="px-2.5 py-0.5 bg-brand-navy text-white text-[10px] font-extrabold rounded-full">
+                          {b.status}
+                        </span>
+                      </div>
+                      <div className="text-xs text-slate-500 font-semibold mt-1">
+                        Customer: {b.customer_name} • Locality: {b.locality}
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-0.5">
+                        Assigned: {b.provider_name || "Unassigned"}
+                      </div>
+                    </div>
+
+                    {!b.provider_name && b.status === "REQUESTED" && (
+                      <div className="flex items-center gap-2 shrink-0">
+                        <select
+                          value={selectedProviderByBooking[b.id] || ""}
+                          onChange={(e) =>
+                            setSelectedProviderByBooking((prev) => ({ ...prev, [b.id]: e.target.value }))
+                          }
+                          className="p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-brand-ink"
+                        >
+                          <option value="">Select Patna Pro</option>
+                          {providers
+                            .filter((p) => p.verification_status === "VERIFIED")
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name}
+                              </option>
+                            ))}
+                        </select>
+                        <button
+                          onClick={() => assignProvider(b.id)}
+                          className="px-3 py-2 bg-brand-orange text-white rounded-xl text-xs font-extrabold"
+                        >
+                          Assign
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {status ? <p className="form-status operations-status">{status}</p> : null}
-    </section>
+      {status && (
+        <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-2xl text-xs font-bold text-brand-navy">
+          {status}
+        </div>
+      )}
+    </div>
   );
 }

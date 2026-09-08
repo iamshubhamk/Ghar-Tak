@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, Star, ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ChevronLeft, ChevronRight, CheckCircle2 } from 'lucide-react';
 
 interface HeroCarouselProps {
   onSelectCategory?: (category: string) => void;
@@ -9,36 +9,36 @@ interface HeroCarouselProps {
 const HERO_SLIDES = [
   {
     id: 1,
-    title: 'AC Service & Repair',
-    subtitle: 'Foam Jet Cleaning & Inspection at Flat 20% OFF',
-    tag: '⚡ 30-Min Arrival',
-    rating: '4.8 ★ (120k+ reviews)',
+    title: 'Electrician & Repairs in Patna',
+    subtitle: 'Switchboard fixes, MCBs, wiring & appliance repair at your doorstep.',
+    tag: '⚡ On-Demand Service',
+    valueProp: 'Verified Patna Technicians',
     bgGradient: 'from-brand-navy via-brand-navy-soft to-slate-900',
     accentColor: 'text-brand-orange',
-    cta: 'Book AC Service',
-    categoryName: 'AC & Appliance Repair',
+    cta: 'Book Electrician',
+    categoryName: 'Electrician',
   },
   {
     id: 2,
-    title: 'Full House Deep Cleaning',
-    subtitle: 'Intensive Sanitization & Stain Removal by Verified Pros',
-    tag: '🛡️ Safety Guaranteed',
-    rating: '4.9 ★ (85k+ reviews)',
+    title: 'Plumbing & Water Leak Fixes',
+    subtitle: 'Tap replacements, pipe repairs & bathroom fitting by verified local pros.',
+    tag: '🔧 Fixed Rate Cards',
+    valueProp: 'Cash on Service First',
     bgGradient: 'from-slate-900 via-indigo-950 to-brand-navy',
     accentColor: 'text-amber-400',
-    cta: 'Book Deep Cleaning',
-    categoryName: 'Cleaning & Pest Control',
+    cta: 'Book Plumber',
+    categoryName: 'Plumber',
   },
   {
     id: 3,
-    title: 'Expert Plumbing & Electricians',
-    subtitle: 'Instant Fixes, Pipe Repairs & Wiring with 30-Day Guarantee',
-    tag: '🔧 Fixed Price Cards',
-    rating: '4.8 ★ (210k+ reviews)',
+    title: 'AC Service & Deep Cleaning',
+    subtitle: 'Foam jet wash, cooling inspection & gas leak checks in Patna localities.',
+    tag: '❄️ Seasonal Care',
+    valueProp: '30-Day Workmanship Guarantee',
     bgGradient: 'from-brand-navy-dark via-slate-900 to-orange-950',
     accentColor: 'text-brand-orange',
-    cta: 'Book Electrician/Plumber',
-    categoryName: 'Plumbing & Electrician',
+    cta: 'Book AC Service',
+    categoryName: 'AC Repair',
   },
 ];
 
@@ -85,8 +85,8 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
                   {slide.tag}
                 </span>
                 <span className="flex items-center gap-1 text-xs font-bold text-slate-200">
-                  <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                  {slide.rating}
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  {slide.valueProp}
                 </span>
               </div>
 
@@ -108,7 +108,7 @@ export const HeroCarousel: React.FC<HeroCarouselProps> = ({ onSelectCategory }) 
 
                 <div className="flex items-center gap-2 text-xs font-semibold text-slate-300">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  <span>Verified Professionals</span>
+                  <span>Patna Verified Pros</span>
                 </div>
               </div>
             </motion.div>

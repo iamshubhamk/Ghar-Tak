@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Star, Clock, Plus, Minus, Flame } from 'lucide-react';
+import { Clock, Plus, Minus, Flame, ShieldCheck } from 'lucide-react';
 
 interface ServiceItem {
   id: string;
@@ -36,7 +36,7 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
       <div className="mb-6">
         <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-brand-orange mb-1">
           <Flame className="w-4 h-4 fill-brand-orange text-brand-orange" />
-          <span>Top Rated Deals</span>
+          <span>Popular Services in Patna</span>
         </div>
         <h3 className="text-2xl font-black text-brand-navy tracking-tight">{title}</h3>
         {subtitle && <p className="text-sm font-semibold text-slate-500 mt-1">{subtitle}</p>}
@@ -54,12 +54,11 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <span className="px-2.5 py-1 bg-orange-50 border border-orange-100 text-brand-orange text-[10px] font-extrabold rounded-full">
-                    {svc.badge || 'Popular Choice'}
+                    {svc.badge || 'Patna Rate Card'}
                   </span>
-                  <div className="flex items-center gap-1 text-xs font-extrabold text-brand-navy">
-                    <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" />
-                    <span>{svc.rating || 4.8}</span>
-                    <span className="text-slate-400 font-medium">({svc.reviewCount || 142})</span>
+                  <div className="flex items-center gap-1 text-[11px] font-extrabold text-emerald-600">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>Verified Pro</span>
                   </div>
                 </div>
 
@@ -73,19 +72,21 @@ export const ServiceCarousel: React.FC<ServiceCarouselProps> = ({
                 <div className="flex items-center gap-3 text-xs text-slate-500 font-semibold mb-4">
                   <div className="flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-slate-400" />
-                    <span>{svc.duration || '45 mins'}</span>
+                    <span>{svc.duration || '30-45 mins'}</span>
                   </div>
                   <span>•</span>
-                  <span className="text-emerald-600 font-bold">Verified Partner</span>
+                  <span className="text-slate-500 font-bold">Cash on Service</span>
                 </div>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                 <div>
-                  <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                    Price
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Service Rate
                   </div>
-                  <div className="text-xl font-black text-brand-navy">₹{svc.price}</div>
+                  <div className="text-xl font-black text-brand-navy">
+                    {svc.price > 0 ? `₹${svc.price}` : 'Inspection Quote'}
+                  </div>
                 </div>
 
                 {qty === 0 ? (
