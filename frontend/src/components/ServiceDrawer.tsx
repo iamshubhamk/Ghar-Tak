@@ -13,6 +13,7 @@ import {
   ArrowRight,
   ShoppingBag,
 } from 'lucide-react';
+import { DateTimePicker } from './DateTimePicker';
 
 interface CartItem {
   id: string;
@@ -158,44 +159,7 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                     ))}
                   </div>
 
-                  <div className="space-y-3">
-                    <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                      <Calendar className="w-3.5 h-3.5 text-brand-orange" />
-                      <span>Select Date & Time Slot</span>
-                    </h4>
-
-                    <div className="grid grid-cols-3 gap-2">
-                      {['Today', 'Tomorrow', 'Day After'].map((d) => (
-                        <button
-                          key={d}
-                          onClick={() => setSelectedDate(d)}
-                          className={`py-2 rounded-xl text-xs font-extrabold border transition-all ${
-                            selectedDate === d
-                              ? 'bg-brand-navy text-white border-brand-navy shadow-sm'
-                              : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                          }`}
-                        >
-                          {d}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      {TIME_SLOTS.map((slot) => (
-                        <button
-                          key={slot}
-                          onClick={() => setSelectedSlot(slot)}
-                          className={`py-2 px-2.5 rounded-xl text-[11px] font-bold border transition-all text-center truncate ${
-                            selectedSlot === slot
-                              ? 'bg-orange-50 border-brand-orange text-brand-navy shadow-sm'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          {slot}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+                  <DateTimePicker onChange={(iso) => setSelectedDate(iso)} />
 
                   <div className="space-y-2">
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
@@ -303,3 +267,4 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
     </AnimatePresence>
   );
 };
+

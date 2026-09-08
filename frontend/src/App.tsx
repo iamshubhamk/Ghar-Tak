@@ -26,9 +26,9 @@ function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<AppView>("home");
   const [showSplash, setShowSplash] = useState(true);
-  const [currentLocation, setCurrentLocation] = useState("Connaught Place, New Delhi");
+  const [currentLocation, setCurrentLocation] = useState("Boring Road, Patna");
   const [activeRole, setActiveRole] = useState<'customer' | 'provider' | 'admin'>('customer');
-  
+
   // Cart & Service Drawer State
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -58,7 +58,13 @@ function App() {
     if (!token) return;
 
     apiRequest<User>("/auth/me")
-      .then(setCurrentUser)
+      .then((user) => {
+        setCurrentUser(user);
+        // Automatically land Admin & Provider users in their dedicated dashboard workspace
+        if (user.role === "ADMIN" || user.role === "PROVIDER") {
+          setView("dashboard");
+        }
+      })
       .catch(() => {
         localStorage.removeItem("ghartak_token");
       });
@@ -67,7 +73,7 @@ function App() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowSplash(false);
-    }, 1800);
+    }, 1500);
     return () => clearTimeout(timer);
   }, []);
 
@@ -79,8 +85,13 @@ function App() {
     sessionStorage.removeItem(bookingIntentStorageKey);
   };
 
+  // Role-Dedicated Home / Logo Navigation Logic
   const goHome = () => {
-    setView("home");
+    if (currentUser?.role === "ADMIN" || currentUser?.role === "PROVIDER") {
+      setView("dashboard"); // Providers and Admins return to operational workspace
+    } else {
+      setView("home"); // Customers and Guests return to consumer booking homepage
+    }
     setPendingCategoryName(undefined);
     sessionStorage.removeItem(bookingIntentStorageKey);
   };
@@ -113,7 +124,7 @@ function App() {
         {
           id: service.id,
           name: service.name,
-          price: service.price || 499,
+          price: service.price || 199,
           quantity: 1,
         },
       ];
@@ -150,6 +161,17 @@ function App() {
     }
   };
 
+  const handleRoleChange = (role: 'customer' | 'provider' | 'admin') => {
+    setActiveRole(role);
+    if (role === 'customer') {
+      setView(currentUser ? "dashboard" : "customer-auth");
+    } else if (role === 'provider') {
+      setView(currentUser ? "dashboard" : "provider-auth");
+    } else if (role === 'admin') {
+      setView(currentUser && currentUser.role === 'ADMIN' ? "dashboard" : "login");
+    }
+  };
+
   return (
     <main className="min-h-screen bg-slate-50 font-sans text-brand-ink">
       {showSplash && (
@@ -160,7 +182,7 @@ function App() {
         </div>
       )}
 
-      {/* Urban Company Sticky Navigation Header */}
+      {/* Role-Tailored Navigation Header */}
       <Header
         currentLocation={currentLocation}
         onSelectLocation={setCurrentLocation}
@@ -169,9 +191,11 @@ function App() {
         onOpenCart={() => setIsDrawerOpen(true)}
         onSearch={setSearchQuery}
         activeRole={activeRole}
-        onRoleChange={(r: 'customer' | 'provider' | 'admin') => setActiveRole(r)}
+        onRoleChange={handleRoleChange}
         userSession={currentUser ? { user: { full_name: currentUser.name } } : null}
+        userRole={currentUser?.role ?? null}
         onOpenAuth={() => (currentUser ? setView("dashboard") : setView("login"))}
+        onGoHome={goHome}
       />
 
       {/* Page Routing Views */}
@@ -183,7 +207,7 @@ function App() {
         />
       ) : null}
 
-      {view === "home" ? (
+      {view === "home" && (!currentUser || currentUser.role === "CUSTOMER") ? (
         <PublicHome
           categories={defaultServices}
           selectedCategory={selectedCategory}
@@ -203,26 +227,26 @@ function App() {
       {!currentUser && view === "customer-auth" ? (
         <AuthPanel
           allowedModes={["customer", "login"]}
-          heading="Book a service"
+          heading="Book a service in Patna"
           initialMode="customer"
           onAuthenticated={(user) => {
             setCurrentUser(user);
             setView("dashboard");
           }}
-          subheading="Create a customer account or log in to search verified providers and request service."
+          subheading="Create a customer account or log in to search verified Patna service providers."
         />
       ) : null}
 
       {!currentUser && view === "provider-auth" ? (
         <AuthPanel
           allowedModes={["provider", "login"]}
-          heading="Join as provider"
+          heading="Join as Patna service partner"
           initialMode="provider"
           onAuthenticated={(user) => {
             setCurrentUser(user);
             setView("dashboard");
           }}
-          subheading="Register your service profile. Your account stays under review until admin approval."
+          subheading="Register your technician profile in Patna. Account stays under verification until admin approval."
         />
       ) : null}
 
@@ -235,20 +259,22 @@ function App() {
             setCurrentUser(user);
             setView("dashboard");
           }}
-          subheading="Use your customer, provider, or admin credentials to continue."
+          subheading="Enter your email and password to access your Customer, Provider, or Admin dashboard."
         />
       ) : null}
 
-      {/* Urban Company Dynamic Service Drawer */}
-      <ServiceDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        cartItems={cartItems}
-        onUpdateQuantity={handleUpdateQuantity}
-        onClearCart={() => setCartItems([])}
-        currentLocation={currentLocation}
-        onConfirmBooking={handleConfirmBookingFromDrawer}
-      />
+      {/* Service Drawer (Customer & Guest only) */}
+      {(!currentUser || currentUser.role === "CUSTOMER") && (
+        <ServiceDrawer
+          isOpen={isDrawerOpen}
+          onClose={() => setIsDrawerOpen(false)}
+          cartItems={cartItems}
+          onUpdateQuantity={handleUpdateQuantity}
+          onClearCart={() => setCartItems([])}
+          currentLocation={currentLocation}
+          onConfirmBooking={handleConfirmBookingFromDrawer}
+        />
+      )}
     </main>
   );
 }

@@ -33,18 +33,25 @@ interface BookingTrackerProps {
 }
 
 const STATUS_STEPS = [
-  { key: 'pending', label: 'Booking Placed', icon: Clock },
+  { key: 'requested', label: 'Booking Placed', icon: Clock },
   { key: 'accepted', label: 'Partner Assigned', icon: UserCheck },
   { key: 'on_the_way', label: 'On The Way', icon: Truck },
   { key: 'in_progress', label: 'Service Started', icon: Sparkles },
   { key: 'completed', label: 'Completed', icon: CheckCircle2 },
 ];
 
+const STATUS_INDEX_MAP: Record<string, number> = {
+  pending: 0,
+  requested: 0,
+  accepted: 1,
+  on_the_way: 2,
+  in_progress: 3,
+  completed: 4,
+};
+
 export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
-  const currentStatusIndex = Math.max(
-    0,
-    STATUS_STEPS.findIndex((s) => s.key === (booking.status || 'pending'))
-  );
+  const normalizedStatus = (booking.status || 'requested').toLowerCase();
+  const currentStatusIndex = STATUS_INDEX_MAP[normalizedStatus] ?? 0;
 
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
@@ -118,7 +125,7 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
         </div>
       </div>
 
-      {booking.status !== 'completed' && (
+      {normalizedStatus !== 'completed' && (
         <div className="p-4 bg-orange-50/80 border border-orange-200 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-brand-orange text-white rounded-xl shadow-sm">
@@ -145,35 +152,38 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
           <div>
             <div className="flex items-center gap-2">
               <div className="font-extrabold text-sm text-brand-navy">
-                {booking.provider?.name || 'Ramesh Kumar (Verified Pro)'}
+                {booking.provider?.name || 'Awaiting Partner Assignment'}
               </div>
-              <ShieldCheck className="w-4 h-4 text-emerald-600" />
+              {booking.provider?.name && <ShieldCheck className="w-4 h-4 text-emerald-600" />}
             </div>
             <div className="text-xs font-semibold text-slate-500">
-              4.9 ★ Rating • 320+ Completed Jobs
+              {booking.provider?.name ? '4.9 ★ Rating • Verified Patna Partner' : 'Finding top-rated professional near your location'}
             </div>
           </div>
         </div>
 
-        <a
-          href={`tel:${booking.provider?.phone || '9876543210'}`}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy shadow-sm transition-all"
-        >
-          <Phone className="w-4 h-4 text-brand-orange" />
-          <span>Call Partner</span>
-        </a>
+        {booking.provider?.name && (
+          <a
+            href={`tel:${booking.provider?.phone || '9876543210'}`}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy shadow-sm transition-all"
+          >
+            <Phone className="w-4 h-4 text-brand-orange" />
+            <span>Call Partner</span>
+          </a>
+        )}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-slate-600">
         <div className="flex items-center gap-2">
           <Calendar className="w-4 h-4 text-slate-400" />
-          <span>Scheduled: {booking.scheduled_at || 'Today, 02:00 PM - 04:00 PM'}</span>
+          <span>Scheduled: {booking.scheduled_at || 'Today'}</span>
         </div>
         <div className="flex items-center gap-2">
           <MapPin className="w-4 h-4 text-slate-400 truncate" />
-          <span className="truncate">{booking.address || 'Connaught Place, New Delhi'}</span>
+          <span className="truncate">{booking.address || 'Patna'}</span>
         </div>
       </div>
     </div>
   );
 };
+
