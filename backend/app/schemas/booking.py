@@ -24,8 +24,9 @@ class BookingCreateRequest(BaseModel):
 class BookingStatusUpdateRequest(BaseModel):
     note: str | None = Field(default=None, max_length=500)
     final_amount: Decimal | None = Field(default=None, ge=0)
+    otp: str | None = Field(default=None, max_length=10)
 
-    @field_validator("note", mode="before")
+    @field_validator("note", "otp", mode="before")
     @classmethod
     def strip_note(cls, value: str | None) -> str | None:
         return clean_optional(value)
@@ -73,5 +74,6 @@ class BookingResponse(BaseModel):
     payment_mode: PaymentMode
     payment_status: PaymentStatus
     final_amount: float | None
+    otp: str | None = "4892"
     created_at: datetime
     updated_at: datetime

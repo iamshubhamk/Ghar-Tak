@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+import uuid
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from typing import Any
 from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
@@ -11,6 +13,131 @@ logger = setup_logger("ghartak.providers")
 class ProviderService:
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self.db = db
+
+    async def submit_skill_request(
+        self,
+        provider_user: dict[str, Any],
+        category_name: str,
+        proof_url: str,
+        notes: str | None = None,
+    ) -> dict[str, Any]:
+        provider = await self.get_provider_profile_for_user(provider_user)
+        existing_categories = provider.get("provider_profile", {}).get("category_names", [])
+        if any(cat.lower() == category_name.lower() for cat in existing_categories):
+            raise app_http_error(
+                400,
+                AppErrorCode.VALIDATION_ERROR,
+                f"You are already verified for {category_name}.",
+            )
+
+        existing_pending = await self.db.skill_requests.find_one({
+            "provider_id": provider["id"],
+            "category_name": {"$regex": f"^{category_name.strip()}$", "$options": "i"},
+            "status": "PENDING",
+        })
+        if existing_pending:
+            raise app_http_error(
+                400,
+                AppErrorCode.VALIDATION_ERROR,
+                f"A pending skill request for {category_name} already exists.",
+            )
+
+        now = datetime.now(UTC)
+        request_doc = {
+            "id": str(uuid.uuid4()),
+            "provider_id": provider["id"],
+            "provider_name": provider["name"],
+            "category_name": category_name,
+            "proof_url": proof_url,
+            "notes": notes,
+            "status": "PENDING",
+            "rejection_reason": None,
+            "created_at": now,
+            "updated_at": now,
+        }
+        await self.db.skill_requests.insert_one(request_doc)
+
+        await NotificationService(self.db).notify_role(
+            role=UserRole.ADMIN,
+            title="New Skill Addition Request",
+            message=f"{provider['name']} submitted a request to add skill '{category_name}'.",
+            event_type="SKILL_REQUESTED",
+            related_entity_type="skill_request",
+            related_entity_id=request_doc["id"],
+        )
+
+        logger.info(f"Skill request {request_doc['id']} created by provider {provider['id']} for {category_name}")
+        return request_doc
+
+    async def list_provider_skill_requests(self, provider_id: str) -> list[dict[str, Any]]:
+        cursor = self.db.skill_requests.find({"provider_id": provider_id}).sort("created_at", -1)
+        return await cursor.to_list(length=None)
+
+    async def list_pending_skill_requests(self) -> list[dict[str, Any]]:
+        cursor = self.db.skill_requests.find({"status": "PENDING"}).sort("created_at", -1)
+        return await cursor.to_list(length=None)
+
+    async def approve_skill_request(self, request_id: str) -> dict[str, Any]:
+        req = await self.db.skill_requests.find_one({"id": request_id})
+        if not req:
+            raise app_http_error(404, AppErrorCode.NOT_FOUND, "Skill request not found.")
+
+        if req["status"] != "PENDING":
+            raise app_http_error(400, AppErrorCode.VALIDATION_ERROR, "Skill request is already processed.")
+
+        now = datetime.now(UTC)
+        await self.db.skill_requests.update_one(
+            {"id": request_id},
+            {"$set": {"status": "APPROVED", "updated_at": now}}
+        )
+
+        provider = await self.db.users.find_one({"id": req["provider_id"]})
+        if provider:
+            current_categories = provider.get("provider_profile", {}).get("category_names", [])
+            if req["category_name"] not in current_categories:
+                updated_categories = current_categories + [req["category_name"]]
+                await self.db.users.update_one(
+                    {"id": req["provider_id"]},
+                    {"$set": {"provider_profile.category_names": updated_categories}}
+                )
+
+            await NotificationService(self.db).notify_user(
+                user_id=req["provider_id"],
+                title="Skill Approved!",
+                message=f"Your request to add skill '{req['category_name']}' has been approved by admin.",
+                event_type="SKILL_APPROVED",
+                related_entity_type="skill_request",
+                related_entity_id=request_id,
+            )
+
+        logger.info(f"Skill request {request_id} approved for provider {req['provider_id']}")
+        return await self.db.skill_requests.find_one({"id": request_id})
+
+    async def reject_skill_request(self, request_id: str, rejection_reason: str | None = None) -> dict[str, Any]:
+        req = await self.db.skill_requests.find_one({"id": request_id})
+        if not req:
+            raise app_http_error(404, AppErrorCode.NOT_FOUND, "Skill request not found.")
+
+        if req["status"] != "PENDING":
+            raise app_http_error(400, AppErrorCode.VALIDATION_ERROR, "Skill request is already processed.")
+
+        now = datetime.now(UTC)
+        await self.db.skill_requests.update_one(
+            {"id": request_id},
+            {"$set": {"status": "REJECTED", "rejection_reason": rejection_reason, "updated_at": now}}
+        )
+
+        await NotificationService(self.db).notify_user(
+            user_id=req["provider_id"],
+            title="Skill Request Reviewed",
+            message=f"Your request for skill '{req['category_name']}' was not approved. Reason: {rejection_reason or 'None provided'}",
+            event_type="SKILL_REJECTED",
+            related_entity_type="skill_request",
+            related_entity_id=request_id,
+        )
+
+        logger.info(f"Skill request {request_id} rejected for provider {req['provider_id']}")
+        return await self.db.skill_requests.find_one({"id": request_id})
 
     async def get_provider_profile_for_user(self, user: dict[str, Any]) -> dict[str, Any]:
         if user.get("role") != UserRole.PROVIDER.value or not user.get("provider_profile"):

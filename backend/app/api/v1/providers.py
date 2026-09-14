@@ -1,8 +1,8 @@
 import os
 import uuid
-from fastapi import APIRouter, Depends, Query, File, UploadFile, HTTPException
-from motor.motor_asyncio import AsyncIOMotorDatabase
+from fastapi import APIRouter, Depends, Query, File, UploadFile, HTTPException, Form
 from typing import Any
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.api.deps import require_roles
 from app.core.config import get_settings
@@ -13,6 +13,7 @@ from app.schemas.provider import (
     ProviderProfileUpdateRequest,
     ProviderPublicResponse,
     ProviderVerificationActionRequest,
+    SkillRequestResponse,
 )
 from app.services.providers import ProviderService
 from app.core.logger import setup_logger
@@ -69,13 +70,66 @@ async def upload_provider_documents(
     return ProviderService.serialize(provider)
 
 
-@router.post("/provider/me/reraise", response_model=ProviderPublicResponse)
-async def reraise_verification(
+@router.post("/provider/me/skill-requests", response_model=SkillRequestResponse)
+async def create_skill_request(
+    category_name: str = Form(...),
+    notes: str | None = Form(default=None),
+    proof_file: UploadFile = File(...),
     current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    provider = await ProviderService(db).reraise_verification(current_user)
-    return ProviderService.serialize(provider)
+    settings = get_settings()
+    os.makedirs(settings.local_upload_dir, exist_ok=True)
+    ext = os.path.splitext(proof_file.filename or "")[1] or ".png"
+    filename = f"skill_proof_{uuid.uuid4()}{ext}"
+    filepath = os.path.join(settings.local_upload_dir, filename)
+    with open(filepath, "wb") as f:
+        f.write(await proof_file.read())
+
+    proof_url = f"/uploads/{filename}"
+    return await ProviderService(db).submit_skill_request(
+        provider_user=current_user,
+        category_name=category_name,
+        proof_url=proof_url,
+        notes=notes,
+    )
+
+
+@router.get("/provider/me/skill-requests", response_model=list[SkillRequestResponse])
+async def list_my_skill_requests(
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    provider = await ProviderService(db).get_provider_profile_for_user(current_user)
+    return await ProviderService(db).list_provider_skill_requests(provider["id"])
+
+
+@router.get("/admin/skill-requests", response_model=list[SkillRequestResponse])
+async def admin_list_skill_requests(
+    _: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    return await ProviderService(db).list_pending_skill_requests()
+
+
+@router.patch("/admin/skill-requests/{request_id}/approve", response_model=SkillRequestResponse)
+async def admin_approve_skill_request(
+    request_id: str,
+    _: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    return await ProviderService(db).approve_skill_request(request_id)
+
+
+@router.patch("/admin/skill-requests/{request_id}/reject", response_model=SkillRequestResponse)
+async def admin_reject_skill_request(
+    request_id: str,
+    payload: ProviderVerificationActionRequest | None = None,
+    _: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    reason = payload.rejection_reason if payload else None
+    return await ProviderService(db).reject_skill_request(request_id, rejection_reason=reason)
 
 
 @router.get("/providers", response_model=list[ProviderPublicResponse])

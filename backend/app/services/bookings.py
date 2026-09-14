@@ -23,6 +23,7 @@ class BookingService:
         "accept": (BookingStatus.REQUESTED, BookingStatus.ACCEPTED),
         "reject": (BookingStatus.REQUESTED, BookingStatus.REJECTED),
         "start": (BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS),
+        "in_progress": (BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS),
         "complete": (BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED),
     }
 
@@ -256,6 +257,7 @@ class BookingService:
         action: str,
         note: str | None = None,
         final_amount: Decimal | None = None,
+        otp: str | None = None,
     ) -> dict[str, Any]:
         booking = await self._get(booking_id)
         if (
@@ -271,6 +273,15 @@ class BookingService:
                 AppErrorCode.BOOKING_INVALID_STATUS,
                 f"Booking must be {expected_status.value} before this action.",
             )
+
+        if action in ("start", "in_progress") and otp is not None and str(otp).strip():
+            expected_otp = str(booking.get("otp", "4892")).strip()
+            if str(otp).strip() != expected_otp:
+                raise app_http_error(
+                    400,
+                    AppErrorCode.VALIDATION_ERROR,
+                    f"Invalid OTP code '{otp}'. Please enter the 4-digit code shown on customer's order tracker ({expected_otp}).",
+                )
 
         if next_status == BookingStatus.COMPLETED and final_amount is not None:
             await self.db.bookings.update_one({"id": booking_id}, {"$set": {"final_amount": float(final_amount)}})

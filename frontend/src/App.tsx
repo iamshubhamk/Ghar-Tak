@@ -233,7 +233,7 @@ function App() {
             setCurrentUser(user);
             setView("dashboard");
           }}
-          subheading="Create a customer account or log in to search verified Patna service providers."
+          subheading="Create a customer account or log in to search verified Patna service partners."
         />
       ) : null}
 

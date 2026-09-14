@@ -169,7 +169,25 @@ async def start_booking(
         current_user,
         booking_id,
         "start",
-        payload.note if payload else None,
+        note=payload.note if payload else None,
+        otp=payload.otp if payload else None,
+    )
+    return BookingService.serialize(booking)
+
+
+@router.patch("/provider/bookings/{booking_id}/in_progress", response_model=BookingResponse)
+async def start_booking_in_progress(
+    booking_id: str,
+    payload: BookingStatusUpdateRequest | None = None,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    booking = await BookingService(db).provider_action(
+        current_user,
+        booking_id,
+        "in_progress",
+        note=payload.note if payload else None,
+        otp=payload.otp if payload else None,
     )
     return BookingService.serialize(booking)
 

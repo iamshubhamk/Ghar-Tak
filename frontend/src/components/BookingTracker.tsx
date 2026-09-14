@@ -57,10 +57,22 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-brand-orange">
-            <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-            <span>Active Order #{booking.id.slice(0, 8)}</span>
-          </div>
+          {normalizedStatus === 'completed' ? (
+            <div className="flex items-center gap-2 text-xs font-black uppercase text-emerald-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Completed Order #{booking.id.slice(0, 8)}</span>
+            </div>
+          ) : normalizedStatus.startsWith('cancel') ? (
+            <div className="flex items-center gap-2 text-xs font-black uppercase text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              <span>Cancelled Order #{booking.id.slice(0, 8)}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-black uppercase text-brand-orange">
+              <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
+              <span>Active Order #{booking.id.slice(0, 8)}</span>
+            </div>
+          )}
           <h3 className="text-xl font-black text-brand-navy mt-1">
             {booking.service_name || booking.category_name || 'Home Service'}
           </h3>

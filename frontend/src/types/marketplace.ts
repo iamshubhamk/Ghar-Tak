@@ -28,3 +28,17 @@ export type ProviderProfile = {
   adhaar_card_url?: string | null;
   rejection_reason?: string | null;
 };
+
+export type SkillRequest = {
+  id: string;
+  provider_id: string;
+  provider_name: string;
+  category_name: string;
+  proof_url: string;
+  notes?: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  rejection_reason?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
