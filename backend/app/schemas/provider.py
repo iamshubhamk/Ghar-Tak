@@ -84,3 +84,28 @@ class ProviderDocumentResponse(BaseModel):
     uploaded_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SkillRequestResponse(BaseModel):
+    id: str
+    provider_id: str
+    provider_name: str
+    category_name: str
+    proof_url: str
+    notes: str | None = None
+    status: str
+    rejection_reason: str | None = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SkillRequestActionRequest(BaseModel):
+    rejection_reason: str | None = Field(default=None, max_length=1000)
+
+    @field_validator("rejection_reason", mode="before")
+    @classmethod
+    def strip_reason(cls, value: str | None) -> str | None:
+        return clean_optional(value)
+

@@ -153,7 +153,7 @@ export const Header: React.FC<HeaderProps> = ({
                         : 'text-slate-600 hover:text-brand-navy'
                     }`}
                   >
-                    {r}
+                    {r === 'provider' ? 'Service Partner' : r === 'admin' ? 'Admin' : 'Customer'}
                   </button>
                 ))}
               </div>

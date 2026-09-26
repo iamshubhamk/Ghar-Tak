@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import {
   Briefcase,
   CheckCircle2,
@@ -9,11 +9,16 @@ import {
   UserCheck,
   PlayCircle,
   Building,
+  Plus,
+  FileText,
+  Upload,
+  Sparkles,
 } from "lucide-react";
 
 import { apiRequest } from "../lib/api";
+import { apiBaseUrl, backendBaseUrl } from "../lib/config";
 import { Booking } from "../types/booking";
-import { ProviderProfile } from "../types/marketplace";
+import { Category, ProviderProfile, SkillRequest } from "../types/marketplace";
 
 type ProviderTabKey = "jobs" | "profile" | "earnings";
 
@@ -25,10 +30,28 @@ export function ProviderBookingsPanel() {
   const [status, setStatus] = useState("");
   const [otpInput, setOtpInput] = useState<Record<string, string>>({});
 
-  const loadBookings = async () => {
+  // Skill Request States
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [skillRequests, setSkillRequests] = useState<SkillRequest[]>([]);
+  const [isSkillModalOpen, setIsSkillModalOpen] = useState(false);
+  const [selectedCategoryName, setSelectedCategoryName] = useState("");
+  const [proofFile, setProofFile] = useState<File | null>(null);
+  const [skillNotes, setSkillNotes] = useState("");
+
+  const loadData = async () => {
     try {
-      const providerResponse = await apiRequest<ProviderProfile>("/provider/me");
+      const [providerResponse, categoryResponse, skillRequestResponse] = await Promise.all([
+        apiRequest<ProviderProfile>("/provider/me"),
+        apiRequest<Category[]>("/categories"),
+        apiRequest<SkillRequest[]>("/provider/me/skill-requests").catch(() => []),
+      ]);
       setProvider(providerResponse);
+      setCategories(categoryResponse);
+      setSkillRequests(skillRequestResponse);
+
+      if (categoryResponse.length > 0 && !selectedCategoryName) {
+        setSelectedCategoryName(categoryResponse[0].name);
+      }
 
       if (providerResponse.verification_status !== "VERIFIED") {
         setBookings([]);
@@ -45,10 +68,53 @@ export function ProviderBookingsPanel() {
   };
 
   useEffect(() => {
-    void loadBookings();
+    void loadData();
   }, []);
 
-  const updateBookingStatus = async (bookingId: string, action: "accept" | "reject" | "in_progress" | "complete") => {
+  const handleSkillRequestSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!selectedCategoryName || !proofFile) {
+      setStatus("Please select a category and upload a proof of work file.");
+      return;
+    }
+    setStatus("");
+
+    const formData = new FormData();
+    formData.append("category_name", selectedCategoryName);
+    formData.append("proof_file", proofFile);
+    if (skillNotes) {
+      formData.append("notes", skillNotes);
+    }
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/provider/me/skill-requests`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("ghartak_token")}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail?.error?.message || err.detail || "Failed to submit skill request.");
+      }
+
+      const newRequest: SkillRequest = await response.json();
+      setSkillRequests((prev) => [newRequest, ...prev]);
+      setIsSkillModalOpen(false);
+      setProofFile(null);
+      setSkillNotes("");
+      setStatus(`Skill request for ${selectedCategoryName} submitted for Admin review!`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Skill request failed.");
+    }
+  };
+
+  const updateBookingStatus = async (
+    bookingId: string,
+    action: "accept" | "reject" | "on_the_way" | "in_progress" | "complete"
+  ) => {
     setStatus("");
     try {
       const payload: Record<string, any> = {};
@@ -60,8 +126,8 @@ export function ProviderBookingsPanel() {
         method: "PATCH",
         body: JSON.stringify(payload),
       });
-      await loadBookings();
-      setStatus(`Job updated successfully (${action.toUpperCase()}).`);
+      await loadData();
+      setStatus(`Job updated successfully (${action.toUpperCase().replace("_", " ")}).`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : `Could not update job.`);
     }
@@ -81,7 +147,7 @@ export function ProviderBookingsPanel() {
           </div>
           <h1 className="text-2xl sm:text-3xl font-black">Welcome, {provider?.name || "Partner"}</h1>
           <p className="text-xs text-slate-300 font-medium">
-            Manage Patna job dispatches, OTP verifications, and weekly earnings.
+            Manage Patna job dispatches, skill additions, and weekly earnings.
           </p>
         </div>
 
@@ -105,7 +171,7 @@ export function ProviderBookingsPanel() {
         <div className="lg:col-span-1 space-y-2">
           {[
             { key: "jobs", label: "Job Dispatches", icon: Briefcase, badge: activeJobs.length },
-            { key: "profile", label: "Partner Profile & Skills", icon: UserCheck },
+            { key: "profile", label: "Partner Profile & Skills", icon: UserCheck, badge: provider?.categories.length },
             { key: "earnings", label: "Earnings & Bank Payout", icon: Banknote, badge: `₹${totalEarnings}` },
           ].map((tab) => {
             const IconComp = tab.icon;
@@ -186,8 +252,25 @@ export function ProviderBookingsPanel() {
                         </span>
                       </div>
 
+                      {/* Customer Address & Navigation Link */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white rounded-xl border border-slate-200 text-xs">
+                        <div className="text-slate-600 font-semibold truncate max-w-md">
+                          📍 {b.address || b.locality || "Patna"}
+                        </div>
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                            b.address || b.locality || "Patna"
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold rounded-lg inline-flex items-center gap-1 transition-all"
+                        >
+                          <span>🗺️ Open in Google Maps</span>
+                        </a>
+                      </div>
+
                       {/* Action Triggers */}
-                      {b.status === "REQUESTED" || b.status === "ACCEPTED" ? (
+                      {b.status === "REQUESTED" ? (
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <button
                             onClick={() => updateBookingStatus(b.id, "accept")}
@@ -205,33 +288,85 @@ export function ProviderBookingsPanel() {
                       ) : null}
 
                       {b.status === "ACCEPTED" && (
-                        <div className="flex items-center gap-2 pt-1">
-                          <input
-                            type="text"
-                            placeholder="Enter 4-digit Customer OTP"
-                            value={otpInput[b.id] || ""}
-                            onChange={(e) =>
-                              setOtpInput((prev) => ({ ...prev, [b.id]: e.target.value }))
-                            }
-                            className="p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-brand-ink"
-                          />
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
                           <button
-                            onClick={() => updateBookingStatus(b.id, "in_progress")}
-                            className="px-4 py-2 bg-brand-orange text-white rounded-xl text-xs font-extrabold"
+                            onClick={() => updateBookingStatus(b.id, "on_the_way")}
+                            className="px-4 py-2 bg-brand-navy hover:bg-brand-navy-dark text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
                           >
-                            Verify OTP & Start Job
+                            🚀 I am On The Way
                           </button>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="Or enter Customer OTP"
+                              value={otpInput[b.id] || ""}
+                              onChange={(e) =>
+                                setOtpInput((prev) => ({ ...prev, [b.id]: e.target.value }))
+                              }
+                              className="p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-brand-ink w-44"
+                            />
+                            <button
+                              onClick={() => updateBookingStatus(b.id, "in_progress")}
+                              className="px-3.5 py-2 bg-brand-orange text-white rounded-xl text-xs font-extrabold"
+                            >
+                              Verify & Start
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {b.status === "ON_THE_WAY" && (
+                        <div className="flex flex-wrap items-center gap-3 pt-1 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                          <div className="text-xs font-extrabold text-amber-900">
+                            You are en route! Ask customer for 4-digit OTP on arrival:
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="4-digit Customer OTP"
+                              value={otpInput[b.id] || ""}
+                              onChange={(e) =>
+                                setOtpInput((prev) => ({ ...prev, [b.id]: e.target.value }))
+                              }
+                              className="p-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-brand-ink w-40"
+                            />
+                            <button
+                              onClick={() => updateBookingStatus(b.id, "in_progress")}
+                              className="px-4 py-2 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-xl text-xs font-extrabold shadow-sm"
+                            >
+                              Verify OTP & Start Job
+                            </button>
+                          </div>
                         </div>
                       )}
 
                       {b.status === "IN_PROGRESS" && (
-                        <div className="pt-1">
+                        <div className="pt-1 flex items-center gap-3">
                           <button
                             onClick={() => updateBookingStatus(b.id, "complete")}
-                            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-extrabold shadow-sm"
+                            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
                           >
                             Mark Job Completed
                           </button>
+                        </div>
+                      )}
+
+                      {b.status === "COMPLETED" && (
+                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+                          <div className="text-xs font-bold text-emerald-900">
+                            Payment: {b.payment_status === "PAID_CASH" ? "✅ Paid Cash / Settled" : "💰 Pending Collection"} (₹{b.final_amount || b.total_amount || 499})
+                          </div>
+                          {b.payment_status !== "PAID_CASH" && (
+                            <button
+                              onClick={async () => {
+                                await apiRequest(`/provider/bookings/${b.id}/mark-cash-paid`, { method: "PATCH" });
+                                await loadData();
+                              }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-lg shadow-sm"
+                            >
+                              Confirm Payment Received
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>
@@ -241,36 +376,204 @@ export function ProviderBookingsPanel() {
             </div>
           )}
 
-          {/* TAB 2: PARTNER PROFILE */}
+          {/* TAB 2: PARTNER PROFILE & SKILL CREDENTIALS */}
           {activeTab === "profile" && (
-            <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
-              <h3 className="text-base font-black text-brand-navy flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-brand-orange" />
-                <span>Partner Profile & Skill Credentials</span>
-              </h3>
+            <div className="space-y-6">
+              <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-4 pb-4 border-b border-slate-100">
+                  <div>
+                    <h3 className="text-base font-black text-brand-navy flex items-center gap-2">
+                      <UserCheck className="w-5 h-5 text-brand-orange" />
+                      <span>Partner Profile & Skill Credentials</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 font-medium mt-0.5">
+                      Manage your active skills, experience, and submit proof of work for new categories.
+                    </p>
+                  </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Partner Name</span>
-                  <span className="text-brand-navy font-extrabold text-sm block">{provider?.name}</span>
+                  <button
+                    onClick={() => setIsSkillModalOpen(true)}
+                    className="flex items-center gap-2 px-5 py-3 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-2xl text-xs font-extrabold shadow-sm transition-all"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span>Request New Skill Category</span>
+                  </button>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Verification Status</span>
-                  <span className="text-emerald-600 font-extrabold text-sm block flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4" /> {provider?.verification_status}
-                  </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs font-semibold">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Partner Name</span>
+                    <span className="text-brand-navy font-extrabold text-sm block">{provider?.name}</span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Verification Status</span>
+                    <span className="text-emerald-600 font-extrabold text-sm block flex items-center gap-1">
+                      <CheckCircle2 className="w-4 h-4" /> {provider?.verification_status}
+                    </span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Experience</span>
+                    <span className="text-brand-navy font-extrabold text-sm block">{provider?.experience_years} Years</span>
+                  </div>
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                    <span className="text-slate-400 block text-[10px] uppercase font-bold">Active Verified Skills</span>
+                    <div className="flex flex-wrap gap-1.5 mt-1">
+                      {provider?.categories && provider.categories.length > 0 ? (
+                        provider.categories.map((cat) => (
+                          <span
+                            key={cat}
+                            className="px-3 py-1 bg-emerald-100 text-emerald-800 font-extrabold text-xs rounded-xl flex items-center gap-1"
+                          >
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                            {cat}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-slate-400 text-xs">No skills assigned yet</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Experience</span>
-                  <span className="text-brand-navy font-extrabold text-sm block">{provider?.experience_years} Years</span>
-                </div>
-                <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Skill Categories</span>
-                  <span className="text-brand-navy font-extrabold text-sm block">
-                    {provider?.categories.join(", ") || "General"}
-                  </span>
+
+                {/* Skill Addition Requests History */}
+                <div className="pt-4 border-t border-slate-100 space-y-3">
+                  <h4 className="text-xs font-black uppercase text-brand-navy tracking-wider">
+                    Skill Addition Requests & Verification Status ({skillRequests.length})
+                  </h4>
+
+                  <div className="space-y-2">
+                    {skillRequests.length === 0 && (
+                      <div className="py-6 text-center text-xs font-semibold text-slate-400 bg-slate-50 rounded-2xl border border-slate-200">
+                        No additional skill requests submitted yet. Click "Request New Skill Category" above to add new trade skills (e.g. Carpenter, Plumber).
+                      </div>
+                    )}
+
+                    {skillRequests.map((sr) => (
+                      <div
+                        key={sr.id}
+                        className="p-4 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-sm text-brand-navy">{sr.category_name}</span>
+                            <span
+                              className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
+                                sr.status === "APPROVED"
+                                  ? "bg-emerald-100 text-emerald-700"
+                                  : sr.status === "REJECTED"
+                                  ? "bg-rose-100 text-rose-700"
+                                  : "bg-amber-100 text-amber-700"
+                              }`}
+                            >
+                              {sr.status}
+                            </span>
+                          </div>
+                          {sr.notes && <div className="text-xs text-slate-500 font-medium mt-1">"{sr.notes}"</div>}
+                          {sr.rejection_reason && (
+                            <div className="text-xs text-rose-600 font-bold mt-1">
+                              Rejection Reason: {sr.rejection_reason}
+                            </div>
+                          )}
+                          <div className="text-[11px] text-slate-400 mt-1">
+                            Submitted: {new Date(sr.created_at).toLocaleDateString()}
+                          </div>
+                        </div>
+
+                        {sr.proof_url && (
+                          <a
+                            href={`${backendBaseUrl}${sr.proof_url}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy shadow-sm transition-all self-start sm:self-auto shrink-0"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-brand-orange" />
+                            <span>View Submitted Proof</span>
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
+
+              {/* Modal for Requesting New Skill */}
+              {isSkillModalOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-brand-navy/60 backdrop-blur-sm">
+                  <form
+                    onSubmit={handleSkillRequestSubmit}
+                    className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-floating space-y-4 border border-slate-200"
+                  >
+                    <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                      <h4 className="text-lg font-black text-brand-navy">Request New Skill Category</h4>
+                      <button
+                        type="button"
+                        onClick={() => setIsSkillModalOpen(false)}
+                        className="p-1 text-slate-400 hover:text-brand-navy rounded-full"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-navy">Skill Category</label>
+                      <select
+                        value={selectedCategoryName}
+                        onChange={(e) => setSelectedCategoryName(e.target.value)}
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-brand-ink"
+                      >
+                        {categories.map((c) => (
+                          <option key={c.id} value={c.name}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-navy">
+                        Proof of Work / Certification (Photo or PDF)
+                      </label>
+                      <input
+                        type="file"
+                        required
+                        accept="image/*,.pdf"
+                        onChange={(e) => setProofFile(e.target.files?.[0] || null)}
+                        className="w-full text-xs text-slate-500 file:mr-3 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-extrabold file:bg-orange-50 file:text-brand-orange"
+                      />
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Upload photos of your past jobs (e.g. carpentry/plumbing work) or trade training certificate.
+                      </p>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-extrabold text-brand-navy">Experience / Work Summary Notes</label>
+                      <textarea
+                        rows={3}
+                        placeholder="Describe your work experience in this skill (years, past projects, tools)..."
+                        value={skillNotes}
+                        onChange={(e) => setSkillNotes(e.target.value)}
+                        className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsSkillModalOpen(false)}
+                        className="w-1/2 py-3.5 bg-slate-100 text-slate-600 rounded-2xl text-xs font-extrabold"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className="w-1/2 py-3.5 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-2xl text-xs font-extrabold shadow-sm transition-all"
+                      >
+                        Submit for Verification
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              )}
             </div>
           )}
 

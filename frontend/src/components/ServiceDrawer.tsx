@@ -51,10 +51,18 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
   onConfirmBooking,
   isSubmitting = false,
 }) => {
-  const [selectedDate, setSelectedDate] = useState('Today');
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    d.setHours(d.getHours() + 2);
+    return d.toISOString();
+  });
   const [selectedSlot, setSelectedSlot] = useState(TIME_SLOTS[0]);
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'online'>('cod');
-  const [addressInput, setAddressInput] = useState(currentLocation || 'Connaught Place, New Delhi');
+  const [addressInput, setAddressInput] = useState('');
+  const [houseNumber, setHouseNumber] = useState('');
+  const [buildingName, setBuildingName] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [pincode, setPincode] = useState('800001');
 
   const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
   const platformFee = subtotal > 0 ? 49 : 0;
@@ -68,8 +76,16 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
       items: cartItems,
       date: selectedDate,
       timeSlot: selectedSlot,
-      address: addressInput,
+      address: addressInput || currentLocation || 'Boring Road, Patna',
+      locality: currentLocation || 'Boring Road, Patna',
+      house_number: houseNumber,
+      building_name: buildingName,
+      landmark: landmark,
+      pincode: pincode,
       paymentMethod,
+      subtotal,
+      platform_fee: platformFee,
+      discount,
       amount: grandTotal,
     });
   };
@@ -164,14 +180,46 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
                   <div className="space-y-2">
                     <h4 className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                       <MapPin className="w-3.5 h-3.5 text-brand-orange" />
-                      <span>Service Location</span>
+                      <span>Service Location ({currentLocation || 'Patna'})</span>
                     </h4>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={houseNumber}
+                        onChange={(e) => setHouseNumber(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
+                        placeholder="House / Flat No."
+                      />
+                      <input
+                        type="text"
+                        value={buildingName}
+                        onChange={(e) => setBuildingName(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
+                        placeholder="Building / Society Name"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={landmark}
+                        onChange={(e) => setLandmark(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
+                        placeholder="Nearby Landmark"
+                      />
+                      <input
+                        type="text"
+                        value={pincode}
+                        onChange={(e) => setPincode(e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
+                        placeholder="Pincode (e.g. 800001)"
+                      />
+                    </div>
                     <input
                       type="text"
                       value={addressInput}
                       onChange={(e) => setAddressInput(e.target.value)}
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
-                      placeholder="Enter flat / house no., street..."
+                      placeholder="Street address / locality notes (optional)..."
                     />
                   </div>
 

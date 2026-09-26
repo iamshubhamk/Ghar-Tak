@@ -19,6 +19,7 @@ interface CartItem {
   name: string;
   price: number;
   quantity: number;
+  category?: string;
 }
 
 function App() {
@@ -112,6 +113,27 @@ function App() {
 
   // Cart Helper functions
   const handleAddToCart = (service: any) => {
+    // Enforce single-category cart to ensure 1 booking = 1 technician trade
+    if (cartItems.length > 0 && service.category) {
+      const existingCategory = cartItems.find((i) => i.category)?.category;
+      if (existingCategory && existingCategory.toLowerCase() !== service.category.toLowerCase()) {
+        const confirmClear = window.confirm(
+          `Your cart already contains ${existingCategory} services. Would you like to clear your cart and start a new order for ${service.category}?`
+        );
+        if (!confirmClear) return;
+        setCartItems([
+          {
+            id: service.id,
+            name: service.name,
+            price: service.price || 199,
+            quantity: 1,
+            category: service.category,
+          },
+        ]);
+        return;
+      }
+    }
+
     setCartItems((prev) => {
       const existing = prev.find((item) => item.id === service.id);
       if (existing) {
@@ -126,6 +148,7 @@ function App() {
           name: service.name,
           price: service.price || 199,
           quantity: 1,
+          category: service.category,
         },
       ];
     });
@@ -136,29 +159,91 @@ function App() {
       prev
         .map((item) => {
           if (item.id === id) {
-            const newQty = item.quantity + delta;
-            return newQty > 0 ? { ...item, quantity: newQty } : null;
+            const nextQty = item.quantity + delta;
+            return nextQty > 0 ? { ...item, quantity: nextQty } : null;
           }
           return item;
         })
-        .filter(Boolean) as CartItem[]
+        .filter((item): item is CartItem => item !== null)
     );
   };
 
-  const cartCount = cartItems.reduce((acc, i) => acc + i.quantity, 0);
-  const cartTotal = cartItems.reduce((acc, i) => acc + i.price * i.quantity, 0);
   const cartRecord = cartItems.reduce<Record<string, number>>((acc, item) => {
     acc[item.id] = item.quantity;
     return acc;
   }, {});
 
-  const handleConfirmBookingFromDrawer = (details: any) => {
-    setIsDrawerOpen(false);
-    if (!currentUser) {
-      setView("customer-auth");
-    } else {
+  const cartCount = cartItems.reduce((total, item) => total + item.quantity, 0);
+  const cartTotal = cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+
+  const submitCartBooking = async (details: any) => {
+    try {
+      const categories = await apiRequest<any[]>("/categories");
+      const primaryCategoryName = details.items?.[0]?.category || selectedCategory || "General";
+      const matchedCategory =
+        categories.find((c: any) => c.name.toLowerCase() === primaryCategoryName.toLowerCase()) ||
+        categories[0];
+
+      if (!matchedCategory) {
+        setView("dashboard");
+        return;
+      }
+
+      const payload = {
+        category_id: matchedCategory.id,
+        locality: details.locality || currentLocation || "Boring Road, Patna",
+        address: details.address || details.locality || "Boring Road, Patna",
+        house_number: details.house_number || null,
+        building_name: details.building_name || null,
+        landmark: details.landmark || null,
+        pincode: details.pincode || "800001",
+        preferred_datetime: details.date || new Date().toISOString(),
+        items: details.items || [],
+        subtotal: details.subtotal || details.amount,
+        platform_fee: details.platform_fee || 0,
+        discount: details.discount || 0,
+        total_amount: details.amount,
+        issue_description:
+          details.items?.map((i: any) => `${i.name} (x${i.quantity})`).join(", ") || "Home Service Booking",
+      };
+
+      await apiRequest("/bookings", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      setCartItems([]);
+      sessionStorage.removeItem("ghartak_pending_cart");
+      setView("dashboard");
+    } catch (err) {
+      console.error("Failed to submit cart booking", err);
       setView("dashboard");
     }
+  };
+
+  const handleConfirmBookingFromDrawer = async (details: any) => {
+    setIsDrawerOpen(false);
+    if (!currentUser) {
+      sessionStorage.setItem("ghartak_pending_cart", JSON.stringify(details));
+      setView("customer-auth");
+    } else {
+      await submitCartBooking(details);
+    }
+  };
+
+  const handleAuthSuccess = async (user: User) => {
+    setCurrentUser(user);
+    const pendingCartStr = sessionStorage.getItem("ghartak_pending_cart");
+    if (pendingCartStr && user.role === "CUSTOMER") {
+      try {
+        const details = JSON.parse(pendingCartStr);
+        await submitCartBooking(details);
+        return;
+      } catch (e) {
+        sessionStorage.removeItem("ghartak_pending_cart");
+      }
+    }
+    setView("dashboard");
   };
 
   const handleRoleChange = (role: 'customer' | 'provider' | 'admin') => {
@@ -229,11 +314,8 @@ function App() {
           allowedModes={["customer", "login"]}
           heading="Book a service in Patna"
           initialMode="customer"
-          onAuthenticated={(user) => {
-            setCurrentUser(user);
-            setView("dashboard");
-          }}
-          subheading="Create a customer account or log in to search verified Patna service providers."
+          onAuthenticated={handleAuthSuccess}
+          subheading="Create a customer account or log in to search verified Patna service partners."
         />
       ) : null}
 
@@ -242,10 +324,7 @@ function App() {
           allowedModes={["provider", "login"]}
           heading="Join as Patna service partner"
           initialMode="provider"
-          onAuthenticated={(user) => {
-            setCurrentUser(user);
-            setView("dashboard");
-          }}
+          onAuthenticated={handleAuthSuccess}
           subheading="Register your technician profile in Patna. Account stays under verification until admin approval."
         />
       ) : null}
@@ -255,10 +334,7 @@ function App() {
           allowedModes={["login", "customer", "provider"]}
           heading="Login to GharTak"
           initialMode="login"
-          onAuthenticated={(user) => {
-            setCurrentUser(user);
-            setView("dashboard");
-          }}
+          onAuthenticated={handleAuthSuccess}
           subheading="Enter your email and password to access your Customer, Provider, or Admin dashboard."
         />
       ) : null}

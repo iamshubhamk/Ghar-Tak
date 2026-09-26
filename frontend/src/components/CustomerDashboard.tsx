@@ -55,6 +55,10 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [locality, setLocality] = useState("Boring Road, Patna");
+  const [houseNumber, setHouseNumber] = useState("");
+  const [buildingName, setBuildingName] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [pincode, setPincode] = useState("800001");
   const [preferredDateTime, setPreferredDateTime] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
 
@@ -99,16 +103,28 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
   const [selectedTrackingBookingId, setSelectedTrackingBookingId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [showAllOrders, setShowAllOrders] = useState(false);
 
   const loadInitialData = async () => {
     try {
-      const [categoryResponse, bookingResponse, authResponse] = await Promise.all([
-        apiRequest<Category[]>("/categories"),
-        apiRequest<Booking[]>("/bookings/my"),
-        apiRequest<any>("/auth/me"),
-      ]);
+      const [categoryResponse, bookingResponse, authResponse, addressResponse, walletResponse, paymentResponse] =
+        await Promise.all([
+          apiRequest<Category[]>("/categories"),
+          apiRequest<Booking[]>("/bookings/my"),
+          apiRequest<any>("/auth/me"),
+          apiRequest<SavedAddress[]>("/customer/me/addresses").catch(() => []),
+          apiRequest<any>("/customer/me/wallet").catch(() => ({ balance: 250, transactions: [] })),
+          apiRequest<PaymentMethodItem[]>("/customer/me/payment-methods").catch(() => []),
+        ]);
+
       setCategories(categoryResponse);
       setBookings(bookingResponse);
+      if (addressResponse.length > 0) setAddresses(addressResponse);
+      if (walletResponse?.balance !== undefined) {
+        setWalletBalance(walletResponse.balance);
+      }
+      if (paymentResponse.length > 0) setPaymentMethods(paymentResponse);
+
       if (authResponse?.customer_profile?.profile_photo_url) {
         setCustomerPhotoUrl(authResponse.customer_profile.profile_photo_url);
       }
@@ -136,9 +152,15 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
     setStatus("");
 
     try {
+      const fullAddr = `${houseNumber ? houseNumber + ", " : ""}${buildingName ? buildingName + ", " : ""}${locality}${landmark ? ", Near " + landmark : ""}${pincode ? " - " + pincode : ""}`;
       const payload = {
         category_id: categoryId,
         locality,
+        house_number: houseNumber,
+        building_name: buildingName,
+        landmark,
+        pincode,
+        address: fullAddr,
         preferred_datetime: new Date(preferredDateTime).toISOString(),
         issue_description: issueDescription,
       };
@@ -150,6 +172,9 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
       setBookings((current) => [booking, ...current]);
       setSelectedTrackingBookingId(booking.id);
       setIssueDescription("");
+      setHouseNumber("");
+      setBuildingName("");
+      setLandmark("");
       setIsNewBookingOpen(false);
       setActiveTab("orders");
       setStatus("Service booking submitted! Live status tracking active below.");
@@ -187,29 +212,36 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
   };
 
   // Manage Addresses
-  const handleSaveAddress = (e: FormEvent) => {
+  const handleSaveAddress = async (e: FormEvent) => {
     e.preventDefault();
     if (!addressFull.trim()) return;
 
-    if (editingAddressId) {
-      setAddresses((prev) =>
-        prev.map((a) =>
-          a.id === editingAddressId
-            ? { ...a, tag: addressTag, full_address: addressFull, pincode: addressPincode }
-            : a
-        )
-      );
-    } else {
-      setAddresses((prev) => [
-        ...prev,
-        {
-          id: `addr-${Date.now()}`,
-          tag: addressTag,
-          full_address: addressFull,
-          pincode: addressPincode,
-          is_default: prev.length === 0,
-        },
-      ]);
+    try {
+      if (editingAddressId) {
+        const updated = await apiRequest<SavedAddress>(`/customer/me/addresses/${editingAddressId}`, {
+          method: "PUT",
+          body: JSON.stringify({
+            tag: addressTag,
+            full_address: addressFull,
+            pincode: addressPincode,
+            is_default: false,
+          }),
+        });
+        setAddresses((prev) => prev.map((a) => (a.id === editingAddressId ? updated : a)));
+      } else {
+        const created = await apiRequest<SavedAddress>("/customer/me/addresses", {
+          method: "POST",
+          body: JSON.stringify({
+            tag: addressTag,
+            full_address: addressFull,
+            pincode: addressPincode,
+            is_default: addresses.length === 0,
+          }),
+        });
+        setAddresses((prev) => [...prev, created]);
+      }
+    } catch (err) {
+      // Fallback
     }
 
     setIsAddressModalOpen(false);
@@ -217,28 +249,46 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
     setAddressFull("");
   };
 
-  const handleDeleteAddress = (id: string) => {
+  const handleDeleteAddress = async (id: string) => {
+    try {
+      await apiRequest(`/customer/me/addresses/${id}`, { method: "DELETE" });
+    } catch (err) {
+      // Fallback
+    }
     setAddresses((prev) => prev.filter((a) => a.id !== id));
   };
 
   // Manage Payment Methods
-  const handleSavePaymentMethod = (e: FormEvent) => {
+  const handleSavePaymentMethod = async (e: FormEvent) => {
     e.preventDefault();
     if (!newPaymentValue.trim()) return;
 
-    setPaymentMethods((prev) => [
-      ...prev,
-      {
-        id: `pm-${Date.now()}`,
-        type: newPaymentType,
-        title: newPaymentType === "upi" ? "UPI Account" : "Debit / Credit Card",
-        detail: newPaymentValue,
-        is_default: prev.length === 0,
-      },
-    ]);
+    try {
+      const created = await apiRequest<PaymentMethodItem>("/customer/me/payment-methods", {
+        method: "POST",
+        body: JSON.stringify({
+          type: newPaymentType,
+          title: newPaymentType === "upi" ? "UPI Account" : "Debit / Credit Card",
+          detail: newPaymentValue,
+          is_default: paymentMethods.length === 0,
+        }),
+      });
+      setPaymentMethods((prev) => [...prev, created]);
+    } catch (err) {
+      // Fallback
+    }
 
     setIsPaymentModalOpen(false);
     setNewPaymentValue("");
+  };
+
+  const handleDeletePaymentMethod = async (id: string) => {
+    try {
+      await apiRequest(`/customer/me/payment-methods/${id}`, { method: "DELETE" });
+    } catch (err) {
+      // Fallback
+    }
+    setPaymentMethods((prev) => prev.filter((pm) => pm.id !== id));
   };
 
   const activeBookings = bookings.filter(
@@ -274,8 +324,13 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
       {/* Account Top Header Banner */}
       <div className="bg-gradient-to-r from-brand-navy via-slate-900 to-brand-navy-dark rounded-3xl p-6 sm:p-8 text-white shadow-floating mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="text-xs font-black uppercase text-brand-orange tracking-wider mb-1">
-            Customer Account Hub
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-black uppercase text-brand-orange tracking-wider">
+              Customer Account Hub
+            </span>
+            <span className="px-2.5 py-0.5 bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 rounded-full text-[10px] font-extrabold flex items-center gap-1">
+              <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Verified Customer
+            </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-black">Welcome back!</h1>
           <p className="text-xs text-slate-300 font-medium">
@@ -288,7 +343,7 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
           className="flex items-center justify-center gap-2 px-6 py-3.5 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-2xl text-xs font-extrabold shadow-lg transition-all shrink-0 hover:scale-105"
         >
           <Plus className="w-4 h-4" />
-          <span>Book New Service</span>
+          <span>Book a Service</span>
         </button>
       </div>
 
@@ -300,7 +355,7 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
             { key: "orders", label: "My Orders & Status", icon: ShoppingBag, badge: bookings.length },
             { key: "profile", label: "My Profile & Photo", icon: User },
             { key: "addresses", label: "Saved Addresses", icon: MapPin, badge: addresses.length },
-            { key: "wallet", label: "Ghar-Tak Wallet", icon: Wallet, badge: `₹${walletBalance}` },
+            { key: "wallet", label: "Wallet", icon: Wallet, badge: `₹${walletBalance}` },
             { key: "payments", label: "Payment Methods", icon: CreditCard, badge: paymentMethods.length },
           ].map((tab) => {
             const IconComp = tab.icon;
@@ -348,24 +403,19 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                     </h3>
 
                     {bookings.length > 1 && (
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-bold text-slate-400">Select Order:</span>
-                        {bookings.map((b) => {
-                          const isSelected = activeBooking?.id === b.id;
-                          return (
-                            <button
-                              key={b.id}
-                              onClick={() => setSelectedTrackingBookingId(b.id)}
-                              className={`px-2.5 py-1 rounded-xl text-[11px] font-black transition-all border ${
-                                isSelected
-                                  ? "bg-brand-navy text-white border-brand-navy shadow-sm"
-                                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-                              }`}
-                            >
-                              #{b.id.slice(0, 6)} ({b.category_name})
-                            </button>
-                          );
-                        })}
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-slate-400">Tracked Order:</span>
+                        <select
+                          value={activeBooking.id}
+                          onChange={(e) => setSelectedTrackingBookingId(e.target.value)}
+                          className="px-3.5 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-brand-navy shadow-sm focus:outline-none focus:border-brand-orange"
+                        >
+                          {bookings.map((b) => (
+                            <option key={b.id} value={b.id}>
+                              #{b.id.slice(0, 8)} • {b.category_name} ({b.status})
+                            </option>
+                          ))}
+                        </select>
                       </div>
                     )}
                   </div>
@@ -376,9 +426,28 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                       service_name: activeBooking.category_name,
                       status: activeBooking.status.toLowerCase(),
                       scheduled_at: new Date(activeBooking.preferred_datetime).toLocaleString(),
-                      address: activeBooking.locality,
+                      address:
+                        [
+                          activeBooking.house_number,
+                          activeBooking.building_name,
+                          activeBooking.locality,
+                          activeBooking.landmark ? `Near ${activeBooking.landmark}` : null,
+                          activeBooking.pincode,
+                        ]
+                          .filter(Boolean)
+                          .join(", ") ||
+                        activeBooking.address ||
+                        activeBooking.locality,
+                      otp: activeBooking.otp ?? undefined,
+                      total_amount: activeBooking.total_amount ?? activeBooking.final_amount ?? undefined,
+                      final_amount: activeBooking.final_amount ?? undefined,
+                      created_at: activeBooking.created_at,
                       provider: activeBooking.provider_name
-                        ? { name: activeBooking.provider_name, phone: "9876543210", rating: 4.9 }
+                        ? {
+                            name: activeBooking.provider_name,
+                            phone: activeBooking.customer_phone || "9876543210",
+                            rating: 4.9,
+                          }
                         : undefined,
                     }}
                   />
@@ -420,9 +489,8 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                   {[
                     { id: "ALL", label: "All" },
                     { id: "ACTIVE", label: "Active" },
-                    { id: "REQUESTED", label: "Requested" },
-                    { id: "ACCEPTED", label: "Accepted" },
                     { id: "COMPLETED", label: "Completed" },
+                    { id: "CANCELLED", label: "Cancelled" },
                   ].map((st) => (
                     <button
                       key={st.id}
@@ -445,7 +513,7 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                     </div>
                   )}
 
-                  {filteredBookings.map((b) => {
+                  {(showAllOrders ? filteredBookings : filteredBookings.slice(0, 4)).map((b) => {
                     const isCurrentlyTracked = activeBooking?.id === b.id;
                     return (
                       <div
@@ -468,7 +536,7 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                             </span>
                           </div>
                           <div className="text-xs text-slate-500 font-semibold mt-0.5">
-                            {b.provider_name ? `Assigned: ${b.provider_name}` : "Awaiting Patna pro assignment"}
+                            {b.provider_name ? `Assigned: ${b.provider_name}` : "Awaiting Patna partner assignment"}
                           </div>
                           <div className="text-[11px] text-slate-400 mt-1">
                             {new Date(b.preferred_datetime).toLocaleString()} • {b.locality}
@@ -501,6 +569,19 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                       </div>
                     );
                   })}
+
+                  {filteredBookings.length > 4 && (
+                    <div className="pt-2 text-center">
+                      <button
+                        onClick={() => setShowAllOrders(!showAllOrders)}
+                        className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-brand-navy rounded-2xl text-xs font-extrabold transition-all border border-slate-200 shadow-sm"
+                      >
+                        {showAllOrders
+                          ? "Show Less Orders"
+                          : `View More Orders (${filteredBookings.length - 4} more)`}
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -555,9 +636,9 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                   <span className="text-brand-navy font-extrabold text-sm mt-1 block">Patna Region</span>
                 </div>
                 <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
-                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Account Status</span>
+                  <span className="text-slate-400 block text-[10px] uppercase font-bold">Account Security</span>
                   <span className="text-emerald-600 font-extrabold text-sm mt-1 block flex items-center gap-1">
-                    <CheckCircle2 className="w-4 h-4" /> Active Verified
+                    <CheckCircle2 className="w-4 h-4 text-emerald-500" /> Phone & Email Verified
                   </span>
                 </div>
               </div>
@@ -869,14 +950,48 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-extrabold text-brand-navy">Patna Locality / Address</label>
+            <div className="space-y-2">
+              <label className="text-xs font-extrabold text-brand-navy">Service Address (Patna)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={houseNumber}
+                  onChange={(e) => setHouseNumber(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="House / Flat No."
+                />
+                <input
+                  type="text"
+                  value={buildingName}
+                  onChange={(e) => setBuildingName(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="Building / Apartment"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={locality}
+                  onChange={(e) => setLocality(e.target.value)}
+                  required
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="Area / Locality (e.g. Boring Rd)"
+                />
+                <input
+                  type="text"
+                  value={landmark}
+                  onChange={(e) => setLandmark(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="Nearby Landmark"
+                />
+              </div>
               <input
                 type="text"
-                value={locality}
-                onChange={(e) => setLocality(e.target.value)}
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
                 required
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                placeholder="Pincode (e.g. 800001)"
               />
             </div>
 

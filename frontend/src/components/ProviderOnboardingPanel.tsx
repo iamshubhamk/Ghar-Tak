@@ -273,7 +273,27 @@ export function ProviderOnboardingPanel() {
               onChange={(e) => setAdhaarFile(e.target.files?.[0] || null)}
             />
             {provider?.adhaar_card_url && (
-              <small style={{ color: 'green' }}>✓ Adhaar card uploaded</small>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '4px' }}>
+                <small style={{ color: 'green' }}>✓ Adhaar card uploaded</small>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch(`${apiBaseUrl}/providers/${provider.id}/adhaar`, {
+                        headers: { Authorization: `Bearer ${localStorage.getItem("ghartak_token")}` }
+                      });
+                      if (!res.ok) throw new Error("Could not load Aadhaar");
+                      const blob = await res.blob();
+                      window.open(URL.createObjectURL(blob), "_blank");
+                    } catch {
+                      alert("Could not load Aadhaar document");
+                    }
+                  }}
+                  style={{ fontSize: '11px', textDecoration: 'underline', background: 'none', border: 'none', color: '#ea580c', cursor: 'pointer', padding: 0 }}
+                >
+                  View File
+                </button>
+              </div>
             )}
           </label>
 

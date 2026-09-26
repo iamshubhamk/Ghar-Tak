@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   CheckCircle2,
   Clock,
@@ -10,6 +10,7 @@ import {
   KeyRound,
   MapPin,
   Calendar,
+  Edit3,
 } from 'lucide-react';
 
 interface BookingTrackerProps {
@@ -28,6 +29,7 @@ interface BookingTrackerProps {
     };
     created_at?: string;
     total_amount?: number;
+    final_amount?: number;
   };
   onCancelBooking?: (id: string) => void;
 }
@@ -53,14 +55,52 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
   const normalizedStatus = (booking.status || 'requested').toLowerCase();
   const currentStatusIndex = STATUS_INDEX_MAP[normalizedStatus] ?? 0;
 
+  const [payeeUpi, setPayeeUpi] = useState(() => {
+    return localStorage.getItem("ghartak_payee_upi") || "ghartak@okaxis";
+  });
+  const [isEditingUpi, setIsEditingUpi] = useState(false);
+  const [tempUpi, setTempUpi] = useState(payeeUpi);
+
+  const handleSaveUpi = (e: React.FormEvent) => {
+    e.preventDefault();
+    const clean = tempUpi.trim();
+    if (!clean) return;
+    setPayeeUpi(clean);
+    localStorage.setItem("ghartak_payee_upi", clean);
+    setIsEditingUpi(false);
+  };
+
+  const handleResetUpi = () => {
+    localStorage.removeItem("ghartak_payee_upi");
+    setPayeeUpi("ghartak@okaxis");
+    setTempUpi("ghartak@okaxis");
+    setIsEditingUpi(false);
+  };
+
+  const amountToPay = booking.final_amount || booking.total_amount || 199;
+  const upiDeepLink = `upi://pay?pa=${encodeURIComponent(payeeUpi)}&pn=${encodeURIComponent("GharTak Patna")}&am=${amountToPay}&tn=${encodeURIComponent(`Order_${booking.id.slice(0, 8)}`)}&cu=INR`;
+  const qrCodeImageUrl = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(upiDeepLink)}`;
+
   return (
     <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-card space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-2 text-xs font-black uppercase text-brand-orange">
-            <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
-            <span>Active Order #{booking.id.slice(0, 8)}</span>
-          </div>
+          {normalizedStatus === 'completed' ? (
+            <div className="flex items-center gap-2 text-xs font-black uppercase text-emerald-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span>Completed Order #{booking.id.slice(0, 8)}</span>
+            </div>
+          ) : normalizedStatus.startsWith('cancel') ? (
+            <div className="flex items-center gap-2 text-xs font-black uppercase text-slate-400">
+              <span className="w-2 h-2 rounded-full bg-slate-400" />
+              <span>Cancelled Order #{booking.id.slice(0, 8)}</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs font-black uppercase text-brand-orange">
+              <span className="w-2 h-2 rounded-full bg-brand-orange animate-ping" />
+              <span>Active Order #{booking.id.slice(0, 8)}</span>
+            </div>
+          )}
           <h3 className="text-xl font-black text-brand-navy mt-1">
             {booking.service_name || booking.category_name || 'Home Service'}
           </h3>
@@ -125,7 +165,7 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
         </div>
       </div>
 
-      {normalizedStatus !== 'completed' && (
+      {normalizedStatus !== 'completed' && !normalizedStatus.startsWith('cancel') && (
         <div className="p-4 bg-orange-50/80 border border-orange-200 rounded-2xl flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-brand-orange text-white rounded-xl shadow-sm">
@@ -139,7 +179,118 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
             </div>
           </div>
           <div className="px-4 py-2 bg-white border border-orange-300 rounded-xl font-black text-xl tracking-widest text-brand-navy shadow-sm">
-            {booking.otp || '4892'}
+            {booking.otp || 'Pending'}
+          </div>
+        </div>
+      )}
+
+      {normalizedStatus === 'completed' && (
+        <div className="p-5 bg-emerald-50/80 border border-emerald-200 rounded-3xl space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-emerald-600 text-white rounded-xl">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm text-emerald-950">Service Completed!</h4>
+                <p className="text-xs text-emerald-700 font-medium">Pay via Cash on Service or Scan UPI</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-[10px] font-bold text-emerald-700 uppercase">Amount</div>
+              <div className="text-lg font-black text-emerald-950">₹{booking.final_amount || booking.total_amount || 199}</div>
+            </div>
+          </div>
+
+          {/* Dynamic UPI QR Code for Client Demo */}
+          <div className="bg-white p-5 rounded-2xl border border-emerald-100 flex flex-col sm:flex-row items-center justify-between gap-5">
+            <div className="text-center sm:text-left space-y-2 flex-1">
+              <div className="flex items-center justify-center sm:justify-start gap-2">
+                <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-extrabold rounded-full uppercase">
+                  Zero-Fee UPI Payment
+                </span>
+                <span className="text-[11px] font-mono text-slate-500 font-bold">
+                  {payeeUpi}
+                </span>
+              </div>
+              <div className="font-black text-sm text-brand-navy">Scan with GPay, PhonePe, Paytm, or BHIM</div>
+              <p className="text-[11px] text-slate-500">
+                Direct bank-to-bank settlement via NPCI with zero gateway commission.
+              </p>
+
+              {isEditingUpi ? (
+                <form onSubmit={handleSaveUpi} className="flex items-center gap-2 pt-1 max-w-sm">
+                  <input
+                    type="text"
+                    value={tempUpi}
+                    onChange={(e) => setTempUpi(e.target.value)}
+                    placeholder="Enter active UPI ID (e.g. yourname@okicici)"
+                    className="flex-1 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-semibold text-brand-ink focus:outline-none focus:border-brand-orange"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="px-3 py-1.5 bg-brand-navy text-white rounded-xl text-xs font-bold shadow-sm"
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempUpi(payeeUpi);
+                      setIsEditingUpi(false);
+                    }}
+                    className="px-2 py-1.5 text-xs font-bold text-slate-400 hover:text-slate-600"
+                  >
+                    Cancel
+                  </button>
+                </form>
+              ) : (
+                <div className="pt-1 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+                  <a
+                    href={upiDeepLink}
+                    className="inline-block text-xs font-bold text-emerald-700 underline hover:text-emerald-800"
+                  >
+                    Open UPI App directly
+                  </a>
+                  <span className="text-slate-300 text-xs">•</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempUpi(payeeUpi);
+                      setIsEditingUpi(true);
+                    }}
+                    className="text-xs font-bold text-brand-orange hover:underline flex items-center gap-1"
+                  >
+                    <Edit3 className="w-3 h-3" />
+                    <span>Change UPI ID for Live Test</span>
+                  </button>
+                  {payeeUpi !== "ghartak@okaxis" && (
+                    <>
+                      <span className="text-slate-300 text-xs">•</span>
+                      <button
+                        type="button"
+                        onClick={handleResetUpi}
+                        className="text-xs font-bold text-slate-400 hover:text-rose-600 underline"
+                      >
+                        Reset to Demo
+                      </button>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="p-2.5 bg-white rounded-2xl border border-slate-200 shadow-sm shrink-0 flex flex-col items-center">
+              <img
+                src={qrCodeImageUrl}
+                alt="UPI Payment QR Code"
+                className="w-32 h-32 rounded-xl"
+              />
+              <span className="text-[10px] font-black text-slate-400 mt-1 uppercase tracking-wider">
+                Scan to Pay ₹{amountToPay}
+              </span>
+            </div>
           </div>
         </div>
       )}
@@ -157,7 +308,7 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
               {booking.provider?.name && <ShieldCheck className="w-4 h-4 text-emerald-600" />}
             </div>
             <div className="text-xs font-semibold text-slate-500">
-              {booking.provider?.name ? '4.9 ★ Rating • Verified Patna Partner' : 'Finding top-rated professional near your location'}
+              {booking.provider?.name ? 'Verified Patna Partner' : 'Finding top-rated professional near your location'}
             </div>
           </div>
         </div>
@@ -175,12 +326,14 @@ export const BookingTracker: React.FC<BookingTrackerProps> = ({ booking }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-semibold text-slate-600">
         <div className="flex items-center gap-2">
-          <Calendar className="w-4 h-4 text-slate-400" />
+          <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
           <span>Scheduled: {booking.scheduled_at || 'Today'}</span>
         </div>
         <div className="flex items-center gap-2">
-          <MapPin className="w-4 h-4 text-slate-400 truncate" />
-          <span className="truncate">{booking.address || 'Patna'}</span>
+          <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
+          <span className="truncate">
+            {[booking.address, booking.category_name].filter(Boolean).join(' • ') || 'Patna'}
+          </span>
         </div>
       </div>
     </div>
