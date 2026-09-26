@@ -1,6 +1,7 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends, Query
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from typing import Any
 
 from app.api.deps import require_roles
 from app.core.enums import BookingStatus, UserRole
@@ -25,7 +26,7 @@ async def create_booking(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     booking = await BookingService(db).create(current_user, payload)
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.get("/bookings/my", response_model=list[BookingResponse])
@@ -34,7 +35,7 @@ async def list_my_bookings(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     bookings = await BookingService(db).list_customer(current_user)
-    return [BookingService.serialize(booking) for booking in bookings]
+    return [BookingService.serialize(booking, actor=current_user) for booking in bookings]
 
 
 @router.get("/admin/bookings", response_model=list[BookingResponse])
@@ -50,7 +51,7 @@ async def list_admin_bookings(
         category_id=category_id,
         provider_id=provider_id,
     )
-    return [BookingService.serialize(booking) for booking in bookings]
+    return [BookingService.serialize(booking, actor=current_user) for booking in bookings]
 
 
 @router.patch("/admin/bookings/{booking_id}/assign", response_model=BookingResponse)
@@ -66,7 +67,7 @@ async def assign_booking_provider(
         payload.provider_id,
         payload.note,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/admin/bookings/{booking_id}/mark-cash-paid", response_model=BookingResponse)
@@ -82,7 +83,7 @@ async def admin_mark_cash_paid(
         payload.final_amount if payload else None,
         payload.note if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/admin/bookings/{booking_id}/status", response_model=BookingResponse)
@@ -99,7 +100,7 @@ async def admin_update_booking_status(
         payload.note,
         payload.final_amount,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/bookings/{booking_id}/cancel", response_model=BookingResponse)
@@ -114,7 +115,7 @@ async def cancel_booking(
         booking_id,
         payload.note if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.get("/provider/bookings", response_model=list[BookingResponse])
@@ -123,7 +124,7 @@ async def list_provider_bookings(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     bookings = await BookingService(db).list_provider(current_user)
-    return [BookingService.serialize(booking) for booking in bookings]
+    return [BookingService.serialize(booking, actor=current_user) for booking in bookings]
 
 
 @router.patch("/provider/bookings/{booking_id}/accept", response_model=BookingResponse)
@@ -139,7 +140,23 @@ async def accept_booking(
         "accept",
         payload.note if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
+
+
+@router.patch("/provider/bookings/{booking_id}/on_the_way", response_model=BookingResponse)
+async def on_the_way_booking(
+    booking_id: str,
+    payload: BookingStatusUpdateRequest | None = None,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    booking = await BookingService(db).provider_action(
+        current_user,
+        booking_id,
+        "on_the_way",
+        payload.note if payload else None,
+    )
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/provider/bookings/{booking_id}/reject", response_model=BookingResponse)
@@ -155,7 +172,7 @@ async def reject_booking(
         "reject",
         payload.note if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/provider/bookings/{booking_id}/start", response_model=BookingResponse)
@@ -172,7 +189,7 @@ async def start_booking(
         note=payload.note if payload else None,
         otp=payload.otp if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/provider/bookings/{booking_id}/in_progress", response_model=BookingResponse)
@@ -189,7 +206,7 @@ async def start_booking_in_progress(
         note=payload.note if payload else None,
         otp=payload.otp if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/provider/bookings/{booking_id}/complete", response_model=BookingResponse)
@@ -206,7 +223,7 @@ async def complete_booking(
         payload.note if payload else None,
         payload.final_amount if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)
 
 
 @router.patch("/provider/bookings/{booking_id}/mark-cash-paid", response_model=BookingResponse)
@@ -222,4 +239,4 @@ async def provider_mark_cash_paid(
         payload.final_amount if payload else None,
         payload.note if payload else None,
     )
-    return BookingService.serialize(booking)
+    return BookingService.serialize(booking, actor=current_user)

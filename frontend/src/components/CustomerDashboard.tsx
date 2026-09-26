@@ -55,6 +55,10 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
   const [isNewBookingOpen, setIsNewBookingOpen] = useState(false);
   const [categoryId, setCategoryId] = useState("");
   const [locality, setLocality] = useState("Boring Road, Patna");
+  const [houseNumber, setHouseNumber] = useState("");
+  const [buildingName, setBuildingName] = useState("");
+  const [landmark, setLandmark] = useState("");
+  const [pincode, setPincode] = useState("800001");
   const [preferredDateTime, setPreferredDateTime] = useState("");
   const [issueDescription, setIssueDescription] = useState("");
 
@@ -148,9 +152,15 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
     setStatus("");
 
     try {
+      const fullAddr = `${houseNumber ? houseNumber + ", " : ""}${buildingName ? buildingName + ", " : ""}${locality}${landmark ? ", Near " + landmark : ""}${pincode ? " - " + pincode : ""}`;
       const payload = {
         category_id: categoryId,
         locality,
+        house_number: houseNumber,
+        building_name: buildingName,
+        landmark,
+        pincode,
+        address: fullAddr,
         preferred_datetime: new Date(preferredDateTime).toISOString(),
         issue_description: issueDescription,
       };
@@ -162,6 +172,9 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
       setBookings((current) => [booking, ...current]);
       setSelectedTrackingBookingId(booking.id);
       setIssueDescription("");
+      setHouseNumber("");
+      setBuildingName("");
+      setLandmark("");
       setIsNewBookingOpen(false);
       setActiveTab("orders");
       setStatus("Service booking submitted! Live status tracking active below.");
@@ -413,9 +426,28 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
                       service_name: activeBooking.category_name,
                       status: activeBooking.status.toLowerCase(),
                       scheduled_at: new Date(activeBooking.preferred_datetime).toLocaleString(),
-                      address: activeBooking.locality,
+                      address:
+                        [
+                          activeBooking.house_number,
+                          activeBooking.building_name,
+                          activeBooking.locality,
+                          activeBooking.landmark ? `Near ${activeBooking.landmark}` : null,
+                          activeBooking.pincode,
+                        ]
+                          .filter(Boolean)
+                          .join(", ") ||
+                        activeBooking.address ||
+                        activeBooking.locality,
+                      otp: activeBooking.otp ?? undefined,
+                      total_amount: activeBooking.total_amount ?? activeBooking.final_amount ?? undefined,
+                      final_amount: activeBooking.final_amount ?? undefined,
+                      created_at: activeBooking.created_at,
                       provider: activeBooking.provider_name
-                        ? { name: activeBooking.provider_name, phone: "9876543210", rating: 4.9 }
+                        ? {
+                            name: activeBooking.provider_name,
+                            phone: activeBooking.customer_phone || "9876543210",
+                            rating: 4.9,
+                          }
                         : undefined,
                     }}
                   />
@@ -918,14 +950,48 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
               </select>
             </div>
 
-            <div className="space-y-1">
-              <label className="text-xs font-extrabold text-brand-navy">Patna Locality / Address</label>
+            <div className="space-y-2">
+              <label className="text-xs font-extrabold text-brand-navy">Service Address (Patna)</label>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={houseNumber}
+                  onChange={(e) => setHouseNumber(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="House / Flat No."
+                />
+                <input
+                  type="text"
+                  value={buildingName}
+                  onChange={(e) => setBuildingName(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="Building / Apartment"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  type="text"
+                  value={locality}
+                  onChange={(e) => setLocality(e.target.value)}
+                  required
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="Area / Locality (e.g. Boring Rd)"
+                />
+                <input
+                  type="text"
+                  value={landmark}
+                  onChange={(e) => setLandmark(e.target.value)}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                  placeholder="Nearby Landmark"
+                />
+              </div>
               <input
                 type="text"
-                value={locality}
-                onChange={(e) => setLocality(e.target.value)}
+                value={pincode}
+                onChange={(e) => setPincode(e.target.value)}
                 required
-                className="w-full p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-semibold text-brand-ink"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-brand-ink"
+                placeholder="Pincode (e.g. 800001)"
               />
             </div>
 

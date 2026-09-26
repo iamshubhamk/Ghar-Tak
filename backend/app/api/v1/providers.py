@@ -1,12 +1,15 @@
 import os
 import uuid
-from fastapi import APIRouter, Depends, Query, File, UploadFile, HTTPException, Form
 from typing import Any
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.api.deps import require_roles
 from app.core.config import get_settings
 from app.core.enums import UserRole, VerificationStatus
+from app.core.logger import setup_logger
 from app.db.session import get_db
 from app.schemas.provider import (
     AvailabilityUpdateRequest,
@@ -16,7 +19,6 @@ from app.schemas.provider import (
     SkillRequestResponse,
 )
 from app.services.providers import ProviderService
-from app.core.logger import setup_logger
 
 logger = setup_logger("ghartak.api.providers")
 
@@ -45,9 +47,11 @@ async def upload_provider_documents(
     if profile_photo:
         if not profile_photo.content_type.startswith("image/"):
             raise HTTPException(400, "Profile photo must be an image (JPG/JPEG).")
-        ext = os.path.splitext(profile_photo.filename)[1]
+        public_dir = os.path.join(settings.local_upload_dir, "public")
+        os.makedirs(public_dir, exist_ok=True)
+        ext = os.path.splitext(profile_photo.filename or "file")[1]
         filename = f"{uuid.uuid4()}{ext}"
-        filepath = os.path.join(settings.local_upload_dir, filename)
+        filepath = os.path.join(public_dir, filename)
         with open(filepath, "wb") as f:
             f.write(await profile_photo.read())
         update_data["provider_profile.profile_photo_url"] = f"/uploads/{filename}"
@@ -55,12 +59,17 @@ async def upload_provider_documents(
     if adhaar_card:
         if adhaar_card.content_type != "application/pdf":
             raise HTTPException(400, "Adhaar card must be a PDF.")
-        ext = os.path.splitext(adhaar_card.filename)[1]
+        private_dir = os.path.join(settings.local_upload_dir, "private")
+        os.makedirs(private_dir, exist_ok=True)
+        ext = os.path.splitext(adhaar_card.filename or "file")[1]
         filename = f"{uuid.uuid4()}{ext}"
-        filepath = os.path.join(settings.local_upload_dir, filename)
+        filepath = os.path.join(private_dir, filename)
         with open(filepath, "wb") as f:
             f.write(await adhaar_card.read())
-        update_data["provider_profile.adhaar_card_url"] = f"/uploads/{filename}"
+        update_data["provider_profile.adhaar_card_url"] = (
+            f"/api/v1/providers/{current_user['id']}/adhaar"
+        )
+        update_data["provider_profile.adhaar_card_filename"] = filename
 
     if update_data:
         await db.users.update_one({"id": current_user["id"]}, {"$set": update_data})
@@ -68,6 +77,49 @@ async def upload_provider_documents(
 
     provider = await ProviderService(db).get_provider_profile_for_user(current_user)
     return ProviderService.serialize(provider)
+
+
+@router.get("/providers/{provider_id}/adhaar")
+async def get_provider_adhaar(
+    provider_id: str,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.ADMIN, UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    is_admin = current_user.get("role") == UserRole.ADMIN.value
+    is_owner = (
+        current_user.get("role") == UserRole.PROVIDER.value
+        and current_user.get("id") == provider_id
+    )
+    if not is_admin and not is_owner:
+        raise HTTPException(403, "Access to this identity document is forbidden.")
+
+    provider = await db.users.find_one({"id": provider_id, "role": UserRole.PROVIDER.value})
+    if not provider:
+        raise HTTPException(404, "Provider not found.")
+
+    profile = provider.get("provider_profile", {})
+    filename = profile.get("adhaar_card_filename")
+    if not filename:
+        url = profile.get("adhaar_card_url", "")
+        if url:
+            filename = os.path.basename(url)
+
+    if not filename:
+        raise HTTPException(404, "Aadhaar document not found.")
+
+    settings = get_settings()
+    private_path = os.path.join(settings.local_upload_dir, "private", filename)
+    if not os.path.exists(private_path):
+        private_path = os.path.join(settings.local_upload_dir, filename)
+
+    if not os.path.exists(private_path):
+        raise HTTPException(404, "Aadhaar document file not found.")
+
+    return FileResponse(
+        private_path,
+        media_type="application/pdf",
+        filename=f"Aadhaar_{provider.get('name', 'Provider').replace(' ', '_')}.pdf",
+    )
 
 
 @router.post("/provider/me/skill-requests", response_model=SkillRequestResponse)

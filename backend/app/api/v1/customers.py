@@ -2,7 +2,8 @@ import os
 import uuid
 from datetime import UTC, datetime
 from typing import Any
-from fastapi import APIRouter, Depends, File, UploadFile, HTTPException
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.api.deps import require_roles
@@ -32,9 +33,11 @@ async def upload_customer_photo(
     if not profile_photo.content_type.startswith("image/"):
         raise HTTPException(400, "Profile photo must be an image (JPG/JPEG/PNG).")
 
+    public_dir = os.path.join(settings.local_upload_dir, "public")
+    os.makedirs(public_dir, exist_ok=True)
     ext = os.path.splitext(profile_photo.filename or "file")[1]
     filename = f"{uuid.uuid4()}{ext}"
-    filepath = os.path.join(settings.local_upload_dir, filename)
+    filepath = os.path.join(public_dir, filename)
 
     with open(filepath, "wb") as f:
         f.write(await profile_photo.read())
@@ -51,6 +54,7 @@ async def upload_customer_photo(
 
 
 # --- SAVED ADDRESSES ---
+
 
 @router.get("/customer/me/addresses", response_model=list[SavedAddressResponse])
 async def get_my_addresses(
@@ -163,6 +167,7 @@ async def delete_address(
 
 # --- WALLET ---
 
+
 @router.get("/customer/me/wallet", response_model=WalletResponse)
 async def get_my_wallet(
     current_user: dict[str, Any] = Depends(require_roles(UserRole.CUSTOMER)),
@@ -191,6 +196,7 @@ async def get_my_wallet(
 
 
 # --- PAYMENT METHODS ---
+
 
 @router.get("/customer/me/payment-methods", response_model=list[PaymentMethodResponse])
 async def get_my_payment_methods(

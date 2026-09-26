@@ -36,6 +36,14 @@ export const NotificationPopover: React.FC<NotificationPopoverProps> = ({
   };
 
   useEffect(() => {
+    void loadNotifications();
+    const interval = setInterval(() => {
+      void loadNotifications();
+    }, 4000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
     if (isOpen) {
       void loadNotifications();
     }

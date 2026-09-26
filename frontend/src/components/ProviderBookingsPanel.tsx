@@ -111,7 +111,10 @@ export function ProviderBookingsPanel() {
     }
   };
 
-  const updateBookingStatus = async (bookingId: string, action: "accept" | "reject" | "in_progress" | "complete") => {
+  const updateBookingStatus = async (
+    bookingId: string,
+    action: "accept" | "reject" | "on_the_way" | "in_progress" | "complete"
+  ) => {
     setStatus("");
     try {
       const payload: Record<string, any> = {};
@@ -124,7 +127,7 @@ export function ProviderBookingsPanel() {
         body: JSON.stringify(payload),
       });
       await loadData();
-      setStatus(`Job updated successfully (${action.toUpperCase()}).`);
+      setStatus(`Job updated successfully (${action.toUpperCase().replace("_", " ")}).`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : `Could not update job.`);
     }
@@ -249,8 +252,25 @@ export function ProviderBookingsPanel() {
                         </span>
                       </div>
 
+                      {/* Customer Address & Navigation Link */}
+                      <div className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white rounded-xl border border-slate-200 text-xs">
+                        <div className="text-slate-600 font-semibold truncate max-w-md">
+                          📍 {b.address || b.locality || "Patna"}
+                        </div>
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(
+                            b.address || b.locality || "Patna"
+                          )}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 font-extrabold rounded-lg inline-flex items-center gap-1 transition-all"
+                        >
+                          <span>🗺️ Open in Google Maps</span>
+                        </a>
+                      </div>
+
                       {/* Action Triggers */}
-                      {b.status === "REQUESTED" || b.status === "ACCEPTED" ? (
+                      {b.status === "REQUESTED" ? (
                         <div className="flex flex-wrap items-center gap-2 pt-1">
                           <button
                             onClick={() => updateBookingStatus(b.id, "accept")}
@@ -268,33 +288,85 @@ export function ProviderBookingsPanel() {
                       ) : null}
 
                       {b.status === "ACCEPTED" && (
-                        <div className="flex items-center gap-2 pt-1">
-                          <input
-                            type="text"
-                            placeholder="Enter 4-digit Customer OTP"
-                            value={otpInput[b.id] || ""}
-                            onChange={(e) =>
-                              setOtpInput((prev) => ({ ...prev, [b.id]: e.target.value }))
-                            }
-                            className="p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-brand-ink"
-                          />
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
                           <button
-                            onClick={() => updateBookingStatus(b.id, "in_progress")}
-                            className="px-4 py-2 bg-brand-orange text-white rounded-xl text-xs font-extrabold"
+                            onClick={() => updateBookingStatus(b.id, "on_the_way")}
+                            className="px-4 py-2 bg-brand-navy hover:bg-brand-navy-dark text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
                           >
-                            Verify OTP & Start Job
+                            🚀 I am On The Way
                           </button>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="Or enter Customer OTP"
+                              value={otpInput[b.id] || ""}
+                              onChange={(e) =>
+                                setOtpInput((prev) => ({ ...prev, [b.id]: e.target.value }))
+                              }
+                              className="p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-brand-ink w-44"
+                            />
+                            <button
+                              onClick={() => updateBookingStatus(b.id, "in_progress")}
+                              className="px-3.5 py-2 bg-brand-orange text-white rounded-xl text-xs font-extrabold"
+                            >
+                              Verify & Start
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {b.status === "ON_THE_WAY" && (
+                        <div className="flex flex-wrap items-center gap-3 pt-1 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                          <div className="text-xs font-extrabold text-amber-900">
+                            You are en route! Ask customer for 4-digit OTP on arrival:
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              placeholder="4-digit Customer OTP"
+                              value={otpInput[b.id] || ""}
+                              onChange={(e) =>
+                                setOtpInput((prev) => ({ ...prev, [b.id]: e.target.value }))
+                              }
+                              className="p-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-brand-ink w-40"
+                            />
+                            <button
+                              onClick={() => updateBookingStatus(b.id, "in_progress")}
+                              className="px-4 py-2 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-xl text-xs font-extrabold shadow-sm"
+                            >
+                              Verify OTP & Start Job
+                            </button>
+                          </div>
                         </div>
                       )}
 
                       {b.status === "IN_PROGRESS" && (
-                        <div className="pt-1">
+                        <div className="pt-1 flex items-center gap-3">
                           <button
                             onClick={() => updateBookingStatus(b.id, "complete")}
-                            className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-extrabold shadow-sm"
+                            className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
                           >
                             Mark Job Completed
                           </button>
+                        </div>
+                      )}
+
+                      {b.status === "COMPLETED" && (
+                        <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between">
+                          <div className="text-xs font-bold text-emerald-900">
+                            Payment: {b.payment_status === "PAID_CASH" ? "✅ Paid Cash / Settled" : "💰 Pending Collection"} (₹{b.final_amount || b.total_amount || 499})
+                          </div>
+                          {b.payment_status !== "PAID_CASH" && (
+                            <button
+                              onClick={async () => {
+                                await apiRequest(`/provider/bookings/${b.id}/mark-cash-paid`, { method: "PATCH" });
+                                await loadData();
+                              }}
+                              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold rounded-lg shadow-sm"
+                            >
+                              Confirm Payment Received
+                            </button>
+                          )}
                         </div>
                       )}
                     </div>

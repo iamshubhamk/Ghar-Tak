@@ -22,6 +22,7 @@ class AvailabilityStatus(StrEnum):
 class BookingStatus(StrEnum):
     REQUESTED = "REQUESTED"
     ACCEPTED = "ACCEPTED"
+    ON_THE_WAY = "ON_THE_WAY"
     REJECTED = "REJECTED"
     IN_PROGRESS = "IN_PROGRESS"
     COMPLETED = "COMPLETED"
