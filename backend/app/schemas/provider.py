@@ -57,9 +57,13 @@ class ProviderPublicResponse(BaseModel):
     is_public: bool
     categories: list[str] = Field(default_factory=list)
     localities: list[str] = Field(default_factory=list)
-    profile_photo_url: str | None = None
     adhaar_card_url: str | None = None
-    rejection_reason: str | None = None
+    has_tools: bool = False
+    bank_account_holder: str | None = None
+    bank_account_number: str | None = None
+    bank_ifsc: str | None = None
+    payout_upi_id: str | None = None
+    bank_proof_url: str | None = None
     created_at: datetime
     updated_at: datetime
 
