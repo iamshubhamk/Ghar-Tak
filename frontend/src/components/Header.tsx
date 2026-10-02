@@ -140,25 +140,7 @@ export const Header: React.FC<HeaderProps> = ({
           )}
 
           {/* Right Action Icons & Controls */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {!userSession && (
-              <div className="hidden lg:flex items-center p-1 bg-slate-100 rounded-2xl border border-slate-200 text-xs font-bold">
-                {(['customer', 'provider', 'admin'] as const).map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => onRoleChange(r)}
-                    className={`px-3 py-1.5 rounded-xl capitalize transition-all ${
-                      activeRole === r
-                        ? 'bg-brand-navy text-white shadow-sm'
-                        : 'text-slate-600 hover:text-brand-navy'
-                    }`}
-                  >
-                    {r === 'provider' ? 'Service Partner' : r === 'admin' ? 'Admin' : 'Customer'}
-                  </button>
-                ))}
-              </div>
-            )}
-
+          <div className="flex items-center gap-3">
             {/* Notification Bell Icon */}
             <div className="relative">
               <button
@@ -202,10 +184,14 @@ export const Header: React.FC<HeaderProps> = ({
             {/* Account Profile / Auth Button */}
             <button
               onClick={onOpenAuth}
-              className="flex items-center gap-2 px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 text-brand-navy rounded-2xl text-xs font-bold transition-all border border-slate-200"
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-extrabold transition-all shadow-sm ${
+                userSession
+                  ? 'bg-slate-100 hover:bg-slate-200 text-brand-navy border border-slate-200'
+                  : 'bg-brand-navy hover:bg-slate-800 text-white'
+              }`}
             >
-              <User className="w-4 h-4 text-brand-navy" />
-              <span className="hidden sm:inline truncate max-w-[100px]">
+              <User className={`w-4 h-4 ${userSession ? 'text-brand-navy' : 'text-brand-orange'}`} />
+              <span className="truncate max-w-[120px]">
                 {userSession?.user?.full_name ? userSession.user.full_name.split(' ')[0] : 'Sign In'}
               </span>
             </button>

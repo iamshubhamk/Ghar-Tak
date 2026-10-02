@@ -2,7 +2,7 @@ import os
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -31,7 +31,7 @@ async def get_provider_me(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     provider = await ProviderService(db).get_provider_profile_for_user(current_user)
-    return ProviderService.serialize(provider)
+    return ProviderService.serialize(provider, is_owner=True)
 
 
 @router.post("/provider/me/documents", response_model=ProviderPublicResponse)
@@ -46,7 +46,7 @@ async def upload_provider_documents(
 
     if profile_photo:
         if not profile_photo.content_type.startswith("image/"):
-            raise HTTPException(400, "Profile photo must be an image (JPG/JPEG).")
+            raise HTTPException(400, "Profile photo must be an image (JPG/PNG).")
         public_dir = os.path.join(settings.local_upload_dir, "public")
         os.makedirs(public_dir, exist_ok=True)
         ext = os.path.splitext(profile_photo.filename or "file")[1]
@@ -57,8 +57,9 @@ async def upload_provider_documents(
         update_data["provider_profile.profile_photo_url"] = f"/uploads/{filename}"
 
     if adhaar_card:
-        if adhaar_card.content_type != "application/pdf":
-            raise HTTPException(400, "Adhaar card must be a PDF.")
+        allowed = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
+        if adhaar_card.content_type not in allowed:
+            raise HTTPException(400, "Aadhaar card must be a PDF or image (JPG/PNG).")
         private_dir = os.path.join(settings.local_upload_dir, "private")
         os.makedirs(private_dir, exist_ok=True)
         ext = os.path.splitext(adhaar_card.filename or "file")[1]
@@ -76,7 +77,18 @@ async def upload_provider_documents(
         logger.info(f"Provider {current_user['id']} uploaded new documents.")
 
     provider = await ProviderService(db).get_provider_profile_for_user(current_user)
-    return ProviderService.serialize(provider)
+    return ProviderService.serialize(provider, is_owner=True)
+
+
+@router.post("/provider/me/resubmit", response_model=ProviderPublicResponse)
+async def resubmit_provider_application(
+    request: Request,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    form = await request.form()
+    provider = await ProviderService(db).resubmit_application(current_user, form)
+    return ProviderService.serialize(provider, is_owner=True)
 
 
 @router.get("/providers/{provider_id}/adhaar")
@@ -115,10 +127,57 @@ async def get_provider_adhaar(
     if not os.path.exists(private_path):
         raise HTTPException(404, "Aadhaar document file not found.")
 
+    ext = os.path.splitext(filename)[1].lower()
+    media_type = "application/pdf" if ext == ".pdf" else (f"image/{ext.replace('.', '')}" if ext in [".jpg", ".jpeg", ".png"] else "application/octet-stream")
     return FileResponse(
         private_path,
-        media_type="application/pdf",
-        filename=f"Aadhaar_{provider.get('name', 'Provider').replace(' ', '_')}.pdf",
+        media_type=media_type,
+        filename=f"Aadhaar_{provider.get('name', 'Provider').replace(' ', '_')}{ext}",
+    )
+
+
+@router.get("/providers/{provider_id}/bank-proof")
+async def get_provider_bank_proof(
+    provider_id: str,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.ADMIN, UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    is_admin = current_user.get("role") == UserRole.ADMIN.value
+    is_owner = (
+        current_user.get("role") == UserRole.PROVIDER.value
+        and current_user.get("id") == provider_id
+    )
+    if not is_admin and not is_owner:
+        raise HTTPException(403, "Access to this financial document is forbidden.")
+
+    provider = await db.users.find_one({"id": provider_id, "role": UserRole.PROVIDER.value})
+    if not provider:
+        raise HTTPException(404, "Provider not found.")
+
+    profile = provider.get("provider_profile", {})
+    filename = profile.get("bank_proof_filename")
+    if not filename:
+        url = profile.get("bank_proof_url", "")
+        if url:
+            filename = os.path.basename(url)
+
+    if not filename:
+        raise HTTPException(404, "Bank proof document not found.")
+
+    settings = get_settings()
+    private_path = os.path.join(settings.local_upload_dir, "private", filename)
+    if not os.path.exists(private_path):
+        private_path = os.path.join(settings.local_upload_dir, filename)
+
+    if not os.path.exists(private_path):
+        raise HTTPException(404, "Bank proof document file not found.")
+
+    ext = os.path.splitext(filename)[1].lower()
+    media_type = "application/pdf" if ext == ".pdf" else (f"image/{ext.replace('.', '')}" if ext in [".jpg", ".jpeg", ".png"] else "application/octet-stream")
+    return FileResponse(
+        private_path,
+        media_type=media_type,
+        filename=f"BankProof_{provider.get('name', 'Provider').replace(' ', '_')}{ext}",
     )
 
 
@@ -207,7 +266,7 @@ async def update_provider_me(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     provider = await ProviderService(db).update_provider_profile(current_user, payload)
-    return ProviderService.serialize(provider)
+    return ProviderService.serialize(provider, is_owner=True)
 
 
 @router.patch("/provider/me/availability", response_model=ProviderPublicResponse)
@@ -220,7 +279,7 @@ async def update_provider_availability(
         current_user,
         payload.availability_status,
     )
-    return ProviderService.serialize(provider)
+    return ProviderService.serialize(provider, is_owner=True)
 
 
 @router.get("/admin/providers", response_model=list[ProviderPublicResponse])
@@ -230,7 +289,7 @@ async def admin_list_providers(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     providers = await ProviderService(db).list_admin(verification_status=verification_status)
-    return [ProviderService.serialize(provider) for provider in providers]
+    return [ProviderService.serialize(provider, is_admin=True) for provider in providers]
 
 
 @router.patch("/admin/providers/{provider_id}/approve", response_model=ProviderPublicResponse)
@@ -241,7 +300,7 @@ async def approve_provider(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     provider = await ProviderService(db).approve(provider_id)
-    return ProviderService.serialize(provider)
+    return ProviderService.serialize(provider, is_admin=True)
 
 
 @router.patch("/admin/providers/{provider_id}/reject", response_model=ProviderPublicResponse)
@@ -253,7 +312,7 @@ async def reject_provider(
 ):
     reason = payload.rejection_reason if payload else None
     provider = await ProviderService(db).reject(provider_id, rejection_reason=reason)
-    return ProviderService.serialize(provider)
+    return ProviderService.serialize(provider, is_admin=True)
 
 
 @router.patch("/admin/providers/{provider_id}/disable", response_model=ProviderPublicResponse)
@@ -264,4 +323,4 @@ async def disable_provider(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     provider = await ProviderService(db).disable(provider_id)
-    return ProviderService.serialize(provider)
+    return ProviderService.serialize(provider, is_admin=True)

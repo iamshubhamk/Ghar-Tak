@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
 
 from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
 
@@ -55,11 +55,22 @@ class ProviderRegisterRequest(ContactMixin):
     price_note: str | None = Field(default=None, max_length=255)
     category_ids: list[str] = Field(default_factory=list, max_length=12)
     localities: list[str] = Field(default_factory=list, max_length=20)
+    has_tools: bool = Field(default=True)
+    bank_account_holder: str | None = Field(default=None, max_length=120)
+    bank_account_number: str | None = Field(default=None, max_length=50)
+    bank_ifsc: str | None = Field(default=None, max_length=20)
+    payout_upi_id: str | None = Field(default=None, max_length=100)
 
-    @field_validator("name", "bio", "price_note", mode="before")
+    @field_validator("name", "bio", "price_note", "bank_account_holder", "bank_account_number", "payout_upi_id", mode="before")
     @classmethod
     def strip_text(cls, value: str | None) -> str | None:
         return clean_optional(value)
+
+    @field_validator("bank_ifsc", mode="before")
+    @classmethod
+    def normalize_ifsc(cls, value: str | None) -> str | None:
+        cleaned = clean_optional(value)
+        return cleaned.upper() if cleaned else None
 
     @field_validator("category_ids", "localities")
     @classmethod
@@ -95,6 +106,12 @@ class ProviderProfileResponse(BaseModel):
     rejection_reason: str | None = None
     profile_photo_url: str | None = None
     adhaar_card_url: str | None = None
+    has_tools: bool = False
+    bank_account_holder: str | None = None
+    bank_account_number: str | None = None
+    bank_ifsc: str | None = None
+    payout_upi_id: str | None = None
+    bank_proof_url: str | None = None
     availability_status: AvailabilityStatus
     price_note: str | None = None
     average_rating: float
@@ -124,3 +141,32 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserResponse
+
+
+class PasswordResetVerifyRequest(BaseModel):
+    email: EmailStr
+    phone: str = Field(min_length=10, max_length=15)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def clean_phone(cls, value: str) -> str:
+        cleaned = clean_optional(value)
+        return cleaned or ""
+
+
+class PasswordResetVerifyResponse(BaseModel):
+    name: str
+    verified: bool = True
+
+
+class PasswordResetSubmitRequest(BaseModel):
+    email: EmailStr
+    phone: str = Field(min_length=10, max_length=15)
+    new_password: str = Field(min_length=6, max_length=128)
+
+    @field_validator("phone", mode="before")
+    @classmethod
+    def clean_phone(cls, value: str) -> str:
+        cleaned = clean_optional(value)
+        return cleaned or ""
+

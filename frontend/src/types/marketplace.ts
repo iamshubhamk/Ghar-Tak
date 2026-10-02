@@ -24,6 +24,12 @@ export type ProviderProfile = {
   is_public: boolean;
   categories: string[];
   localities: string[];
+  has_tools?: boolean;
+  bank_account_holder?: string | null;
+  bank_account_number?: string | null;
+  bank_ifsc?: string | null;
+  payout_upi_id?: string | null;
+  bank_proof_url?: string | null;
   profile_photo_url?: string | null;
   adhaar_card_url?: string | null;
   rejection_reason?: string | null;

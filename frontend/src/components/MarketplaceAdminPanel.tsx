@@ -10,10 +10,17 @@ import {
   Plus,
   UserCheck,
   Building,
+  Building2,
   RefreshCw,
   Search,
   FileText,
   Sparkles,
+  Copy,
+  Check,
+  Eye,
+  EyeOff,
+  Wrench,
+  AlertTriangle,
 } from "lucide-react";
 
 import { apiRequest } from "../lib/api";
@@ -23,6 +30,20 @@ import { Booking, BookingStatus, Review } from "../types/booking";
 import { Category, ProviderProfile, SkillRequest } from "../types/marketplace";
 
 type AdminTabKey = "overview" | "categories" | "providers" | "bookings";
+
+const PROVIDER_REJECTION_PRESETS = [
+  "Aadhaar card document is blurred, unreadable, or cropped.",
+  "Aadhaar card name does not match the bank account holder name.",
+  "Bank account number or IFSC code provided is invalid or unverified.",
+  "Selected trade category does not match experience or skills.",
+  "Phone number is unreachable or outside active Patna service areas.",
+];
+
+const SKILL_REJECTION_PRESETS = [
+  "Proof of work document is unclear or unreadable.",
+  "Certificate or proof does not match requested trade category.",
+  "Insufficient experience or training evidence provided.",
+];
 
 export function MarketplaceAdminPanel() {
   const [activeTab, setActiveTab] = useState<AdminTabKey>("overview");
@@ -38,8 +59,19 @@ export function MarketplaceAdminPanel() {
 
   const [categoryName, setCategoryName] = useState("");
   const [description, setDescription] = useState("");
+  const [revealedBankAccounts, setRevealedBankAccounts] = useState<Record<string, boolean>>({});
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [priceLabel, setPriceLabel] = useState("");
   const [status, setStatus] = useState("");
+
+  // In-app Rejection Modal States
+  const [rejectingProvider, setRejectingProvider] = useState<ProviderProfile | null>(null);
+  const [rejectionReasonText, setRejectionReasonText] = useState("");
+  const [isSubmittingRejection, setIsSubmittingRejection] = useState(false);
+
+  const [rejectingSkillRequest, setRejectingSkillRequest] = useState<SkillRequest | null>(null);
+  const [skillRejectionReasonText, setSkillRejectionReasonText] = useState("");
+  const [isSubmittingSkillRejection, setIsSubmittingSkillRejection] = useState(false);
 
   const loadAdminData = async () => {
     try {
@@ -95,24 +127,45 @@ export function MarketplaceAdminPanel() {
     }
   };
 
-  const verifyProvider = async (providerId: string, action: "approve" | "reject") => {
+  const verifyProvider = async (providerId: string, action: "approve" | "disable") => {
     setStatus("");
-    let rejection_reason: string | undefined = undefined;
-    if (action === "reject") {
-      const reason = window.prompt("Reason for rejection:");
-      if (reason === null) return;
-      rejection_reason = reason || "No reason provided";
-    }
-
     try {
       await apiRequest<ProviderProfile>(`/admin/providers/${providerId}/${action}`, {
         method: "PATCH",
-        body: JSON.stringify(action === "reject" ? { rejection_reason } : {}),
       });
       await loadAdminData();
       setStatus(`Provider ${action}d successfully.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : `Could not ${action} provider.`);
+    }
+  };
+
+  const openRejectProviderModal = (provider: ProviderProfile) => {
+    setRejectingProvider(provider);
+    setRejectionReasonText("");
+  };
+
+  const handleConfirmProviderRejection = async () => {
+    if (!rejectingProvider) return;
+    const reason = rejectionReasonText.trim();
+    if (!reason) {
+      setStatus("Please specify a reason for rejection.");
+      return;
+    }
+    setIsSubmittingRejection(true);
+    try {
+      await apiRequest<ProviderProfile>(`/admin/providers/${rejectingProvider.id}/reject`, {
+        method: "PATCH",
+        body: JSON.stringify({ rejection_reason: reason }),
+      });
+      setRejectingProvider(null);
+      setRejectionReasonText("");
+      await loadAdminData();
+      setStatus(`Application for ${rejectingProvider.name} rejected.`);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : "Could not reject provider.");
+    } finally {
+      setIsSubmittingRejection(false);
     }
   };
 
@@ -129,20 +182,32 @@ export function MarketplaceAdminPanel() {
     }
   };
 
-  const rejectSkillRequest = async (requestId: string) => {
-    const reason = window.prompt("Reason for rejecting skill request:");
-    if (reason === null) return;
-    setStatus("");
+  const openRejectSkillModal = (sr: SkillRequest) => {
+    setRejectingSkillRequest(sr);
+    setSkillRejectionReasonText("");
+  };
 
+  const handleConfirmSkillRejection = async () => {
+    if (!rejectingSkillRequest) return;
+    const reason = skillRejectionReasonText.trim();
+    if (!reason) {
+      setStatus("Please specify a reason for rejection.");
+      return;
+    }
+    setIsSubmittingSkillRejection(true);
     try {
-      await apiRequest<SkillRequest>(`/admin/skill-requests/${requestId}/reject`, {
+      await apiRequest<SkillRequest>(`/admin/skill-requests/${rejectingSkillRequest.id}/reject`, {
         method: "PATCH",
-        body: JSON.stringify({ rejection_reason: reason || "Proof of work insufficient" }),
+        body: JSON.stringify({ rejection_reason: reason }),
       });
+      setRejectingSkillRequest(null);
+      setSkillRejectionReasonText("");
       await loadAdminData();
-      setStatus("Skill request rejected.");
+      setStatus(`Skill request for ${rejectingSkillRequest.provider_name} rejected.`);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : "Could not reject skill request.");
+    } finally {
+      setIsSubmittingSkillRejection(false);
     }
   };
 
@@ -163,6 +228,31 @@ export function MarketplaceAdminPanel() {
     } catch (err) {
       alert(err instanceof Error ? err.message : "Error opening Aadhaar document");
     }
+  };
+
+  const viewBankProofDoc = async (providerId: string) => {
+    try {
+      const token = localStorage.getItem("ghartak_token");
+      const res = await fetch(`${backendBaseUrl}/api/v1/providers/${providerId}/bank-proof`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!res.ok) {
+        throw new Error("Unable to view Bank proof document. Not authorized or document not found.");
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      window.open(url, "_blank");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Error opening Bank proof document");
+    }
+  };
+
+  const copyText = (text: string, key: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedKey(key);
+    setTimeout(() => setCopiedKey(null), 2000);
   };
 
   const assignProvider = async (bookingId: string) => {
@@ -436,8 +526,8 @@ export function MarketplaceAdminPanel() {
                             <span>Approve Skill</span>
                           </button>
                           <button
-                            onClick={() => rejectSkillRequest(sr.id)}
-                            className="flex items-center gap-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
+                            onClick={() => openRejectSkillModal(sr)}
+                            className="flex items-center gap-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer"
                           >
                             <XCircle className="w-3.5 h-3.5" />
                             <span>Reject</span>
@@ -468,64 +558,294 @@ export function MarketplaceAdminPanel() {
                   {providers.length === 0 && (
                     <div className="py-8 text-center text-xs font-semibold text-slate-400">No registered providers yet.</div>
                   )}
-                  {providers.map((p) => (
-                    <div
-                      key={p.id}
-                      className="p-5 bg-slate-50 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
-                    >
-                      <div>
+                  {providers.map((p) => {
+                    const missingCategories = !p.categories || p.categories.length === 0;
+                    const missingAadhaar = !p.adhaar_card_url;
+                    const canApprove = !missingCategories && !missingAadhaar;
+                    const isAccountRevealed = !!revealedBankAccounts[p.id];
+                    const hasBankDetails = !!(p.bank_account_number || p.bank_ifsc || p.bank_account_holder);
+
+                    return (
+                      <div
+                        key={p.id}
+                        className="p-5 bg-slate-50 rounded-2xl border border-slate-200 space-y-4"
+                      >
+                        {/* Top Summary Row */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
+                          <div>
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="font-extrabold text-base text-brand-navy">{p.name}</span>
+                              <span
+                                className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${
+                                  p.verification_status === "VERIFIED"
+                                    ? "bg-emerald-100 text-emerald-700"
+                                    : p.verification_status === "REJECTED"
+                                    ? "bg-rose-100 text-rose-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
+                              >
+                                {p.verification_status.replace("_", " ")}
+                              </span>
+                              {p.has_tools && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 text-blue-700 flex items-center gap-1">
+                                  <Wrench className="w-3 h-3" />
+                                  <span>Owns Tools</span>
+                                </span>
+                              )}
+                              {p.phone && (
+                                <span className="text-xs text-slate-500 font-semibold">
+                                  📞 {p.phone}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-slate-500 font-semibold mt-1">
+                              Experience: {p.experience_years} years • Patna Areas:{" "}
+                              {p.localities?.length ? p.localities.join(", ") : "All Patna"}
+                            </div>
+                            {p.bio && (
+                              <div className="text-[11px] text-slate-600 italic mt-1 bg-white/60 p-2 rounded-xl border border-slate-200">
+                                "{p.bio}"
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action Buttons for Pending or Verified */}
+                          <div className="flex items-center gap-2 self-start sm:self-auto shrink-0">
+                            {p.verification_status === "PENDING_VERIFICATION" && (
+                              <>
+                                <button
+                                  type="button"
+                                  disabled={!canApprove}
+                                  onClick={() => verifyProvider(p.id, "approve")}
+                                  title={
+                                    !canApprove
+                                      ? missingCategories && missingAadhaar
+                                        ? "Cannot approve: Missing trade categories & Aadhaar document"
+                                        : missingCategories
+                                        ? "Cannot approve: No trade categories selected"
+                                        : "Cannot approve: Aadhaar document not uploaded"
+                                      : "Approve Partner"
+                                  }
+                                  className={`flex items-center gap-1.5 px-4 py-2.5 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all ${
+                                    canApprove
+                                      ? "bg-emerald-600 hover:bg-emerald-700 cursor-pointer"
+                                      : "bg-slate-300 text-slate-500 cursor-not-allowed opacity-60"
+                                  }`}
+                                >
+                                  <UserCheck className="w-3.5 h-3.5" />
+                                  <span>Approve Partner</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => openRejectProviderModal(p)}
+                                  className="flex items-center gap-1.5 px-3.5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer"
+                                >
+                                  <XCircle className="w-3.5 h-3.5" />
+                                  <span>Reject</span>
+                                </button>
+                              </>
+                            )}
+
+                            {p.verification_status === "VERIFIED" && (
+                              <button
+                                type="button"
+                                onClick={() => verifyProvider(p.id, "disable")}
+                                className="flex items-center gap-1.5 px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-extrabold transition-all"
+                              >
+                                <span>Disable Account</span>
+                              </button>
+                            )}
+
+                            {p.verification_status === "REJECTED" && (
+                              <div className="text-[11px] font-bold text-rose-600">
+                                Rejection reason: {p.rejection_reason || "None"}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Trade Categories Pills */}
                         <div className="flex items-center gap-2">
-                          <span className="font-extrabold text-sm text-brand-navy">{p.name}</span>
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold ${
-                              p.verification_status === "VERIFIED"
-                                ? "bg-emerald-100 text-emerald-700"
-                                : p.verification_status === "REJECTED"
-                                ? "bg-rose-100 text-rose-700"
-                                : "bg-amber-100 text-amber-700"
-                            }`}
-                          >
-                            {p.verification_status}
-                          </span>
+                          <span className="text-xs font-bold text-slate-400">Trade Categories:</span>
+                          {p.categories?.length > 0 ? (
+                            <div className="flex flex-wrap gap-1.5">
+                              {p.categories.map((c) => (
+                                <span
+                                  key={c}
+                                  className="px-2.5 py-0.5 bg-white border border-slate-200 text-brand-navy rounded-lg text-xs font-bold shadow-2xs"
+                                >
+                                  {c}
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="px-2.5 py-0.5 bg-rose-50 border border-rose-200 text-rose-600 rounded-lg text-xs font-bold">
+                              No categories selected (Needs update)
+                            </span>
+                          )}
                         </div>
-                        <div className="text-xs text-slate-500 font-semibold mt-1">
-                          Experience: {p.experience_years} years • Categories: {p.categories.join(", ") || "General"}
+
+                        {/* Financial Bank & KYC Verification Details Card */}
+                        <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-2xs space-y-3">
+                          <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                            <div className="flex items-center gap-2">
+                              <Building2 className="w-4 h-4 text-brand-orange" />
+                              <span className="text-xs font-extrabold text-brand-navy uppercase tracking-wider">
+                                Bank Branch & Payout KYC Details
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-semibold">
+                              Admin Verification View (Unmasked)
+                            </span>
+                          </div>
+
+                          {hasBankDetails ? (
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                              {/* Account Holder */}
+                              <div className="space-y-0.5">
+                                <div className="text-[10px] font-bold text-slate-400 uppercase">Account Holder</div>
+                                <div className="font-extrabold text-brand-navy">
+                                  {p.bank_account_holder || p.name}
+                                </div>
+                              </div>
+
+                              {/* Account Number with Show/Hide & Copy */}
+                              <div className="space-y-0.5">
+                                <div className="text-[10px] font-bold text-slate-400 uppercase">
+                                  Bank Account Number
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-extrabold text-brand-navy tracking-wider text-sm">
+                                    {isAccountRevealed
+                                      ? p.bank_account_number
+                                      : p.bank_account_number
+                                      ? `•••• •••• ${p.bank_account_number.slice(-4)}`
+                                      : "Not Provided"}
+                                  </span>
+                                  {p.bank_account_number && (
+                                    <div className="flex items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setRevealedBankAccounts((prev) => ({
+                                            ...prev,
+                                            [p.id]: !prev[p.id],
+                                          }))
+                                        }
+                                        title={isAccountRevealed ? "Mask Account Number" : "Show Full Account Number"}
+                                        className="p-1 hover:bg-slate-100 rounded text-slate-500"
+                                      >
+                                        {isAccountRevealed ? (
+                                          <EyeOff className="w-3.5 h-3.5" />
+                                        ) : (
+                                          <Eye className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => copyText(p.bank_account_number || "", `acc_${p.id}`)}
+                                        title="Copy Account Number"
+                                        className="p-1 hover:bg-slate-100 rounded text-slate-500"
+                                      >
+                                        {copiedKey === `acc_${p.id}` ? (
+                                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                        ) : (
+                                          <Copy className="w-3.5 h-3.5" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* IFSC & UPI */}
+                              <div className="space-y-0.5">
+                                <div className="text-[10px] font-bold text-slate-400 uppercase">
+                                  IFSC & UPI
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono font-extrabold text-brand-navy uppercase">
+                                    {p.bank_ifsc || "Not Provided"}
+                                  </span>
+                                  {p.bank_ifsc && (
+                                    <button
+                                      type="button"
+                                      onClick={() => copyText(p.bank_ifsc || "", `ifsc_${p.id}`)}
+                                      title="Copy IFSC"
+                                      className="p-1 hover:bg-slate-100 rounded text-slate-500"
+                                    >
+                                      {copiedKey === `ifsc_${p.id}` ? (
+                                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                                      ) : (
+                                        <Copy className="w-3.5 h-3.5" />
+                                      )}
+                                    </button>
+                                  )}
+                                  {p.payout_upi_id && (
+                                    <span className="text-[11px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-md">
+                                      UPI: {p.payout_upi_id}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="text-xs text-slate-400 font-semibold">
+                              No bank details provided for this partner account.
+                            </div>
+                          )}
+
+                          {/* Verification Documents Action Buttons */}
+                          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+                            {p.adhaar_card_url ? (
+                              <button
+                                type="button"
+                                onClick={() => viewAdhaarDoc(p.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 hover:bg-orange-100 text-brand-orange border border-brand-orange/30 rounded-xl text-xs font-extrabold shadow-2xs transition-all"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                                <span>View Aadhaar Document (Private KYC)</span>
+                              </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-200 rounded-xl text-xs font-bold">
+                                <AlertTriangle className="w-3.5 h-3.5" />
+                                <span>No Aadhaar Document Uploaded</span>
+                              </span>
+                            )}
+
+                            {p.bank_proof_url ? (
+                              <button
+                                type="button"
+                                onClick={() => viewBankProofDoc(p.id)}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-300 rounded-xl text-xs font-extrabold shadow-2xs transition-all"
+                              >
+                                <Building2 className="w-3.5 h-3.5" />
+                                <span>View Passbook / Cheque Copy</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 font-semibold px-2 py-1">
+                                No Cheque/Passbook attached
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        {p.bio && <div className="text-[11px] text-slate-400 mt-0.5">"{p.bio}"</div>}
-                        {p.adhaar_card_url && (
-                          <div className="mt-2">
-                            <button
-                              type="button"
-                              onClick={() => viewAdhaarDoc(p.id)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy shadow-sm transition-all"
-                            >
-                              <FileText className="w-3.5 h-3.5 text-brand-orange" />
-                              <span>View Aadhaar (Private Doc)</span>
-                            </button>
+
+                        {/* Guardrail Warning Banner when pending & cannot approve */}
+                        {p.verification_status === "PENDING_VERIFICATION" && !canApprove && (
+                          <div className="p-3 bg-amber-50 rounded-xl border border-amber-200 text-xs text-amber-800 flex items-center gap-2">
+                            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>
+                              {missingCategories && missingAadhaar
+                                ? "Approval Blocked: Partner has not selected trade categories and has not uploaded Aadhaar card."
+                                : missingCategories
+                                ? "Approval Blocked: Partner has not selected any trade categories."
+                                : "Approval Blocked: Mandatory Aadhaar card document is missing."}
+                            </span>
                           </div>
                         )}
                       </div>
-
-                      {p.verification_status === "PENDING_VERIFICATION" && (
-                        <div className="flex items-center gap-2 shrink-0">
-                          <button
-                            onClick={() => verifyProvider(p.id, "approve")}
-                            className="flex items-center gap-1 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
-                          >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>Approve</span>
-                          </button>
-                          <button
-                            onClick={() => verifyProvider(p.id, "reject")}
-                            className="flex items-center gap-1 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all"
-                          >
-                            <XCircle className="w-3.5 h-3.5" />
-                            <span>Reject</span>
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -684,6 +1004,161 @@ export function MarketplaceAdminPanel() {
       {status && (
         <div className="mt-4 p-4 bg-orange-50 border border-orange-200 rounded-2xl text-xs font-bold text-brand-navy">
           {status}
+        </div>
+      )}
+
+      {/* Provider Rejection Modal */}
+      {rejectingProvider && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <XCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-brand-navy">Reject Partner Application</h3>
+                  <p className="text-xs text-slate-500 font-semibold">{rejectingProvider.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingProvider(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
+                Quick Preset Reasons (Click to apply)
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {PROVIDER_REJECTION_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setRejectionReasonText(preset)}
+                    className="text-left text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 hover:border-brand-orange hover:bg-orange-50/50 text-slate-700 transition-all cursor-pointer"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-brand-navy uppercase tracking-wider block">
+                Rejection Reason (Visible to Partner on Portal)
+              </label>
+              <textarea
+                value={rejectionReasonText}
+                onChange={(e) => setRejectionReasonText(e.target.value)}
+                rows={3}
+                placeholder="Specify the reason clearly so the partner can correct details and re-apply..."
+                className="w-full p-3 border border-slate-200 rounded-2xl text-xs text-brand-ink focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+              />
+              <p className="text-[11px] text-slate-400 font-medium">
+                The partner will see this reason in their portal dashboard and will have the opportunity to update their documents or details to re-apply.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setRejectingProvider(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!rejectionReasonText.trim() || isSubmittingRejection}
+                onClick={handleConfirmProviderRejection}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer"
+              >
+                {isSubmittingRejection ? "Rejecting..." : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Skill Request Rejection Modal */}
+      {rejectingSkillRequest && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-5 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0">
+                  <XCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-brand-navy">Reject Skill Request</h3>
+                  <p className="text-xs text-slate-500 font-semibold">
+                    {rejectingSkillRequest.provider_name} • {rejectingSkillRequest.category_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRejectingSkillRequest(null)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-500 uppercase tracking-wider block">
+                Quick Preset Reasons
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {SKILL_REJECTION_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setSkillRejectionReasonText(preset)}
+                    className="text-left text-xs font-semibold px-3 py-1.5 rounded-xl border border-slate-200 hover:border-brand-orange hover:bg-orange-50/50 text-slate-700 transition-all cursor-pointer"
+                  >
+                    {preset}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-[11px] font-black text-brand-navy uppercase tracking-wider block">
+                Rejection Reason
+              </label>
+              <textarea
+                value={skillRejectionReasonText}
+                onChange={(e) => setSkillRejectionReasonText(e.target.value)}
+                rows={3}
+                placeholder="Specify the reason why this skill qualification proof cannot be approved..."
+                className="w-full p-3 border border-slate-200 rounded-2xl text-xs text-brand-ink focus:outline-hidden focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 font-medium"
+              />
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setRejectingSkillRequest(null)}
+                className="px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-all cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!skillRejectionReasonText.trim() || isSubmittingSkillRejection}
+                onClick={handleConfirmSkillRejection}
+                className="flex items-center gap-1.5 px-5 py-2.5 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white rounded-xl text-xs font-extrabold shadow-sm transition-all cursor-pointer"
+              >
+                {isSubmittingSkillRejection ? "Rejecting..." : "Confirm Rejection"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
