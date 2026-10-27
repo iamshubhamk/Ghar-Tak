@@ -12,3 +12,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-28 | AR-002 | backend | Disable self-service password reset (403 PASSWORD_RESET_DISABLED, flag off by default) | inbox: AR-002 infrastructure, web, support, architect
 - 2026-10-28 | BE-001 | backend | Add missing email-validator to requirements.txt | inbox: architect (BE-002)
 - 2026-10-28 | BE-002 | backend | Mongo test fixtures (mongomock-motor), ported tests, booking-state tests; fix category create 500 | inbox: architect, support, infrastructure
+- 2026-10-28 | AR-004 | architect | Proposed phased ticket backlog (Phases 0-7, 52 tickets, policy proposals P-1..P-4) in docs/plans/roadmap-tickets.md | inbox: none (awaiting human approval)
