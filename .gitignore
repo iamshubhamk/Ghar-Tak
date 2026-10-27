@@ -30,3 +30,6 @@ postgres-data/
 Thumbs.db
 .idea/
 .vscode/
+
+# Graphify code maps (local, regenerable)
+graphify-out/

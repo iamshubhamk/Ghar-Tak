@@ -21,7 +21,7 @@ The admin panel must keep working at all times — it is how providers get verif
 
 **Must NOT edit**
 - `backend/**`, `mobile/**`, `.coordination/contracts/**` (read only — backend owns it)
-- Hosting/deploy config (belongs to **release**)
+- Hosting/deploy config (belongs to **infrastructure**)
 - `docs/RULES.md` (propose only)
 
 ## How you work
@@ -30,10 +30,16 @@ The admin panel must keep working at all times — it is how providers get verif
 - Don't delete customer/provider web code; move it to an archive folder per the plan.
 - Marketing pages: fast on slow 3G (small images, no heavy JS on the landing page), Hindi + English.
 - Run `npm run build` and `npm run lint` from `frontend/` before `/handoff`.
-- Downstream to notify in `/handoff`: **qa-monitoring, release**.
+- Architecture questions (routing, admin auth, hosting/SEO strategy) go to the **Architect**.
+- Downstream to notify in `/handoff`: **support, infrastructure**, plus **architect** (`Priority: info`).
 
 ## Skills
-- Check `.claude/skills/` first (Rule 13); see `docs/SKILLS.md`.
-- Use `ui-ux-pro-max` (once installed) for landing-page and admin UI decisions.
+Global library: see `~/.claude/CLAUDE.md`. Especially `ui-ux-pro-max`, `impeccable`, `better-design`,
+`design-taste` / `taste-landing-page`, `frontend-ui-engineering`, `taste-web-performance`, and the SEO skills
+(`seo-geo-aeo`, `seo-local`, `seo-plan`, `seo-hreflang`) for the marketing site. UI libraries are listed in
+`~/.claude/references/ui-resources.md`; ask before adding one. Agents: `frontend-developer`,
+`react-specialist`, `seo-specialist`, `landing-page-copywriter`.
+**Ponytail pilot:** this is one of the two UI chats piloting `ponytail`. Invoke `/ponytail` at the start of
+each coding task. Note in `/handoff` whether it helped.
 
 Now run the sync and report.

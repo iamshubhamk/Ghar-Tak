@@ -1,6 +1,6 @@
 # Coordination
 
-Claude Code chats can't message each other, so the 5 workstreams talk through these files.
+Claude Code chats can't message each other, so the 6 workstreams (architect, backend, mobile, web, infrastructure, support) talk through these files.
 
 ```
 .coordination/
@@ -39,7 +39,7 @@ Contract ref: contracts/API_CHANGES.md#BE-014
 (or `[DONE: no-op]` for `info` items / nothing to do, or `[WONTFIX: reason]` with the human's approval).
 
 If the receiver's own change affects others, its `/handoff` writes new entries to their inboxes, e.g.
-backend → mobile → qa-monitoring → release.
+backend → mobile → support → infrastructure.
 
 ## Commands
 
@@ -47,7 +47,17 @@ backend → mobile → qa-monitoring → release.
 |------------|------------|------|
 | `/sync`    | every chat | read own inbox, summarise OPEN items, propose an order |
 | `/handoff` | every chat | after a change: CHANGELOG + contract files + downstream inbox entries |
-| `/status`  | the human  | summary of open items across all inboxes |
+| `/status`  | the human, Architect | summary of open items across all inboxes |
+
+## Typical flows
+
+```
+Requirement:  human → architect (design, ADR) → backend (contract first) → mobile / web
+              → support (verify) → infrastructure (release) → every workstream (info)
+Bug:          human or monitoring → support (repro + root cause) → architect (decide + dispatch)
+              → owning workstream (fix) → support (verify) → architect (close)
+Every /handoff also drops an info entry in architect.md so the Architect can check the result.
+```
 
 A `SessionStart` hook (`.claude/hooks/inbox-status.sh`) prints OPEN counts per inbox when any chat starts.
 

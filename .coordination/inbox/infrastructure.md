@@ -1,6 +1,6 @@
-# Inbox — release
+# Inbox — infrastructure
 
-Entries addressed to the release workstream. Append new entries at the bottom; never delete.
+Entries addressed to the infrastructure workstream (formerly "release"). Append new entries at the bottom; never delete.
 Format and status lifecycle: see `.coordination/README.md`.
 
 ---

@@ -21,10 +21,12 @@ Hand off the change just completed in this chat. A change isn't done until this 
 5. **Close what this change resolved.** In this workstream's own inbox, change the heading tag of any item
    this change resolves to `[DONE: <ID>]`.
 6. **Notify downstream.** Decide which workstreams are affected (defaults: backend → mobile, web,
-   qa-monitoring, release; mobile/web → qa-monitoring, release; release → all on a release;
-   qa-monitoring → the owner of the bug). For each, re-read its inbox file and append an entry in the
-   exact format from `.coordination/README.md`, with a concrete "Action needed in this workstream".
-   qa-monitoring should almost always get one, so it can verify the change.
+   support, infrastructure; mobile/web → support, infrastructure; infrastructure → all on a release;
+   support → **architect** with the bug report; architect → whichever workstreams it dispatches to).
+   For each, re-read its inbox file and append an entry in the exact format from `.coordination/README.md`,
+   with a concrete "Action needed in this workstream". Support should almost always get one, so it can
+   verify the change. Unless you *are* the Architect, also append a `Priority: info` entry to
+   `architect.md` summarising the result against the acceptance criteria of the item you resolved.
 7. **Commit suggestion.** Propose a commit message `<ID>: <summary>` listing the files. Do not commit or push
    unless I say so.
 8. Report: the CHANGELOG line, each inbox entry written (workstream + ID + priority), and anything left open.

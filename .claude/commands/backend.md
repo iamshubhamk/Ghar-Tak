@@ -30,11 +30,16 @@ notifications/storage/payment adapters, backend tests, and the **API contract**.
   a deprecation date in `API_CHANGES.md`.
 - Booking transitions live in `backend/app/services/bookings.py`; every new/changed transition needs a test.
 - Run `pytest` and `ruff check .` from `backend/` before `/handoff`.
-- Downstream to notify in `/handoff`: **mobile, web, qa-monitoring, release** (whichever are affected).
+- Architecture questions (new collections, auth design, new services) go to the **Architect** first.
+  Implement once it's decided.
+- Downstream to notify in `/handoff`: **mobile, web, support, infrastructure** (whichever are affected), plus
+  **architect** (`Priority: info`) so it can check the result.
 
 ## Skills
-- Check `.claude/skills/` first (Rule 13). See `docs/SKILLS.md` for what's installed.
-- Built-in: `/code-review` before handoff on non-trivial changes, `/security-review` for anything touching
-  auth, uploads, or Aadhaar/bank documents.
+Global library: see `~/.claude/CLAUDE.md`. Especially `api-and-interface-design`, `test-driven-development`,
+`incremental-implementation`, `security-and-hardening`, `deprecation-and-migration`, `systematic-debugging`,
+`graphify`; agents `fastapi-developer`, `python-pro`, `backend-developer`, `database-optimizer`.
+Built-in: `/code-review` before handoff on non-trivial changes, and `/security-review` for anything touching
+auth, uploads, or Aadhaar/bank documents.
 
 Now run the sync and report.

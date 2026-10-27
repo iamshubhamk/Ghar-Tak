@@ -1,10 +1,10 @@
 ---
-description: Summarise open items across ALL inboxes (for the human coordinator)
+description: Summarise open items across ALL inboxes (for the human coordinator and the Architect)
 ---
 
 Give me, the human coordinator, a status report across all workstreams. Read-only — change nothing.
 
-1. Read every file in `.coordination/inbox/` (`backend`, `mobile`, `web`, `release`, `qa-monitoring`).
+1. Read every file in `.coordination/inbox/` (`architect`, `backend`, `mobile`, `web`, `infrastructure`, `support`).
 2. Summary table, one row per workstream: OPEN | IN PROGRESS | breaking OPEN | oldest OPEN item (ID + age in days).
 3. Then list every `breaking` item that isn't DONE, with its ID, receiver, sender, age and action needed.
 4. List chains that look stuck: an item OPEN for more than 3 days, or an `[IN PROGRESS]` item with no

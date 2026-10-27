@@ -6,7 +6,7 @@ argument-hint: "[workstream]"
 Sync this chat with the coordination files.
 
 1. Determine the workstream: use `$ARGUMENTS` if given, otherwise the role loaded earlier in this chat
-   (`/backend`, `/mobile`, `/web`, `/release`, `/qa-monitoring`). If neither, ask.
+   (`/architect`, `/backend`, `/mobile`, `/web`, `/infrastructure`, `/support`). If neither, ask.
 2. Read `.coordination/inbox/<workstream>.md` in full.
 3. List every entry whose heading is `[OPEN]` or `[IN PROGRESS]`, as a table:
    ID | title | from | priority | date | one-line action needed.

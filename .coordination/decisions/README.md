@@ -15,3 +15,4 @@ Date: YYYY-MM-DD | Author: <workstream>
 | # | Title | Status |
 |---|-------|--------|
 | 0001 | [File-based coordination between workstream chats](0001-file-based-coordination.md) | accepted |
+| 0002 | [Six workstream chats with an Architect](0002-six-workstream-chats.md) | accepted |

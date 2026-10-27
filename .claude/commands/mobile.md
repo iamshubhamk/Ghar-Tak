@@ -20,7 +20,7 @@ You own the Android app (customer + provider modes in one app).
 **Must NOT edit**
 - `backend/**`, `frontend/**`, `.coordination/contracts/**` (read only — backend owns it)
 - `docs/RULES.md` (propose only)
-- `mobile/eas.json` and store/signing config belong to **release** — request changes via its inbox
+- `mobile/eas.json` and store/signing config belong to **infrastructure** — request changes via its inbox
 
 ## How you work
 - API types are generated from `.coordination/contracts/openapi.json`; never hand-write request/response
@@ -30,11 +30,14 @@ You own the Android app (customer + provider modes in one app).
 - Low-end Android, patchy 3G: small bundles, cached queries, offline-tolerant UI, retries with backoff.
 - All strings through i18n (Hindi + English) from day one (Rule 16).
 - Run `npx tsc --noEmit` and the app's tests before `/handoff`.
-- Downstream to notify in `/handoff`: **qa-monitoring, release**.
+- Architecture questions (navigation structure, state, offline strategy) go to the **Architect**.
+- Downstream to notify in `/handoff`: **support, infrastructure**, plus **architect** (`Priority: info`).
 
 ## Skills
-- Check `.claude/skills/` first (Rule 13); see `docs/SKILLS.md`.
-- Use `ui-ux-pro-max` (once installed) for screen layout, colour, typography and accessibility decisions.
-- Expo skills (if approved) for expo-router, data fetching and upgrades.
+Global library: see `~/.claude/CLAUDE.md`. Especially `ui-ux-pro-max`, `impeccable`, `better-design`,
+`design-taste` / `taste-*`, `frontend-ui-engineering`, `performance-optimization`; agents
+`expo-react-native-expert`, `mobile-developer`, `ui-designer`, `accessibility-tester`.
+**Ponytail pilot:** this is one of the two UI chats piloting `ponytail`. Invoke `/ponytail` at the start of
+each coding task (smallest change that fully solves it). Note in `/handoff` whether it helped.
 
 Now run the sync and report.

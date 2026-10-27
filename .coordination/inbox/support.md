@@ -1,6 +1,6 @@
-# Inbox — qa-monitoring
+# Inbox — support
 
-Entries addressed to the qa-monitoring workstream. Append new entries at the bottom; never delete.
+Entries addressed to the support workstream (formerly "qa-monitoring"). Append new entries at the bottom; never delete.
 Format and status lifecycle: see `.coordination/README.md`.
 
 ---

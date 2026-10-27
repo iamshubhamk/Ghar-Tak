@@ -5,7 +5,7 @@
 dir="${CLAUDE_PROJECT_DIR:-.}/.coordination/inbox"
 
 echo "GharTak inboxes (run /sync to see your items):"
-for ws in backend mobile web release qa-monitoring; do
+for ws in architect backend mobile web infrastructure support; do
   file="$dir/$ws.md"
   if [ ! -f "$file" ]; then
     printf '  %-14s (missing inbox file)\n' "$ws"
