@@ -1,43 +1,47 @@
-from sqlalchemy.orm import Session
-
 from app.core.security import create_access_token
 from app.services.auth import AuthService
+from app.services.categories import CategoryService
+from tests.conftest import run
 
 
-def create_admin_token(db_session: Session) -> str:
-    admin = AuthService(db_session).create_admin_user(
-        name="Admin",
-        email="admin@example.com",
-        password="strongpass123",
+def create_admin_token(db) -> str:
+    admin = run(
+        AuthService(db).create_admin_user(
+            name="Admin",
+            email="admin@example.com",
+            password="strongpass123",
+        )
     )
-    return create_access_token(subject=admin.id, role=admin.role)
+    return create_access_token(subject=admin["id"], role=admin["role"])
 
 
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def test_admin_can_create_and_public_can_list_active_categories(client, db_session) -> None:
-    admin_token = create_admin_token(db_session)
+def test_admin_can_create_and_public_can_list_active_categories(client, db) -> None:
+    admin_token = create_admin_token(db)
+    run(CategoryService(db).ensure_default_categories())  # what app startup does
 
     create_response = client.post(
         "/api/v1/admin/categories",
         headers=auth_header(admin_token),
         json={
-            "name": "Electrician",
-            "description": "Switches, wiring, and repair work",
-            "display_order": 1,
+            "name": "Gardener",
+            "description": "Lawn and plant care",
+            "display_order": 99,
         },
     )
 
     list_response = client.get("/api/v1/categories")
 
     assert create_response.status_code == 201
-    assert create_response.json()["slug"] == "electrician"
+    assert create_response.json()["slug"] == "gardener"
     assert list_response.status_code == 200
     assert list_response.json()[0]["name"] == "Electrician"
     assert list_response.json()[0]["price_label"] == "Starts at INR 199"
     assert {category["name"] for category in list_response.json()} >= {
+        "Gardener",
         "Electrician",
         "Plumber",
         "Carpenter",
@@ -61,8 +65,8 @@ def test_category_admin_requires_admin_role(client) -> None:
     assert response.status_code == 401
 
 
-def test_disabled_category_is_hidden_from_public_list(client, db_session) -> None:
-    admin_token = create_admin_token(db_session)
+def test_disabled_category_is_hidden_from_public_list(client, db) -> None:
+    admin_token = create_admin_token(db)
 
     category_response = client.post(
         "/api/v1/admin/categories",
@@ -85,8 +89,8 @@ def test_disabled_category_is_hidden_from_public_list(client, db_session) -> Non
     assert "Electrician" in category_names
 
 
-def test_provider_can_update_profile_and_admin_can_approve(client, db_session) -> None:
-    admin_token = create_admin_token(db_session)
+def test_provider_can_update_profile_and_admin_can_approve(client, db) -> None:
+    admin_token = create_admin_token(db)
     category_response = client.post(
         "/api/v1/admin/categories",
         headers=auth_header(admin_token),
@@ -106,7 +110,7 @@ def test_provider_can_update_profile_and_admin_can_approve(client, db_session) -
     )
     provider_body = provider_response.json()
     provider_token = provider_body["access_token"]
-    provider_id = provider_body["user"]["provider_profile"]["id"]
+    provider_id = provider_body["user"]["id"]
 
     update_response = client.patch(
         "/api/v1/provider/me",

@@ -265,3 +265,17 @@ Action needed in this workstream: Check the result. Note: `email-validator` is m
 `requirements.txt` (OR-001 #2); I installed it in my local venv only to run the tests. Prod evidently has
 it, but a clean install fails, so I'd like to add it next (BE-001).
 Contract ref: contracts/API_CHANGES.md#ar-002
+
+## [OPEN] BE-002 — info: test suite runs again; decision needed on admin status override
+From: backend | Date: 2026-10-28 | Priority: info
+What changed: BE-001: `email-validator==2.2.0` added to `requirements.txt` (clean install now imports the app).
+BE-002: `tests/conftest.py` rewritten for MongoDB (in-memory `mongomock-motor`, or a real DB when
+`TEST_MONGODB_URL` is set); stale tests ported; new `tests/test_booking_states.py` pins the current state
+machine (provider allowed/disallowed matrix, OTP on start, cancel, assign, cash-paid, history). 114 tests pass,
+ruff clean on `tests/`. Also fixed a real bug found by the suite: `POST /admin/categories` returned 500
+(`CategoryService.create` did not set `created_at`/`updated_at`).
+Why: OR-001 items 1 and 2; Rule 9.
+Action needed in this workstream: DECISION: `PATCH /admin/bookings/{id}/status` accepts any status from any
+status (e.g. COMPLETED -> REQUESTED). Should admins be bound by the central transition table (OR-001 item 6)?
+Pinned by `test_known_gap_admin_can_force_any_status_transition`. Related: SU-007 (non-atomic transitions).
+Contract ref: none

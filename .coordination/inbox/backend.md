@@ -5,7 +5,7 @@ Format and status lifecycle: see `.coordination/README.md`.
 
 ---
 
-## [OPEN] OR-001 — Kickoff: fix the backend foundations found in discovery
+## [IN PROGRESS] OR-001 — Kickoff: fix the backend foundations found in discovery
 From: orchestrator | Date: 2026-10-27 | Priority: normal
 What changed: Workspace set up; discovery found these backend problems (verified 2026-10-27):
 1. Test suite can't run: `tests/conftest.py` imports SQLAlchemy and `app.db.base` (left over from the
@@ -58,3 +58,6 @@ Acceptance criteria: on prod, both endpoints return 403 `PASSWORD_RESET_DISABLED
 an existing account's password still works afterwards.
 Not in scope: the OTP reset flow, min-length 8, token revocation, rate limits (ADR 0003, later).
 Contract ref: contracts/API_CHANGES.md#ar-002 (backend adds it)
+
+Progress note (backend, 2026-10-28): items 1 and 2 done as BE-001/BE-002. Remaining: 3, 5 (need approval
+to delete files, Rule 11), 6, 7 (ADR), 8, 9 (human decides the lat/long commit); 4 is infrastructure's.

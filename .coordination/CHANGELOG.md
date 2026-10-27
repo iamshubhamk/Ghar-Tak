@@ -10,3 +10,5 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-28 | AR-002 | architect | Dispatched approved security hotfix: disable self-service password reset (SU-002) | inbox: backend (breaking), web (info), support (verify), infrastructure (deploy via AR-003)
 - 2026-10-28 | AR-003 | architect | Dispatched approved prod admin password rotation + README credential removal + AR-002 prod deploy | inbox: infrastructure (breaking)
 - 2026-10-28 | AR-002 | backend | Disable self-service password reset (403 PASSWORD_RESET_DISABLED, flag off by default) | inbox: AR-002 infrastructure, web, support, architect
+- 2026-10-28 | BE-001 | backend | Add missing email-validator to requirements.txt | inbox: architect (BE-002)
+- 2026-10-28 | BE-002 | backend | Mongo test fixtures (mongomock-motor), ported tests, booking-state tests; fix category create 500 | inbox: architect, support, infrastructure

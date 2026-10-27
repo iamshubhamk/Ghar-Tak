@@ -40,3 +40,14 @@ Action needed in this workstream: Verify on prod once infrastructure confirms th
 non-existent accounts only). Local note: `pytest` still can't run through `tests/conftest.py` (OR-001 #1);
 the 5 DB-free tests pass with `pytest --noconftest tests/test_password_reset.py -k "when_disabled or defaults"`.
 Contract ref: contracts/API_CHANGES.md#ar-002
+
+## [OPEN] BE-002 — the backend test suite now runs
+From: backend | Date: 2026-10-28 | Priority: info
+What changed: From `backend/`: `pytest` (114 tests, ~6 s, no MongoDB needed; set `TEST_MONGODB_URL` to use a
+real test DB). `tests/test_booking_states.py` covers the provider status matrix, start OTP, cancel, assign and
+cash-paid rules, so part of your lifecycle matrix (SU-001) is automated. Pins current behaviour, including
+known gaps (admin can force any status).
+Why: OR-001 item 1.
+Action needed in this workstream: Extend the suite for your open bug reports (SU-003..SU-009) as needed; the
+fixtures are in `tests/conftest.py` and `ctx` in `test_booking_states.py`.
+Contract ref: none
