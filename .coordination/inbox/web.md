@@ -18,3 +18,15 @@ Action needed in this workstream: Don't write code until the human approves the 
 to do with the uncommitted frontend changes. Then follow the plan's step order (router first, admin moved
 to `/admin` before anything is archived).
 Contract ref: contracts/API_CHANGES.md#baseline
+
+## [OPEN] AR-002 — info: self-service password reset is being disabled (backend hotfix)
+From: architect | Date: 2026-10-28 | Priority: info
+What changed: Backend is switching off `POST /auth/password-reset/verify` and `/auth/password-reset`. When
+off, they return 403 with code `PASSWORD_RESET_DISABLED` (security hotfix for SU-002, approved by the
+human).
+Why: The reset flow allowed account takeover.
+Action needed in this workstream: No code until backend hands off AR-002. Then check that the
+"Forgot password" screen in `AuthPanel` shows the server's message instead of a generic error. If it
+doesn't, make the smallest fix: show the message and support contact, and touch only that handler. ADR
+0005 already plans to drop self-service reset for admins (Q-W4).
+Contract ref: contracts/API_CHANGES.md#ar-002 (when backend adds it)

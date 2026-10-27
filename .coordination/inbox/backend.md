@@ -28,3 +28,33 @@ Action needed in this workstream: Suggested order: (2) → (1) with Mongo test f
 tests → (3)(5) cleanup → (6) central transition table → ADR for (7). Also review the "Missing endpoints"
 section in `docs/plans/mobile-app.md` once the human approves it.
 Contract ref: contracts/API_CHANGES.md#baseline
+
+## [OPEN] AR-002 — HOTFIX: disable self-service password reset (account takeover, SU-002)
+From: architect | Date: 2026-10-28 | Priority: breaking
+What changed: The human approved (2026-10-28, in the architect chat: "Approved: disable self-service
+password reset in prod (hotfix)") switching off self-service password reset. Today
+`POST /auth/password-reset` sets a new password and returns a token for any matching email + phone, with
+no OTP. Anyone can take over any account, admin included. Root cause and repro: architect inbox SU-002.
+Why: Account takeover on the live site. This is the interim fix from ADR 0003 §8. The real OTP-based
+reset comes later with the refresh-token work, after the ADR is accepted.
+Action needed in this workstream (do this before any other work; keep the diff minimal):
+1. Add a setting `password_reset_self_service_enabled: bool`, default **False**, and add it to
+   `.env.example`. Local devs can switch it on. Prod gets the default.
+2. When it's off, both `POST /auth/password-reset/verify` and `POST /auth/password-reset` return
+   **403** with the standard error body, code `PASSWORD_RESET_DISABLED` (new `AppErrorCode`), and message
+   "Password reset is not available in the app yet. Please contact GharTak support." Check the flag
+   **before** any DB lookup, so the response is identical for known and unknown accounts (this also
+   closes the account-existence leak from `/verify`).
+3. Tests (Rule 9): with the flag off, both endpoints give 403 + the code and the password is unchanged;
+   with it on, behaviour is unchanged. If the suite still can't run (OR-001 #1), add the tests anyway and
+   say in the handoff that they're unrun. Don't block the hotfix on the suite rewrite.
+4. Contract: re-export `openapi.json` (add `responses={403: ...}` on both routes) and add an
+   `API_CHANGES.md` section. It isn't a breaking schema change, but behaviour changes for web (the admin
+   panel's "forgot password" now gets 403).
+5. Commit only your files as `AR-002`. The checkout has the human's uncommitted booking/frontend edits;
+   leave them alone. `/handoff`: infrastructure (deploy to prod; confirm which branch Render deploys
+   from), web (show the support message), support (verify on prod), architect (info).
+Acceptance criteria: on prod, both endpoints return 403 `PASSWORD_RESET_DISABLED` for any input, and
+an existing account's password still works afterwards.
+Not in scope: the OTP reset flow, min-length 8, token revocation, rate limits (ADR 0003, later).
+Contract ref: contracts/API_CHANGES.md#ar-002 (backend adds it)

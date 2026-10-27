@@ -9,9 +9,9 @@ recommendation. Answering "rec" accepts it. Once these are answered, the archite
   email + phone pair, sets a new password and returns a login token. There's no OTP or link. Providers
   see customer phone numbers, and admin accounts are affected too. **Rec:** disable self-service reset
   in prod now (backend hotfix behind a flag; support/admin reset on request). Then fix it properly per
-  ADR 0003 §8. OK to touch prod auth for this (Rule 11)? →
+  ADR 0003 §8. OK to touch prod auth for this (Rule 11)? → **Approved 2026-10-28** (interim disable). Dispatched as AR-002 (backend), AR-003 (infra deploy).
 - **Q-S2 Demo admin login in `README.md`** (OR-004 #1). Does that account exist on the live site? **Rec:**
-  rotate the prod admin password today and remove the README section. →
+  rotate the prod admin password today and remove the README section. → **Approved 2026-10-28.** Dispatched as AR-003 (infrastructure).
 - **Q-S3 Skill-request proof documents are public** (`/uploads/...`, no auth). **Rec:** support confirms on
   the live site, then backend serves them through an authenticated route like Aadhaar. OK? →
 
