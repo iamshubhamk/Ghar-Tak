@@ -251,3 +251,17 @@ Action needed in this workstream: triage SU-002 (breaking) first; answer the ❓
 expected columns can be finalised. Still open in OR-005: error tracking + uptime proposal, and the API test
 suite, which waits on OR-001.
 Contract ref: none
+
+## [OPEN] AR-002 — info: backend hotfix done (password reset disabled)
+From: backend | Date: 2026-10-28 | Priority: info
+What changed: Setting `password_reset_self_service_enabled` (default False, in `.env.example`); new
+`AppErrorCode.PASSWORD_RESET_DISABLED`; a router dependency in `api/v1/auth.py` returns 403 on both
+endpoints before FastAPI validates the body or any DB access. Contract re-exported; `API_CHANGES.md#ar-002`.
+Tests in `tests/test_password_reset.py`: 5 DB-free tests pass (403 + code for valid, malformed and empty
+input; flag defaults off). The other 3 (identical response for known/unknown account, password unchanged,
+reset works when enabled) need the Mongo fixtures, so they are UNRUN until BE-002 (OR-001 #1).
+Why: SU-002 / ADR 0003 §8.
+Action needed in this workstream: Check the result. Note: `email-validator` is missing from
+`requirements.txt` (OR-001 #2); I installed it in my local venv only to run the tests. Prod evidently has
+it, but a clean install fails, so I'd like to add it next (BE-001).
+Contract ref: contracts/API_CHANGES.md#ar-002

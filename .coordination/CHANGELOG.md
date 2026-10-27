@@ -9,3 +9,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-28 | SU-001 | support | Test plan (booking lifecycle matrix, auth, provider verification, low-end checks) + 8 bug reports SU-002..SU-009 | inbox: architect (SU-001 info, SU-002 breaking, SU-003..SU-009 normal)
 - 2026-10-28 | AR-002 | architect | Dispatched approved security hotfix: disable self-service password reset (SU-002) | inbox: backend (breaking), web (info), support (verify), infrastructure (deploy via AR-003)
 - 2026-10-28 | AR-003 | architect | Dispatched approved prod admin password rotation + README credential removal + AR-002 prod deploy | inbox: infrastructure (breaking)
+- 2026-10-28 | AR-002 | backend | Disable self-service password reset (403 PASSWORD_RESET_DISABLED, flag off by default) | inbox: AR-002 infrastructure, web, support, architect

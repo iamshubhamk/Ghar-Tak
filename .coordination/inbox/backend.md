@@ -29,7 +29,7 @@ tests → (3)(5) cleanup → (6) central transition table → ADR for (7). Also 
 section in `docs/plans/mobile-app.md` once the human approves it.
 Contract ref: contracts/API_CHANGES.md#baseline
 
-## [OPEN] AR-002 — HOTFIX: disable self-service password reset (account takeover, SU-002)
+## [DONE] AR-002 — HOTFIX: disable self-service password reset (account takeover, SU-002)
 From: architect | Date: 2026-10-28 | Priority: breaking
 What changed: The human approved (2026-10-28, in the architect chat: "Approved: disable self-service
 password reset in prod (hotfix)") switching off self-service password reset. Today

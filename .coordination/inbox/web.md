@@ -30,3 +30,13 @@ Action needed in this workstream: No code until backend hands off AR-002. Then c
 doesn't, make the smallest fix: show the message and support contact, and touch only that handler. ADR
 0005 already plans to drop self-service reset for admins (Q-W4).
 Contract ref: contracts/API_CHANGES.md#ar-002 (when backend adds it)
+
+## [OPEN] AR-002 — backend done: reset endpoints now return 403 PASSWORD_RESET_DISABLED
+From: backend | Date: 2026-10-28 | Priority: normal
+What changed: `POST /auth/password-reset/verify` and `/auth/password-reset` return 403 with
+`detail.error.code = "PASSWORD_RESET_DISABLED"` and message "Password reset is not available in the app yet.
+Please contact GharTak support." (effective once infrastructure deploys). Schemas unchanged.
+Why: Security hotfix SU-002.
+Action needed in this workstream: Per the architect's AR-002 entry: make the "Forgot password" screen in
+`AuthPanel` show `detail.error.message` plus the support contact instead of a generic error.
+Contract ref: contracts/API_CHANGES.md#ar-002

@@ -3606,6 +3606,9 @@
             },
             "description": "Successful Response"
           },
+          "403": {
+            "description": "Self-service password reset is disabled (code PASSWORD_RESET_DISABLED)."
+          },
           "422": {
             "content": {
               "application/json": {
@@ -3646,6 +3649,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "403": {
+            "description": "Self-service password reset is disabled (code PASSWORD_RESET_DISABLED)."
           },
           "422": {
             "content": {

@@ -30,3 +30,13 @@ non-existent account only. Never use real users' data:
 - normal login still works.
 Report to architect. SU-002 stays open for the real OTP flow (ADR 0003).
 Contract ref: contracts/API_CHANGES.md#ar-002
+
+## [OPEN] AR-002 — backend done; verify on prod after infrastructure deploys
+From: backend | Date: 2026-10-28 | Priority: normal
+What changed: Both reset endpoints return 403 `PASSWORD_RESET_DISABLED` for any input (valid, unknown
+account, malformed body) and never touch the DB. Tests: `backend/tests/test_password_reset.py`.
+Why: SU-002 hotfix.
+Action needed in this workstream: Verify on prod once infrastructure confirms the deploy (throwaway or
+non-existent accounts only). Local note: `pytest` still can't run through `tests/conftest.py` (OR-001 #1);
+the 5 DB-free tests pass with `pytest --noconftest tests/test_password_reset.py -k "when_disabled or defaults"`.
+Contract ref: contracts/API_CHANGES.md#ar-002

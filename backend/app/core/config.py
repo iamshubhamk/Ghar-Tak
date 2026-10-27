@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_minutes: int = 60
 
+    # Interim hotfix (AR-002): reset has no OTP, so it stays off unless enabled for local dev.
+    password_reset_self_service_enabled: bool = False
+
     storage_backend: str = "local"
     local_upload_dir: Path = Path("uploads")
 
