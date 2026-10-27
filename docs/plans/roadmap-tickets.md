@@ -63,7 +63,7 @@ first means everything after it is built on tested, safe ground.
 ### 1a. Backend health
 | ID | Ticket | Owner | Depends on | Size | Done when | Source |
 |---|---|---|---|---|---|---|
-| T1-01 | Make the test suite run on MongoDB (fixtures, `email-validator`, `requirements-dev.txt`) | backend | — | M | `pytest` runs green on a clean install | OR-001 #1–2 (**backend has started**) |
+| T1-01 | Make the test suite run on MongoDB (fixtures, `email-validator`, `requirements-dev.txt`) | backend | — | M | `pytest` runs green on a clean install | OR-001 #1–2 (**done as BE-002, architect to verify**) |
 | T1-02 | Remove dead SQLAlchemy code and stray root scripts | backend | T1-01 | S | No imports of missing modules; `drop_cat.py`/`test_cat.py` gone (deleting files → your OK, Rule 11) | OR-001 #3, #5 |
 | T1-03 | Decide what happens to the uncommitted `dev` changes (booking lat/long + web map picker) | **you** → backend/web | Q-W5 | S | Committed or discarded; backend and web know which | OR-001 #9 |
 
