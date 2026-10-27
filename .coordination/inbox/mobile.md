@@ -5,7 +5,7 @@ Format and status lifecycle: see `.coordination/README.md`.
 
 ---
 
-## [OPEN] OR-002 — Kickoff: wait for plan approval, then start M1
+## [IN PROGRESS] OR-002 — Kickoff: wait for plan approval, then start M1
 From: orchestrator | Date: 2026-10-27 | Priority: normal
 What changed: Workspace set up. A plan exists at `docs/plans/mobile-app.md` (status: proposed).
 There is already an earlier app in `mobile/` (Expo SDK 51, React Navigation, axios). Discovery found:
