@@ -66,6 +66,11 @@ const en = {
   installPlay: "Get it on Google Play",
   footerTag: "Home services for Patna",
   notFound: "Page not found",
+  navPrivacy: "Privacy policy",
+  navTerms: "Terms of use",
+  navDelete: "Delete account",
+  legalDraft: "DRAFT: this text has not been reviewed by a lawyer yet. Items in [square brackets] still need to be confirmed.",
+  legalEnglishOnly: "This page is in English only for now.",
 } as const;
 
 const hi: Record<keyof typeof en, string> = {
@@ -134,6 +139,11 @@ const hi: Record<keyof typeof en, string> = {
   installPlay: "Google Play पर पाएँ",
   footerTag: "पटना के लिए होम सर्विस",
   notFound: "पेज नहीं मिला",
+  navPrivacy: "गोपनीयता नीति",
+  navTerms: "उपयोग की शर्तें",
+  navDelete: "खाता हटाएँ",
+  legalDraft: "ड्राफ़्ट: इस पाठ की अभी किसी वकील ने समीक्षा नहीं की है। [चौकोर कोष्ठक] वाली बातें अभी तय होनी हैं।",
+  legalEnglishOnly: "यह पेज अभी केवल अंग्रेज़ी में है।",
 };
 
 export type Lang = "en" | "hi";

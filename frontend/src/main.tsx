@@ -16,6 +16,11 @@ const ServicePage = sitePage((m) => m.ServicePage);
 const Partner = sitePage((m) => m.Partner);
 const Support = sitePage((m) => m.Support);
 const Install = sitePage((m) => m.Install);
+const legalPage = (pick: (m: typeof import("./site/legal")) => ComponentType) =>
+  lazy(() => import("./site/legal").then((m) => ({ default: pick(m) })));
+const Privacy = legalPage((m) => m.Privacy);
+const Terms = legalPage((m) => m.Terms);
+const DeleteAccount = legalPage((m) => m.DeleteAccount);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -31,6 +36,9 @@ createRoot(document.getElementById("root")!).render(
             <Route path="/partner" element={<Partner />} />
             <Route path="/support" element={<Support />} />
             <Route path="/install" element={<Install />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/delete-account" element={<DeleteAccount />} />
           </Route>
           <Route path="/*" element={<App />} />
         </Routes>

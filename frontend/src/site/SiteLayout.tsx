@@ -56,9 +56,12 @@ function Shell() {
             <div className="font-black text-brand-navy">{t("brand")}</div>
             <div>{t("footerTag")}</div>
           </div>
-          <div className="flex gap-5 font-semibold">
+          <div className="flex flex-wrap gap-x-5 gap-y-2 font-semibold">
             <Link to="/partner">{t("navPartner")}</Link>
             <Link to="/support">{t("navSupport")}</Link>
+            <Link to="/privacy">{t("navPrivacy")}</Link>
+            <Link to="/terms">{t("navTerms")}</Link>
+            <Link to="/delete-account">{t("navDelete")}</Link>
           </div>
         </div>
       </footer>
