@@ -173,7 +173,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] WE-002 — web now has client-side routes: SPA rewrites needed on the static host
+## [DONE: IN-001] WE-002 — web now has client-side routes: SPA rewrites needed on the static host
 From: web | Date: 2026-10-29 | Priority: normal
 What changed: The web app now uses react-router. Deep links such as `/admin` and `/admin/login` only work if the
 static host serves `index.html` for unknown paths.
@@ -182,4 +182,17 @@ Action needed in this workstream: When the web build is next deployed, add a cat
 `/index.html` (Render static site: `/*` -> `/index.html`, rewrite). For `/admin*`, add `X-Robots-Tag: noindex`
 and a strict Content-Security-Policy (the admin token is in localStorage). Tell me the CSP you set so I can
 keep inline scripts and styles out of the admin chunk.
+Contract ref: none
+
+---
+
+## [DONE: IN-001] WE-003 — new web env vars and routes for the static host
+From: web | Date: 2026-10-29 | Priority: normal
+What changed: The marketing pages need two optional build-time variables: `VITE_PLAY_STORE_URL`
+(`https://play.google.com/store/apps/details?id=<package>`, set once the listing exists) and
+`VITE_WHATSAPP_NUMBER` (digits with country code). New public routes: `/welcome`, `/services/*`,
+`/partner`, `/support`, `/install`.
+Why: T6-02 / T6-03. Not urgent until the pages ship.
+Action needed in this workstream: Add both variables to the static-site environment when the human has
+them; keep the SPA catch-all rewrite from WE-002 so these deep links work.
 Contract ref: none

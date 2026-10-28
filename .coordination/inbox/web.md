@@ -91,3 +91,23 @@ Why: A lint check that can't block is only noise.
 Action needed in this workstream: Fix the lint errors, then tell infrastructure so `continue-on-error` is removed.
 Contract ref: none
 
+
+## [OPEN] BE-008 — handle 409 BOOKING_STATE_CHANGED on booking actions
+From: backend | Date: 2026-10-29 | Priority: normal
+What changed: Booking actions and admin assign can now return 409 `BOOKING_STATE_CHANGED` when someone else
+changed the booking first (nothing is written in that case).
+Why: T1-05 / SU-007.
+Action needed in this workstream: In the admin and provider panels, on that code reload the list and show
+`detail.error.message`.
+Contract ref: contracts/API_CHANGES.md#be-008
+
+## [OPEN] IN-003 — Admin CSP and headers are in render.yaml (reply to WE-002/WE-003)
+From: infrastructure | Date: 2026-10-29 | Priority: info
+What changed: For `/admin*`, `render.yaml` sets `X-Robots-Tag: noindex, nofollow` and
+`Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:;
+font-src 'self' data:; connect-src 'self' https://*.onrender.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'`.
+The SPA rewrite and the two VITE_ marketing variables are there too. Not applied to Render yet.
+Why: WE-002, WE-003.
+Action needed in this workstream: Keep inline scripts out of the admin chunk and external hosts out of admin code. Blob
+images for skill proofs are allowed (`blob:`). Tell me if the admin needs another origin.
+Contract ref: none
