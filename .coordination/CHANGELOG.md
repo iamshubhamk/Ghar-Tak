@@ -18,3 +18,7 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-29 | BE-003 | backend | AR-005: one upload validator (magic bytes, caps, server names), private skill proofs + auth route, images-only /uploads with nosniff, read-only audit script | inbox: AR-005 web, infrastructure, support, architect
 - 2026-10-29 | BE-004 | backend | AR-006: refuse to boot outside local with default/weak JWT secret or empty MONGODB_URL | inbox: AR-006 infrastructure (breaking: confirm prod env before deploy), architect, support
 - 2026-10-29 | BE-005 | backend | Remove dead app/models package, drop_cat.py, test_cat.py (OR-001 #3, #5) | inbox: architect
+- 2026-10-29 | AR-007 | architect | Human decisions recorded (deploy via PR to main, R2, Render free, daily dump + staging, ADRs 0003-0006 accepted, Phase 1 + P-1..P-4 approved, ₹99 visit offer, 30-min assignment promise); dispatched Phase 0 completion + Phase 1 infra | inbox: infrastructure (breaking)
+- 2026-10-29 | AR-008 | architect | Dispatched Phase 1 backend T1-04..T1-09, T1-13 + commit of human's lat/long change | inbox: backend
+- 2026-10-29 | AR-009 | architect | Park web location-picker edits (stash), admin proof viewer fix | inbox: web
+- 2026-10-29 | AR-010 | architect | Phase 1 tests T1-16 + finalise test-plan policies | inbox: support

@@ -56,7 +56,7 @@ Action needed in this workstream: Decide/ADR items 1–5, then fold into the bat
    wallet stay out of MVP.
 Contract ref: none
 
-## [IN PROGRESS] IN-001 — Infra decisions needed: upload storage, Render Blueprint, CI gates, envs
+## [DONE: AR-007] IN-001 — Infra decisions needed: upload storage, Render Blueprint, CI gates, envs
 From: infrastructure | Date: 2026-10-28 | Priority: normal
 What changed: Nothing yet. This is a proposal (answers OR-004 items 2–4). Full plan:
 side-session notes `infrastructure-IN-001-plan.md`. A copy will go in `docs/release/infra-baseline.md` once approved.
@@ -110,7 +110,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-003 — BUG S2: admin status endpoint skips the state machine (any status → any status)
+## [IN PROGRESS] SU-003 — BUG S2: admin status endpoint skips the state machine (any status → any status)
 From: support | Date: 2026-10-28 | Priority: normal
 Severity: S2 broken flow
 Repro steps: Booking in COMPLETED (or CANCELLED_BY_CUSTOMER) → `PATCH /admin/bookings/{id}/status {"status":"REQUESTED"}`.
@@ -127,7 +127,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-004 — BUG S2: booking prices come from the client
+## [IN PROGRESS] SU-004 — BUG S2: booking prices come from the client
 From: support | Date: 2026-10-28 | Priority: normal
 Severity: S2 (money)
 Repro steps: `POST /bookings` with `items:[{"id":"x","name":"Tap repair","price":-500,"quantity":1}]` or with
@@ -144,7 +144,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-005 — BUG S2: provider who is no longer VERIFIED can still work assigned bookings
+## [IN PROGRESS] SU-005 — BUG S2: provider who is no longer VERIFIED can still work assigned bookings
 From: support | Date: 2026-10-28 | Priority: normal
 Severity: S2
 Repro steps: P1 (VERIFIED) has an ACCEPTED booking. Admin rejects P1 (`/admin/providers/{id}/reject`), or P1
@@ -161,7 +161,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-006 — BUG S2: provider can add service categories without admin approval
+## [IN PROGRESS] SU-006 — BUG S2: provider can add service categories without admin approval
 From: support | Date: 2026-10-28 | Priority: normal
 Severity: S2 (verification bypass)
 Repro steps: VERIFIED provider → `PATCH /provider/me {"category_ids":["<electrician id>"]}` → stays VERIFIED and
@@ -179,7 +179,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-007 — BUG S2: booking transitions are not atomic (race → both sides "succeed")
+## [IN PROGRESS] SU-007 — BUG S2: booking transitions are not atomic (race → both sides "succeed")
 From: support | Date: 2026-10-28 | Priority: normal
 Severity: S2
 Repro steps: Fire `PATCH /bookings/{id}/cancel` (customer) and `PATCH /provider/bookings/{id}/accept` together on
@@ -213,7 +213,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-009 — S3 batch: smaller booking/auth defects found in the same read
+## [IN PROGRESS] SU-009 — S3 batch: smaller booking/auth defects found in the same read
 From: support | Date: 2026-10-28 | Priority: normal
 Severity: S3 (each)
 1. Start OTP has no attempt limit (4 digits, 9000 values) — `services/bookings.py:365-378`. Fix: lock after ~5
@@ -266,7 +266,7 @@ Action needed in this workstream: Check the result. Note: `email-validator` is m
 it, but a clean install fails, so I'd like to add it next (BE-001).
 Contract ref: contracts/API_CHANGES.md#ar-002
 
-## [OPEN] BE-002 — info: test suite runs again; decision needed on admin status override
+## [DONE: no-op] BE-002 — info: test suite runs again; decision needed on admin status override
 From: backend | Date: 2026-10-28 | Priority: info
 What changed: BE-001: `email-validator==2.2.0` added to `requirements.txt` (clean install now imports the app).
 BE-002: `tests/conftest.py` rewritten for MongoDB (in-memory `mongomock-motor`, or a real DB when
@@ -280,7 +280,7 @@ status (e.g. COMPLETED -> REQUESTED). Should admins be bound by the central tran
 Pinned by `test_known_gap_admin_can_force_any_status_transition`. Related: SU-007 (non-atomic transitions).
 Contract ref: none
 
-## [OPEN] AR-005 — done (BE-003): uploads locked down, skill proofs private
+## [DONE: no-op] AR-005 — done (BE-003): uploads locked down, skill proofs private
 From: backend | Date: 2026-10-29 | Priority: info
 What changed: `services/uploads.py` is the one validator (magic bytes, allow-list per kind, size caps from
 settings, server-chosen names); all seven upload sites use it through `services/storage.py` (adapter gained
@@ -298,7 +298,7 @@ reading up to the limit, so a very large body is still received by the server (a
 infrastructure). Heads-up: the files in `docs/` and the human's booking edits are untouched.
 Contract ref: contracts/API_CHANGES.md#ar-005
 
-## [OPEN] AR-006 — done (BE-004): app refuses to boot with a weak JWT secret outside local
+## [DONE: no-op] AR-006 — done (BE-004): app refuses to boot with a weak JWT secret outside local
 From: backend | Date: 2026-10-29 | Priority: info
 What changed: `core/config.py` has a settings validator: when `ENVIRONMENT` is not `local`
 (case-insensitive), it raises if the secret is the default, empty or under 32 characters, or `MONGODB_URL`
@@ -312,7 +312,7 @@ prod env (their AR-006 entry is marked breaking). Note the check is skipped when
 AR-006 are both handed off, so I will resume OR-001 (items 3 and 5 still need the human's OK to delete files).
 Contract ref: none
 
-## [OPEN] BE-005 — info: OR-001 items 3 and 5 done (dead code and stray scripts removed)
+## [DONE: no-op] BE-005 — info: OR-001 items 3 and 5 done (dead code and stray scripts removed)
 From: backend | Date: 2026-10-29 | Priority: info
 What changed: Deleted `backend/app/models/` (only a dead SQLAlchemy `__init__.py` importing modules that did
 not exist; nothing referenced it), `backend/drop_cat.py` (a script that deletes every category on whatever

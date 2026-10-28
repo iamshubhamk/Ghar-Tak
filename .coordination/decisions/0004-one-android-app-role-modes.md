@@ -1,6 +1,6 @@
 # 0004 — One Android app with customer and provider modes
 
-Status: proposed
+Status: accepted (human, 2026-10-29)
 Date: 2026-10-28 | Author: architect (AR-001)
 Plan: `docs/plans/mobile-app.md`
 
@@ -94,3 +94,11 @@ Plan: `docs/plans/mobile-app.md`
     `preferred_language` + localised push on assign/status change + token pruning
   - M3: start-OTP attempt limit
   - M5: account deletion
+
+## Notes on acceptance (2026-10-29)
+- Package `com.ghartak.app`; language follows the device locale with a choice on first launch.
+- Phone required at registration, email optional; phone + password login at launch.
+- Assignment promise shown to customers: **within 30 minutes, 8am–10pm**. Requests outside those hours are
+  accepted with a "confirmed after 8am" notice. These values come from `/app/config`.
+- Launch offer: **₹99 visit charge**; parts/extra work quoted on site and entered by the provider at
+  completion (policy P-2 in `docs/plans/roadmap-tickets.md`).

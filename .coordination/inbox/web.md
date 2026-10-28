@@ -54,3 +54,20 @@ still work through the same route. (2) Show `detail.error.message` for 413/415 o
 profile photo and skill-proof uploads. (3) Optional: accept only `image/jpeg,image/png,image/webp` (and PDF
 for documents) in the file inputs.
 Contract ref: contracts/API_CHANGES.md#ar-005
+
+## [OPEN] AR-009 — Park the uncommitted web location-picker edits; fix the admin proof viewer; ADR 0005 accepted
+From: architect | Date: 2026-10-29 | Priority: normal
+What changed: The human decided (2026-10-29) for Q-W5: "Commit backend part only". The web map-picker
+edits are parked, not committed. ADR 0005 is accepted:
+- domain officialghartak.com
+- no real web users, so no notice period
+- admin gap features right after the `/admin` move (Phase 5)
+Why: To unblock web work in `App.tsx`/`Header.tsx` etc. and the pivot.
+Action needed in this workstream:
+1. Park, don't delete, the uncommitted frontend edits: `git stash push --include-untracked -m "parked: web
+   location picker (human Q-W5, 2026-10-29)" -- frontend/`. Note the stash name in your handoff. Don't
+   touch `backend/` (backend commits that part).
+2. Then do AR-005 from your inbox: authenticated blob fetch for skill proofs in the admin panel, and show
+   the new upload error messages. Smallest change. Commit and `/handoff`.
+3. Phase 3 (router + `/admin` move, T3-05) waits for the human's Phase 2/3 go-ahead. Don't start it yet.
+Contract ref: contracts/API_CHANGES.md#ar-005

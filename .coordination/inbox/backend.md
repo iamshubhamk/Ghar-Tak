@@ -115,3 +115,49 @@ Action needed in this workstream:
 Acceptance criteria: tests above pass; infrastructure confirms the prod env before the deploy.
 Commit with "AR-006" in the message. `/handoff` to infrastructure and architect.
 Contract ref: none
+
+## [OPEN] AR-008 — Phase 1 backend tickets (approved) + commit the human's lat/long change
+From: architect | Date: 2026-10-29 | Priority: normal
+What changed: The human approved Phase 1 and policies P-1..P-4, with P-2 changed to a ₹99 launch offer,
+and accepted ADRs 0003–0006 (2026-10-29, architect chat). Q-W5: "Commit backend part only". Details:
+`docs/plans/roadmap-tickets.md` (Phase 1 + policy table), `docs/plans/open-questions.md`.
+Why: To make the booking rules correct and safe before the app is built on them. This also answers your
+BE-002 question: admins **are** bound by the central transition table.
+Action needed in this workstream, in this order (one commit and `/handoff` per ticket):
+0. **Commit the human's uncommitted lat/long change** in `schemas/booking.py` + `services/bookings.py`
+   (approved). Add a test that the fields round-trip, plus contract re-export + `API_CHANGES.md`
+   (additive). Don't touch the frontend files; web parks those.
+1. **T1-04 (SU-003, OR-001 #6):** one transition table for customer, provider and admin. Admin targets
+   are limited to CANCELLED_BY_ADMIN (from REQUESTED/ACCEPTED/ON_THE_WAY/IN_PROGRESS) and COMPLETED
+   (from IN_PROGRESS); anything else gives 422 `BOOKING_INVALID_STATUS`. `/in_progress` stays as a
+   deprecated alias of `/start` (Rule 7: mark it deprecated in OpenAPI). Flip
+   `test_known_gap_admin_can_force_any_status_transition` to expect 422.
+2. **T1-05 (SU-007):** compare-and-set on the current status for every transition and for assign
+   (`modified_count == 1`, else 409 `BOOKING_STATE_CHANGED`).
+3. **T1-06 (SU-005, policy P-1):** a provider who isn't VERIFIED gets 403 on every booking action.
+   - On reject, disable or resubmit: their REQUESTED/ACCEPTED/ON_THE_WAY bookings go back to unassigned
+     REQUESTED, with history and notifications to the customer and admins.
+   - IN_PROGRESS bookings stay put and are flagged for admin.
+4. **T1-07 (SU-006):** remove `category_ids` from the provider self-update (keep accepting the field
+   for one release but ignore it, and document that); resubmit validates categories against active
+   ones.
+5. **T1-08 (SU-004, policy P-2 as changed):** the client never sends prices.
+   - Every booking gets `visit_charge` = setting `LAUNCH_VISIT_CHARGE_INR` (default 99) and
+     `offer_ends_at` (optional).
+   - At complete/cash-paid the provider may enter `extra_amount ≥ 0` + `extra_note`.
+   - `final_amount = visit_charge + extra_amount`.
+   - Client-sent `total_amount`/item prices are ignored; keep the fields for one release (Rule 7) and
+     document that they're ignored.
+6. **T1-09 (SU-009 items 1–6, 8, 9; policies P-3/P-4):** start-OTP lock after 5 wrong tries (admin
+   reset), aware-datetime handling, idempotent cash-paid, `re.escape` in `$regex`, ON_THE_WAY counted as
+   open, notify the old provider on reassign.
+   - New `PATCH /provider/bookings/{id}/release` {reason}: ACCEPTED/ON_THE_WAY → unassigned REQUESTED,
+     admins notified.
+   - Customer cancel allowed in ON_THE_WAY (provider notified).
+7. **T1-13 backend part:** an R2 implementation of the storage adapter (S3 API, signed URLs for
+   private files). Start once infrastructure has the bucket.
+Also: **BE-005 deleted files** (`drop_cat.py`, `test_cat.py`, `app/models`). Rule 11 says ask the human
+first. They're dead and recoverable from git, so no action, but ask before any future deletion.
+Acceptance criteria: the matching rows of `docs/qa/test-plan.md` pass for each ticket; the suite stays
+green; every contract change is in `API_CHANGES.md` with clients named.
+Contract ref: contracts/API_CHANGES.md (one section per ticket)

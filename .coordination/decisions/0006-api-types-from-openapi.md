@@ -1,6 +1,6 @@
 # 0006 — Client API types are generated from `openapi.json`
 
-Status: proposed
+Status: accepted (human, 2026-10-29)
 Date: 2026-10-28 | Author: architect (AR-001)
 
 ## Context
@@ -57,3 +57,6 @@ Date: 2026-10-28 | Author: architect (AR-001)
   routes and the error schema.
 - − Committed generated files make diffs noisy. That's accepted, because it keeps the CI drift check
   trivial.
+
+## Notes on acceptance (2026-10-29)
+- Accepted as proposed.

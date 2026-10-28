@@ -1,6 +1,6 @@
 # 0005 — The web becomes a marketing site, with the admin panel at `/admin`
 
-Status: proposed
+Status: accepted (human, 2026-10-29)
 Date: 2026-10-28 | Author: architect (AR-001)
 Plan: `docs/plans/web-pivot.md`
 
@@ -76,3 +76,8 @@ Plan: `docs/plans/web-pivot.md`
   admins exists.
 - The uncommitted `dev` frontend changes (location picker etc.) touch files that get archived in
   step 5. The human decides whether to commit them first (Q-W5).
+
+## Notes on acceptance (2026-10-29)
+- Domain `officialghartak.com`. No real web users today, so no notice period before the switch.
+- `/install` before launch: WhatsApp waitlist (number to be supplied).
+- Admin gap features are built right after the `/admin` move (Phase 5).

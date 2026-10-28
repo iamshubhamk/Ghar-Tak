@@ -1,6 +1,6 @@
 # 0003 — Rotating refresh tokens, logout, and a real password-reset check
 
-Status: proposed
+Status: accepted (human, 2026-10-29)
 Date: 2026-10-28 | Author: architect (AR-001)
 Touches auth → needs the human's approval (Rule 11).
 
@@ -74,3 +74,8 @@ Touches auth → needs the human's approval (Rule 11).
   backend chore. Signing stays HS256 because there's only one service.
 - Tests (Rule 9): rotation, the grace window, reuse → family revoked, logout, revoke on password change
   and on disable, and expiry.
+
+## Notes on acceptance (2026-10-29)
+- Lifetimes approved as proposed (mobile 30 d sliding / 90 d absolute; admin web 12 h).
+- Launch login is phone + password (Q-M2), so the reset in §8 uses an **email code where the account
+  has an email**. Phone-only accounts reset through support/admin until SMS OTP is added after launch.

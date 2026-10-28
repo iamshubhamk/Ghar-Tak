@@ -120,3 +120,53 @@ secret anywhere; just confirm it is set and long enough. If the secret has to ch
 is signed out once (tokens are signed with it); that is expected. Also check staging, CI and any other
 environment that runs the app. Reply by marking this DONE with the result.
 Contract ref: none
+
+## [OPEN] AR-007 — Deploy plan approved (PR to main) + Phase 1 infrastructure tickets
+From: architect | Date: 2026-10-29 | Priority: breaking (part A), normal (part B)
+What changed: The human answered in the architect chat (2026-10-29):
+- deploy route "PR to main"
+- prod secret "Infra guides me"
+- admin password "Guide me now"
+- Phase 1 "Approve all"
+- storage "Cloudflare R2"
+- hosting "Stay free for now"
+- DB "Daily dump + staging"
+
+They have an Expo account. They don't have Cloudflare, Sentry or Play developer accounts yet. Decision
+record: `docs/plans/open-questions.md`, `docs/plans/roadmap-tickets.md`.
+Why: Phase 0 fixes (AR-002, AR-005, AR-006) are done on `setup/workspace` and none are live. Phase 1
+needs reproducible infrastructure.
+Action needed in this workstream:
+**Part A — finish Phase 0 (do first):**
+1. Write the human a short checklist, in this order. The human does every dashboard click. No secret
+   values in chat, git, inboxes or logs.
+   (a) In Render: check that `ENVIRONMENT=production` is set and `JWT_SECRET_KEY` is at least 32 random
+       characters. If not, generate one (`python -c "import secrets; print(secrets.token_urlsafe(48))"`
+       run locally) and set it. Warn them that this logs everyone out once.
+   (b) Change the admin password: set a new `ADMIN_PASSWORD` in Render and run `python -m scripts.seed_admin`
+       (Render shell, or locally against the prod `MONGODB_URL`), then remove `ADMIN_PASSWORD` from Render.
+2. Push `setup/workspace` and open **one PR into `main`**. It has the security fixes, tests, coordination
+   files and README cleanup. The human's uncommitted edits are excluded. Confirm in the PR that Render
+   deploys from `main`; if it doesn't, stop and tell the architect. The human merges; don't auto-merge.
+3. After the deploy, run `scripts/audit_uploads.py` read-only on prod and give the list to the human
+   (Rule 11: nothing is deleted without their OK). Tell support to verify AR-002/005/006.
+**Part B — Phase 1 tickets (start after Part A step 2):**
+- T1-10 `docker-compose` with MongoDB; split `.env.example` into local and prod examples.
+- T1-11 GitHub Actions CI (on PRs to `main`). Blocking checks:
+  - backend `pytest` + `ruff check tests` (per BE-002)
+  - frontend lint + build
+  - `openapi.json` drift check (export + `git diff --exit-code`)
+- T1-12 `render.yaml` Blueprint, free tier, Singapore region. Note the cold-start limit in it; paid tier
+  gets revisited before the Play launch.
+- T1-13 Cloudflare R2: guide the human to create the account and a private bucket plus API token (they
+  enter the secrets in Render). Backend switches the storage adapter (backend AR-008). Plan the
+  migration of existing files.
+- T1-14 Daily `mongodump` to R2 (scheduled job). Do a restore test. Set up a free staging DB/user and a
+  staging env.
+- T1-15 Sentry (free) + uptime monitor: guide account creation when you get to it.
+Acceptance criteria:
+- Part A: the human confirms the secret is set and the password changed; the PR is merged; prod returns
+  403 on password reset; the audit list is delivered.
+- Part B: each ticket's "Done when" in `roadmap-tickets.md`.
+`/handoff` each ticket separately.
+Contract ref: none

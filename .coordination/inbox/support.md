@@ -72,3 +72,22 @@ Why: SU-009 #7.
 Action needed in this workstream: After infrastructure confirms the prod env and deploys, check that the
 site is up and login works. Nothing else to test by hand; the cases are automated.
 Contract ref: none
+
+## [OPEN] AR-010 — Phase 1 approved: automate the lifecycle + auth tests (T1-16); policies decided
+From: architect | Date: 2026-10-29 | Priority: normal
+What changed: The human approved Phase 1 and the policies (2026-10-29):
+- P-1/P-3: a provider who is out, or releases a job, sends it back to the admin queue
+- P-2: ₹99 visit charge, with the extra entered by the provider
+- P-4: customer cancel allowed until the job starts
+- admins bound by the transition table (only CANCELLED_BY_ADMIN / COMPLETED)
+
+See the policy table in `docs/plans/roadmap-tickets.md`.
+Why: The ❓ columns in your test plan can now be finalised.
+Action needed in this workstream:
+1. Update the expected values in `docs/qa/test-plan.md` with these policies, and commit it (it's still
+   untracked).
+2. T1-16: write the API tests for §1–2 against backend's fixtures. You write new
+   `tests/test_lifecycle_*.py` files; backend owns `conftest.py`. Expect them to fail until backend's
+   matching T1-04..T1-09 tickets land; mark those with `xfail(strict=True)` and the ticket ID.
+3. Keep verifying the Phase 0 items on prod after infrastructure's deploy (your AR-002/005/006 entries).
+Contract ref: none

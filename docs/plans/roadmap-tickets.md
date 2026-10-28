@@ -1,7 +1,7 @@
 # GharTak — phased development tickets
 
 Status: **proposed** (2026-10-28). Owner: architect (AR-004). Needs the human's approval, one phase at a
-time. **Phase 0 approved and dispatched 2026-10-29.**
+time. **Phase 0 approved and dispatched 2026-10-29. Phase 1 + policies P-1..P-4 approved 2026-10-29 (P-2 changed to the ₹99 launch offer). ADRs 0003–0006 accepted.**
 
 ## How to read this
 
@@ -48,8 +48,8 @@ else matters until these are closed. Approved by you on 2026-10-28.
 | T0-02 | Rotate prod admin password; remove demo login from README | infra + **you** | — | S | The old password no longer logs in; README has no credentials | OR-004, AR-003 | README done (`3b0c258`); rotation waiting on you |
 | T0-03 | Deploy T0-01 to prod | infra | T0-01 | S | Prod returns 403 on reset | AR-003 | waiting for the branch/deploy OK from you |
 | T0-04 | Verify T0-01..03 on prod | support | T0-03 | S | Support report in the architect inbox | AR-002 | waiting |
-| T0-05 | Lock down uploads: allow-list jpg/png/webp/pdf, magic-byte check, size cap, server-chosen extension. Skill proofs move to private storage behind an admin-only route | backend | — | M | An HTML file disguised as an image is rejected; an admin can open a skill proof and the public cannot | SU-008 | dispatched AR-005 (backend) |
-| T0-06 | Refuse to start outside `local` when `JWT_SECRET_KEY` is the default; confirm prod has a strong secret | backend + infra | — | S | App exits with a clear error on the default secret; infra confirms the prod value is set | SU-009 #7 | dispatched AR-006 (backend + infra) |
+| T0-05 | Lock down uploads: allow-list jpg/png/webp/pdf, magic-byte check, size cap, server-chosen extension. Skill proofs move to private storage behind an admin-only route | backend | — | M | An HTML file disguised as an image is rejected; an admin can open a skill proof and the public cannot | SU-008 | ✅ BE-003 (154 tests verified); deploy pending |
+| T0-06 | Refuse to start outside `local` when `JWT_SECRET_KEY` is the default; confirm prod has a strong secret | backend + infra | — | S | App exits with a clear error on the default secret; infra confirms the prod value is set | SU-009 #7 | ✅ BE-004; prod secret check pending |
 
 ---
 
@@ -74,7 +74,7 @@ first means everything after it is built on tested, safe ground.
 | T1-05 | Atomic transitions (compare-and-set on the current status; the loser gets 409) | backend | T1-04 | S | Concurrency test §1.8 passes | SU-007 |
 | T1-06 | Unverified providers can't act on bookings; reject/disable sends their open bookings back to the admin queue (policy P-1) | backend | T1-04 | M | Test plan §1.3 rows P3/P4 pass | SU-005 |
 | T1-07 | Providers can't change their own categories (only through a skill request); resubmit validates category names | backend | T1-01 | S | Test plan §3.3 rows 3–4 pass; deprecation note for the field | SU-006 |
-| T1-08 | Server-side booking amounts (policy P-2): ignore client totals, `price ≥ 0`, `quantity ≥ 1` | backend | T1-01 | S | Negative or forged totals rejected or ignored | SU-004 |
+| T1-08 | Server-side booking amounts (policy P-2, ₹99 visit offer): ignore client totals; ₹99 from settings; provider enters extra ≥ 0 at completion | backend | T1-01 | S | Negative or forged totals rejected or ignored | SU-004 |
 | T1-09 | Small fixes batch: start-OTP attempt limit, timezone handling, idempotent cash-paid, `$regex` escaping, ON_THE_WAY counted as open, notify the old provider on reassign, provider "release job" and customer cancel while on the way (policies P-3, P-4) | backend | T1-04 | M | Each item has a test from the test plan | SU-009 |
 
 ### 1c. Infrastructure
@@ -82,9 +82,9 @@ first means everything after it is built on tested, safe ground.
 |---|---|---|---|---|---|---|
 | T1-10 | Local dev on MongoDB (`docker-compose`), separate local and prod `.env.example` | infra | — | S | `docker compose up` gives a working local API | OR-004 #3–4 |
 | T1-11 | CI on GitHub Actions: ruff, pytest, frontend lint + build, `openapi.json` drift check | infra | T1-01 | M | Every PR shows green/red checks; pytest blocks once T1-01 is done | OR-004 #2, ADR 0006 |
-| T1-12 | `render.yaml` Blueprint (API + static site), region and tier per Q-I2 | infra | Q-I2 | S | Deploys are reproducible from git | IN-001 |
+| T1-12 | `render.yaml` Blueprint (API + static site); **free tier for now** (Q-I2), Singapore region; paid tier revisited before the Play launch | infra | Q-I2 | S | Deploys are reproducible from git | IN-001 |
 | T1-13 | Permanent file storage (Q-I1, recommended Cloudflare R2): private bucket, signed URLs, migrate existing files | infra + backend | Q-I1, T0-05 | M | Files survive a redeploy; Aadhaar only through signed admin URLs | IN-001 |
-| T1-14 | Database backups (Q-I3) + a staging environment (Q-I4) | infra | Q-I3, Q-I4 | M | A restore test succeeds; staging has its own DB | IN-001 |
+| T1-14 | Daily `mongodump` to R2 (Q-I3) + a free staging DB (Q-I4) | infra | Q-I3, Q-I4 | M | A restore test succeeds; staging has its own DB | IN-001 |
 | T1-15 | Error tracking (Sentry free) + uptime monitor + structured request logs | infra + support | Q-I5 | S | Alerts reach you on error spikes or downtime | OR-005 |
 | T1-16 | Automated API tests for the booking lifecycle and auth, run in CI | support | T1-01, T1-11 | M | Test plan §1–2 automated | OR-005 |
 
@@ -193,7 +193,7 @@ and the app handles Aadhaar, which Indian law restricts. Closed testing comes be
 | # | Question (from support) | Proposal |
 |---|---|---|
 | P-1 | A provider is rejected, disabled or resubmits while holding bookings (SU-005) | They can't act on any booking (403). Their REQUESTED/ACCEPTED/ON_THE_WAY bookings go back to the admin queue (unassigned REQUESTED), and the customer and admin are notified. IN_PROGRESS stays put for the admin to resolve by hand. |
-| P-2 | No price list exists (SU-004; categories only have a text `price_label`) | Treat amounts as **estimates**. The server ignores client totals and stores `estimated_amount` from the category label if numeric, otherwise none. The provider enters `final_amount` at completion/cash-paid, bounded ≥ 0. A real price list is a later product decision. |
+| P-2 | No price list exists (SU-004; categories only have a text `price_label`) | **Changed by the human (2026-10-29): ₹99 launch offer.** Every booking has a **₹99 visit charge** (server-set from a setting, never from the client). Parts or extra work are quoted on site; the provider enters the extra amount at completion/cash-paid (≥ 0, with a short note). The total shown is ₹99 + extra. The offer price and an end date live in settings / `/app/config`, so it can change without an app release. |
 | P-3 | Provider cancel after accepting (SU-009 #4) | No CANCELLED_BY_PROVIDER. Add "release job": ACCEPTED/ON_THE_WAY → back to the admin queue with a reason, admin notified. The customer still needs the service, so cancelling is the wrong outcome in a demand-first model. |
 | P-4 | Customer cancel while the provider is on the way (SU-009 #5) | Allowed until the job starts. The provider is notified. Repeated late cancels are tracked for later (no penalty in MVP). |
 
