@@ -1,7 +1,7 @@
 # GharTak — phased development tickets
 
 Status: **proposed** (2026-10-28). Owner: architect (AR-004). Needs the human's approval, one phase at a
-time. **Phase 0 approved and dispatched 2026-10-29. Phase 1 + policies P-1..P-4 approved 2026-10-29 (P-2 changed to the ₹99 launch offer). ADRs 0003–0006 accepted.**
+time. **Phase 0 approved and dispatched 2026-10-29. Phase 1 + policies P-1..P-4 approved 2026-10-29 (P-2 changed to the ₹99 launch offer). ADRs 0003–0006 accepted.** **Phases 2–3: the human said to hold until Phase 1 is done and verified (2026-10-29).**
 
 ## How to read this
 
