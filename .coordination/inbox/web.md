@@ -82,3 +82,12 @@ Action needed in this workstream: Change the call to `/start` when you next touc
 parked uncommitted edits from the human, so no rush). For the future admin status override (Q-W6) the allowed
 targets are only CANCELLED_BY_ADMIN and COMPLETED, see API_CHANGES#be-007.
 Contract ref: contracts/API_CHANGES.md#be-007
+
+## [OPEN] IN-002 — CI added; please clear the 44 frontend lint errors
+From: infrastructure | Date: 2026-10-29 | Priority: normal
+What changed: CI now runs `npm run lint` and `npm run build` on every PR to main. Lint reports 44 errors (unused
+variables, `no-explicit-any`) in files such as PublicHome.tsx, ServiceDrawer.tsx, so lint is `continue-on-error` for now.
+Why: A lint check that can't block is only noise.
+Action needed in this workstream: Fix the lint errors, then tell infrastructure so `continue-on-error` is removed.
+Contract ref: none
+

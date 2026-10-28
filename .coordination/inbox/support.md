@@ -117,3 +117,28 @@ Why: SU-003 / T1-04.
 Action needed in this workstream: After deploy, spot-check on staging or prod with throwaway data that an
 admin cannot reopen a COMPLETED booking, and update the matrix rows in the test plan.
 Contract ref: contracts/API_CHANGES.md#be-007
+
+---
+
+## [OPEN] WE-002 — verify admin at /admin (router + guard)
+From: web | Date: 2026-10-29 | Priority: normal
+What changed: Commit `40ab310`. New routes: `/admin/login` (admin-only form), `/admin` (guard: token + `GET /auth/me`
+must say ADMIN, else redirect to `/admin/login`; page is `noindex`) with its own top bar (name, notification
+bell, logout). The panel itself is unchanged. The old public app still runs at `/` and its login still works.
+Why: T3-05 part 1 (ADR 0005).
+Action needed in this workstream: Verify at `/admin` with the real backend: customer and provider logins are
+rejected on `/admin/login` and no token is stored; no token or a customer token at `/admin` redirects to the
+login; reload keeps the admin session; logout clears it. Then walk the existing admin actions (approve, reject
+with reason, disable, Aadhaar and bank-proof viewers, skill-request approve/reject and proof, categories
+create, assign, booking filter). I only checked login, guard, reload and logout against a mock API, not the
+panel actions against the real backend. Admin still uses the 60-minute access token (refresh tokens are T2-01).
+Contract ref: none
+
+## [OPEN] IN-002 — CI now exists; watch the first PR run
+From: infrastructure | Date: 2026-10-29 | Priority: info
+What changed: `.github/workflows/ci.yml` (backend pytest + ruff tests, frontend lint/build, openapi drift) runs on PRs to main.
+Checked locally only; the first GitHub run is the real test. Prod has not changed yet.
+Why: T1-11.
+Action needed in this workstream: None until the PR is merged and deployed (then verify AR-002/005/006).
+Contract ref: none
+

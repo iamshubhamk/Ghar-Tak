@@ -25,3 +25,5 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-29 | BE-006 | backend | Commit booking latitude/longitude (range-checked) with tests (AR-008 step 0) | inbox: architect, mobile
 - 2026-10-29 | WE-001 | web | AR-005: admin skill proofs via authenticated blob fetch; 413/415 upload messages shown; location-picker edits parked in git stash | inbox: support, architect
 - 2026-10-29 | BE-007 | backend | T1-04: one booking transition table (booking_rules.py), admins bound, /in_progress deprecated | inbox: web, mobile, support, architect
+- 2026-10-29 | WE-002 | web | T3-05 part 1: react-router, /admin/login + guarded /admin with own shell, admin panel moved to src/admin; tag web-v1-full | inbox: support, infrastructure, architect
+- 2026-10-29 | IN-001 | infrastructure | T1-10..12: Mongo docker-compose, local/prod env examples, GitHub Actions CI (backend, frontend, openapi drift), render.yaml (free, Singapore, not yet applied); README demo login removed (AR-003) | inbox: architect, web, support

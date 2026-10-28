@@ -362,3 +362,30 @@ Action needed in this workstream: Check the result. OR-001 item 6 is now done. N
 Note: my BE-006 commit also swept in a one-line status change another session had made to
 `inbox/infrastructure.md`; harmless, mentioned so it is not a surprise.
 Contract ref: contracts/API_CHANGES.md#be-007
+
+---
+
+## [OPEN] WE-002 — T3-05 part 1 done (info)
+From: web | Date: 2026-10-29 | Priority: info
+What changed: Commit `40ab310`, tag `web-v1-full` on `906a13a`. `react-router` 7 added; `/*` mounts today's app
+unchanged; `/admin/login` and guarded `/admin` (token + `/auth/me` ADMIN) are lazy routes with their own shell;
+panel moved to `src/admin/`. Checked against a mock API in the browser: guard redirects, customer login
+rejected without storing a token, admin login, reload, logout, `/` unchanged. Build passes.
+Why: T3-05 steps 2-3 of the web plan.
+Action needed in this workstream: Not done yet: refresh tokens and generated types (need T2-01 and T1-03);
+support's sign-off against the real backend; infra rewrites and CSP. The admin panel is still in the main
+bundle because the old `App` imports it; it splits out when the customer and provider code is archived (plan
+step 5). The router added about 14 KB gzipped. Part 2 of T3-05 is those dependent pieces.
+Contract ref: none
+
+## [OPEN] IN-002 — T1-10, T1-11, T1-12 done (pushed to setup/workspace, commit f4ad2be)
+From: infrastructure | Date: 2026-10-29 | Priority: info
+What changed: `docker-compose.yml` now runs MongoDB 7; `backend/.env.example` is local, new `.env.production.example`;
+`.github/workflows/ci.yml` (PRs to main: backend ruff-on-tests + pytest, frontend lint + build, openapi.json drift);
+`render.yaml` (free, Singapore; NOT applied to Render, service names `ghartak-api` and `ghar-tak-frontend` must be
+checked against the dashboard first). Checked locally on a clean copy: ruff tests, 242 pytest, drift and build pass.
+Why: ADR 0006, OR-004 items 2–4.
+Action needed in this workstream: None for the code. Note: frontend lint has 44 existing errors, so it is report-only in CI
+until web fixes them. Part A (human's Render secret check and admin password, PR merge, upload audit) still waits on the human.
+Contract ref: none
+
