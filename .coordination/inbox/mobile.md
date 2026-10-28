@@ -15,3 +15,11 @@ Why: The plan proposes rebuilding on current Expo + expo-router and reusing scre
 Action needed in this workstream: Don't write code until the human approves the plan. Then start
 milestone M1 (auth + browse). Endpoints you need that don't exist yet → entry in backend's inbox.
 Contract ref: contracts/API_CHANGES.md#baseline
+
+## [OPEN] BE-006 — info: bookings accept and return latitude / longitude
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: `POST /bookings` accepts optional `latitude` / `longitude`; every booking response includes them
+(null if absent). See `API_CHANGES.md#be-006`.
+Why: AR-008 step 0 (location pin for the provider).
+Action needed in this workstream: None now; use them when the booking screen has a location picker.
+Contract ref: contracts/API_CHANGES.md#be-006

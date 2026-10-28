@@ -23,6 +23,8 @@ class BookingCreateRequest(BaseModel):
     building_name: str | None = Field(default=None, max_length=150)
     landmark: str | None = Field(default=None, max_length=200)
     pincode: str | None = Field(default=None, max_length=20)
+    latitude: float | None = Field(default=None, ge=-90, le=90)
+    longitude: float | None = Field(default=None, ge=-180, le=180)
     preferred_datetime: datetime
     issue_description: str | None = Field(default=None, max_length=1200)
     items: list[BookingItem] = Field(default_factory=list)
@@ -97,6 +99,8 @@ class BookingResponse(BaseModel):
     building_name: str | None = None
     landmark: str | None = None
     pincode: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
     preferred_datetime: datetime
     issue_description: str
     items: list[BookingItem] = Field(default_factory=list)

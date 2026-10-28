@@ -323,3 +323,14 @@ Action needed in this workstream: Check the result. OR-001 remaining for backend
 table, waits for your T1-04 decision), 7 (refresh-token ADR), 8 (push sender), 9 (lat/long commit is the
 human's call); item 4 (docker-compose) is infrastructure's.
 Contract ref: none
+
+## [OPEN] BE-006 — info: AR-008 step 0 done (booking lat/long committed)
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: Committed the human's lat/long change (Q-W5: backend part only) with `ge/le` range checks on the
+request fields and 4 tests (round trip on create / my / admin lists, optional, out-of-range 422). Contract
+unchanged apart from the min/max; `API_CHANGES.md#be-006`. Suite green. Frontend files untouched.
+Also, for the record on BE-005: the human did approve the deletions in this chat ("Yes, delete") before I
+deleted anything; my BE-005 entry says so.
+Why: AR-008 step 0.
+Action needed in this workstream: Check the result. Next: T1-04.
+Contract ref: contracts/API_CHANGES.md#be-006

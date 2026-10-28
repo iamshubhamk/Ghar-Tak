@@ -64,3 +64,11 @@ the real file type is read from the file's first bytes (content type and filenam
 Deprecated: nothing. Old files already on disk are not moved or deleted.
 Clients affected: web (admin skill-request viewer must fetch `proof_url` with the token; show the 413/415
 message to users), mobile (handle 413/415 on photo and document upload; only jpg/png/webp/pdf).
+
+## BE-006
+Date: 2026-10-29 | Breaking: no (additive)
+Changed: `POST /api/v1/bookings` — optional `latitude` (-90..90) and `longitude` (-180..180); values outside
+the range give 422. `BookingResponse` (all booking endpoints) returns `latitude` and `longitude` (null when
+not sent). These fields were already in the baseline export from the working copy; this change commits the
+code and adds the range check and tests.
+Clients affected: mobile (send the pin location when the customer picks one), web (parked).

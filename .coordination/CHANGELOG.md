@@ -22,3 +22,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-29 | AR-008 | architect | Dispatched Phase 1 backend T1-04..T1-09, T1-13 + commit of human's lat/long change | inbox: backend
 - 2026-10-29 | AR-009 | architect | Park web location-picker edits (stash), admin proof viewer fix | inbox: web
 - 2026-10-29 | AR-010 | architect | Phase 1 tests T1-16 + finalise test-plan policies | inbox: support
+- 2026-10-29 | BE-006 | backend | Commit booking latitude/longitude (range-checked) with tests (AR-008 step 0) | inbox: architect, mobile

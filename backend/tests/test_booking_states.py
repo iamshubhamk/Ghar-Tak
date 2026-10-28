@@ -37,6 +37,7 @@ class Ctx:
     client: TestClient
     db: Any
     booking_id: str
+    category_id: str
     otp: str
     provider_id: str
     customer_token: str
@@ -126,6 +127,7 @@ def ctx(client: TestClient, db: Any) -> Ctx:
         client=client,
         db=db,
         booking_id=booking["id"],
+        category_id=category_id,
         otp=booking["otp"],
         provider_id=provider_id,
         customer_token=customer_token,
@@ -310,3 +312,42 @@ def test_known_gap_admin_can_force_any_status_transition(ctx: Ctx) -> None:
 
     assert response.status_code == 200
     assert response.json()["status"] == S.REQUESTED.value
+
+
+def _new_booking(ctx: Ctx, **extra: Any) -> Any:
+    return ctx.client.post(
+        "/api/v1/bookings",
+        headers=ctx.headers(ctx.customer_token),
+        json={
+            "category_id": ctx.category_id,
+            "locality": "Boring Road",
+            "preferred_datetime": (datetime.now(UTC) + timedelta(days=1)).isoformat(),
+            "issue_description": "Tap leak",
+            **extra,
+        },
+    )
+
+
+def test_booking_location_round_trips(ctx: Ctx) -> None:
+    created = _new_booking(ctx, latitude=25.5941, longitude=85.1376)
+
+    assert created.status_code == 201
+    assert (created.json()["latitude"], created.json()["longitude"]) == (25.5941, 85.1376)
+    mine = ctx.client.get("/api/v1/bookings/my", headers=ctx.headers(ctx.customer_token)).json()
+    assert any(b["latitude"] == 25.5941 and b["longitude"] == 85.1376 for b in mine)
+    admin = ctx.client.get("/api/v1/admin/bookings", headers=ctx.headers(ctx.admin_token)).json()
+    assert any(b["latitude"] == 25.5941 for b in admin)
+
+
+def test_booking_location_is_optional(ctx: Ctx) -> None:
+    created = _new_booking(ctx)
+
+    assert created.status_code == 201
+    assert created.json()["latitude"] is None and created.json()["longitude"] is None
+
+
+@pytest.mark.parametrize(
+    "location", [{"latitude": 91, "longitude": 85}, {"latitude": 25, "longitude": -181}]
+)
+def test_booking_location_out_of_range_is_rejected(ctx: Ctx, location) -> None:
+    assert _new_booking(ctx, **location).status_code == 422

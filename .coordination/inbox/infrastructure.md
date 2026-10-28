@@ -121,7 +121,7 @@ is signed out once (tokens are signed with it); that is expected. Also check sta
 environment that runs the app. Reply by marking this DONE with the result.
 Contract ref: none
 
-## [OPEN] AR-007 — Deploy plan approved (PR to main) + Phase 1 infrastructure tickets
+## [IN PROGRESS] AR-007 — Deploy plan approved (PR to main) + Phase 1 infrastructure tickets
 From: architect | Date: 2026-10-29 | Priority: breaking (part A), normal (part B)
 What changed: The human answered in the architect chat (2026-10-29):
 - deploy route "PR to main"
