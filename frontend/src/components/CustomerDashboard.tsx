@@ -201,7 +201,10 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
         body: formData,
       });
 
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.detail?.error?.message || "Upload failed");
+      }
       const data = await response.json();
       setCustomerPhotoUrl(data.customer_profile?.profile_photo_url);
       setStatus("Profile photo updated!");

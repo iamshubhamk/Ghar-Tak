@@ -96,8 +96,8 @@ export function ProviderOnboardingPanel() {
       });
       
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.detail ?? "Upload failed");
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.detail?.error?.message ?? "Upload failed");
       }
       
       const data = await response.json();
