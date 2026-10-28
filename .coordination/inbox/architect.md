@@ -456,3 +456,29 @@ Suggested fix + owning workstream: backend — use `jsonable_encoder(exc.errors(
 One line; fixes every validator-raised error at once. Web/mobile forms currently see a 500 here.
 Test that will prove the fix: the two xfail cases above (remove the mark with the fix).
 Contract ref: none
+
+---
+
+## [OPEN] WE-004 — draft legal pages built; need the human's facts and a lawyer (info)
+From: web | Date: 2026-10-29 | Priority: info
+What changed: `/privacy`, `/terms`, `/delete-account` (lazy chunk, about 3 KB gzipped), footer links, draft banner.
+Text describes only what the code does (data fields, admin-only documents, OTP at the door); no invented
+promises. Checked in the browser: all three render, `/` unchanged. Build passes.
+Why: T6-03.
+Action needed in this workstream: Not launch-ready. Needed from the human: operator legal name and address,
+support email and phone, minimum age, retention periods, payment, refund and cancellation rules, governing
+courts, list of hosting and notification providers, deletion turnaround time; then a lawyer's review. Hindi
+legal text is not written. The delete-account page tells users to contact support until T7-01 and the app
+screen (T7-02) exist; Play may want an in-app path too.
+Contract ref: none
+
+## [OPEN] IN-004 — T1-13/T1-14 prepared; waiting on the human's Cloudflare account
+From: infrastructure | Date: 2026-10-29 | Priority: info
+What changed: `.github/workflows/backup.yml` (daily mongodump to a private R2 bucket, 30-day lifecycle) and
+`docs/release/storage-and-backups.md` (R2 account walkthrough, secrets table, restore test into staging, staging DB plan,
+upload migration). Not run: it needs the human's Cloudflare account and five GitHub secrets. Also `render.yaml` admin CSP and
+noindex headers (WE-002) and VITE_ marketing variables (WE-003).
+Why: T1-13, T1-14.
+Action needed in this workstream: None now. T1-13 stays blocked on backend AR-008's R2 adapter; I'll migrate files after it is live.
+Contract ref: none
+
