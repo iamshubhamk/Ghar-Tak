@@ -423,3 +423,168 @@ def test_booking_location_is_optional(ctx: Ctx) -> None:
 )
 def test_booking_location_out_of_range_is_rejected(ctx: Ctx, location) -> None:
     assert _new_booking(ctx, **location).status_code == 422
+
+
+# ---------- T1-05: compare-and-set (SU-007) ----------
+
+
+@pytest.fixture
+def freeze_read(monkeypatch: pytest.MonkeyPatch, ctx: Ctx):
+    """Return freeze(): the service's next booking read sees the booking as it is at that moment,
+    even if the DB changes afterwards (simulates another request winning the race)."""
+    from copy import deepcopy
+
+    from app.services.bookings import BookingService
+
+    original = BookingService._get
+
+    def freeze() -> None:
+        snapshot = deepcopy(ctx.booking())
+        used = {"first": False}
+
+        async def get_stale_first(self, booking_id):
+            if not used["first"]:
+                used["first"] = True
+                return deepcopy(snapshot)
+            return await original(self, booking_id)
+
+        monkeypatch.setattr(BookingService, "_get", get_stale_first)
+
+    return freeze
+
+
+def _force_status(ctx: Ctx, status: S) -> None:
+    run(ctx.db.bookings.update_one({"id": ctx.booking_id}, {"$set": {"status": status.value}}))
+
+
+def test_provider_accept_loses_when_customer_cancelled_in_between(ctx: Ctx, freeze_read) -> None:
+    history_before = len(ctx.booking()["status_history"])
+    freeze_read()
+    _force_status(ctx, S.CANCELLED_BY_CUSTOMER)  # happens after the service read REQUESTED
+
+    response = ctx.provider_action("accept")
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "BOOKING_STATE_CHANGED"
+    assert ctx.booking()["status"] == S.CANCELLED_BY_CUSTOMER.value
+    assert len(ctx.booking()["status_history"]) == history_before
+
+
+def test_admin_complete_loses_and_does_not_save_final_amount(ctx: Ctx, freeze_read) -> None:
+    ctx.set_status(S.IN_PROGRESS)
+    freeze_read()
+    _force_status(ctx, S.CANCELLED_BY_CUSTOMER)
+
+    response = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/status",
+        headers=ctx.headers(ctx.admin_token),
+        json={"status": "COMPLETED", "final_amount": 777},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "BOOKING_STATE_CHANGED"
+    assert ctx.booking()["status"] == S.CANCELLED_BY_CUSTOMER.value
+    assert ctx.booking().get("final_amount") != 777
+
+
+def test_customer_cancel_loses_when_service_already_started(ctx: Ctx, freeze_read) -> None:
+    ctx.set_status(S.ACCEPTED)
+    freeze_read()
+    _force_status(ctx, S.IN_PROGRESS)
+
+    response = ctx.client.patch(
+        f"/api/v1/bookings/{ctx.booking_id}/cancel",
+        headers=ctx.headers(ctx.customer_token),
+        json={},
+    )
+
+    assert response.status_code == 409
+    assert ctx.booking()["status"] == S.IN_PROGRESS.value
+
+
+def test_assign_loses_when_booking_moved_on_in_between(ctx: Ctx, freeze_read) -> None:
+    freeze_read()
+    _force_status(ctx, S.CANCELLED_BY_CUSTOMER)
+
+    response = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/assign",
+        headers=ctx.headers(ctx.admin_token),
+        json={"provider_id": ctx.provider_id},
+    )
+
+    assert response.status_code == 409
+    assert response.json()["detail"]["error"]["code"] == "BOOKING_STATE_CHANGED"
+    assert ctx.booking()["status"] == S.CANCELLED_BY_CUSTOMER.value
+
+
+def test_assign_loses_when_another_admin_assigned_a_different_provider(
+    ctx: Ctx, freeze_read
+) -> None:
+    other_id = run(ctx.db.users.find_one({"email": "states-other@example.com"}))["id"]
+    freeze_read()
+    run(ctx.db.bookings.update_one({"id": ctx.booking_id}, {"$set": {"provider_id": other_id}}))
+
+    response = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/assign",
+        headers=ctx.headers(ctx.admin_token),
+        json={"provider_id": ctx.provider_id},
+    )
+
+    assert response.status_code == 409
+    assert ctx.booking()["provider_id"] == other_id
+
+
+def test_two_admins_assigning_different_providers_only_one_wins(ctx: Ctx) -> None:
+    import asyncio
+
+    from app.services.bookings import BookingService
+
+    other_id = run(ctx.db.users.find_one({"email": "states-other@example.com"}))["id"]
+    admin = run(ctx.db.users.find_one({"email": "states-admin@example.com"}))
+    ctx.set_status(S.REQUESTED)
+
+    async def both():
+        service = BookingService(ctx.db)
+        return await asyncio.gather(
+            service.assign_provider(admin, ctx.booking_id, ctx.provider_id),
+            service.assign_provider(admin, ctx.booking_id, other_id),
+            return_exceptions=True,
+        )
+
+    results = asyncio.run(both())
+
+    winners = [r for r in results if isinstance(r, dict)]
+    assert len(winners) >= 1
+    final = ctx.booking()
+    assert final["provider_id"] in (ctx.provider_id, other_id)
+    assert final["status"] == S.REQUESTED.value
+    failures = [r for r in results if not isinstance(r, dict)]
+    assert all(getattr(f, "status_code", None) == 409 for f in failures)
+
+
+def test_provider_accept_and_reject_race_has_exactly_one_winner(ctx: Ctx) -> None:
+    import asyncio
+
+    from app.services.bookings import BookingService
+
+    provider = run(ctx.db.users.find_one({"id": ctx.provider_id}))
+    ctx.set_status(S.REQUESTED)
+    history_before = len(ctx.booking()["status_history"])
+
+    async def both():
+        service = BookingService(ctx.db)
+        return await asyncio.gather(
+            service.provider_action(provider, ctx.booking_id, "accept"),
+            service.provider_action(provider, ctx.booking_id, "reject"),
+            return_exceptions=True,
+        )
+
+    results = asyncio.run(both())
+
+    winners = [r for r in results if isinstance(r, dict)]
+    losers = [r for r in results if not isinstance(r, dict)]
+    assert len(winners) == 1 and len(losers) == 1
+    assert getattr(losers[0], "status_code", None) in (409, 422)
+    assert ctx.booking()["status"] == winners[0]["status"]
+    # one history entry for the winner, none for the loser
+    assert len(ctx.booking()["status_history"]) == history_before + 1

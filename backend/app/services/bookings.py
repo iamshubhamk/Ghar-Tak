@@ -201,12 +201,18 @@ class BookingService:
             )
 
         previous_status = BookingStatus(booking["status"])
+        previous_provider_id = booking.get("provider_id")
         booking["provider_id"] = provider["id"]
         booking["status"] = BookingStatus.REQUESTED.value
         booking["updated_at"] = datetime.now(UTC)
 
-        await self.db.bookings.update_one(
-            {"id": booking["id"]},
+        # Compare-and-set (T1-05): still in the status we checked, and still the same provider.
+        result = await self.db.bookings.update_one(
+            {
+                "id": booking["id"],
+                "status": previous_status.value,
+                "provider_id": previous_provider_id,
+            },
             {
                 "$set": {
                     "provider_id": provider["id"],
@@ -215,6 +221,8 @@ class BookingService:
                 }
             },
         )
+        if result.modified_count != 1:
+            raise self._state_changed_error(booking["id"])
 
         await self._record_history(
             booking,
@@ -306,14 +314,13 @@ class BookingService:
 
         booking = await self._get(booking_id)
         ensure_transition(Actor.ADMIN, BookingStatus(booking["status"]), status)
-        update_data = {}
+        extra_fields = {}
         if status == BookingStatus.COMPLETED and final_amount is not None:
-            update_data["final_amount"] = float(final_amount)
+            extra_fields["final_amount"] = float(final_amount)
 
-        if update_data:
-            await self.db.bookings.update_one({"id": booking_id}, {"$set": update_data})
-
-        await self._transition(booking, status, admin["id"], note or "Status updated by admin.")
+        await self._transition(
+            booking, status, admin["id"], note or "Status updated by admin.", extra_fields
+        )
         return await self._get(booking["id"])
 
     async def provider_action(
@@ -350,12 +357,11 @@ class BookingService:
                     "Invalid OTP code. Please enter the 4-digit code shown on customer's tracker.",
                 )
 
+        extra_fields = {}
         if next_status == BookingStatus.COMPLETED and final_amount is not None:
-            await self.db.bookings.update_one(
-                {"id": booking_id}, {"$set": {"final_amount": float(final_amount)}}
-            )
+            extra_fields["final_amount"] = float(final_amount)
 
-        await self._transition(booking, next_status, provider_user["id"], note)
+        await self._transition(booking, next_status, provider_user["id"], note, extra_fields)
         return await self._get(booking["id"])
 
     async def mark_cash_paid(
@@ -464,12 +470,17 @@ class BookingService:
         next_status: BookingStatus,
         actor_user_id: str,
         note: str | None,
+        extra_fields: dict[str, Any] | None = None,
     ) -> None:
         previous_status = BookingStatus(booking["status"])
         now = datetime.now(UTC)
-        await self.db.bookings.update_one(
-            {"id": booking["id"]}, {"$set": {"status": next_status.value, "updated_at": now}}
+        # Compare-and-set (T1-05): only change the booking if it is still in the status we checked.
+        result = await self.db.bookings.update_one(
+            {"id": booking["id"], "status": previous_status.value},
+            {"$set": {**(extra_fields or {}), "status": next_status.value, "updated_at": now}},
         )
+        if result.modified_count != 1:
+            raise self._state_changed_error(booking["id"])
         booking["status"] = next_status.value
         booking["updated_at"] = now
         await self._record_history(booking, previous_status, next_status, actor_user_id, note)
@@ -478,6 +489,15 @@ class BookingService:
         logger.info(
             f"Booking {booking['id']} status changed from {previous_status.value} "
             f"to {next_status.value} by user {actor_user_id}"
+        )
+
+    @staticmethod
+    def _state_changed_error(booking_id: str):
+        logger.warning(f"Booking {booking_id} changed while another update was being applied.")
+        return app_http_error(
+            409,
+            AppErrorCode.BOOKING_STATE_CHANGED,
+            "This booking was just updated by someone else. Please refresh and try again.",
         )
 
     async def _record_history(

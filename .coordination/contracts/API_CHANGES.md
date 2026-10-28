@@ -90,3 +90,16 @@ against the table above. Web's provider panel still calls `/in_progress`; switch
 Provider and customer rules are unchanged (the table is the same behaviour they had, now in one place:
 `backend/app/services/booking_rules.py`).
 Clients affected: web (switch `/in_progress` to `/start`; future admin override), mobile (use `/start`).
+
+## BE-008
+Date: 2026-10-29 | Breaking: no (new error response on existing routes)
+Changed: every booking status change (`PATCH /provider/bookings/{id}/accept|reject|on_the_way|start|in_progress|complete`,
+`PATCH /bookings/{id}/cancel`, `PATCH /admin/bookings/{id}/status`) and `PATCH /admin/bookings/{id}/assign`
+is now applied only if the booking is still in the status the server checked (compare-and-set). If someone
+else changed it in between, the call returns **409** `BOOKING_STATE_CHANGED`
+("This booking was just updated by someone else. Please refresh and try again.") and writes nothing: no
+status change, no history entry, no notification, no `final_amount`. Before, both sides could "succeed" and
+the last write won. `assign` also fails with 409 if another admin assigned a different provider first.
+The 409 is not in the OpenAPI response lists (it can come from any of these routes); the code is documented here.
+Clients affected: mobile and web. On 409 `BOOKING_STATE_CHANGED`: reload the booking and show the status
+the server now has (Rule 8); do not retry blindly. Normal 422 `BOOKING_INVALID_STATUS` is unchanged.
