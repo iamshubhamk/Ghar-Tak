@@ -43,7 +43,22 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         sync: false
+      # Optional marketing-page variables (WE-003); set once the Play listing / WhatsApp number exist.
+      - key: VITE_PLAY_STORE_URL
+        sync: false
+      - key: VITE_WHATSAPP_NUMBER
+        sync: false
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+    headers:
+      # WE-002: the admin token lives in localStorage, so keep the admin pages out of search results
+      # and allow only same-origin scripts. style-src keeps 'unsafe-inline' for React style attributes.
+      # Add the API origin to connect-src if it is not on *.onrender.com.
+      - path: /admin*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /admin*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.onrender.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
