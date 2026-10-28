@@ -5450,6 +5450,60 @@
           "reviews"
         ]
       }
+    },
+    "/api/v1/skill-requests/{request_id}/proof": {
+      "get": {
+        "operationId": "get_skill_request_proof_api_v1_skill_requests__request_id__proof_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "The proof file. Admin or the owning provider only."
+          },
+          "401": {
+            "description": "Login required."
+          },
+          "403": {
+            "description": "Not the owner and not an admin."
+          },
+          "404": {
+            "description": "Request or file not found."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Get Skill Request Proof",
+        "tags": [
+          "providers"
+        ]
+      }
     }
   }
 }

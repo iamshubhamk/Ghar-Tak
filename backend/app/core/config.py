@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     storage_backend: str = "local"
     local_upload_dir: Path = Path("uploads")
+    upload_max_photo_bytes: int = 5 * 1024 * 1024
+    upload_max_document_bytes: int = 10 * 1024 * 1024
 
     notification_backend: str = "in_app"
     payment_backend: str = "cash"

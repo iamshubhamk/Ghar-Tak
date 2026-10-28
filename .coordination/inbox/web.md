@@ -40,3 +40,17 @@ Why: Security hotfix SU-002.
 Action needed in this workstream: Per the architect's AR-002 entry: make the "Forgot password" screen in
 `AuthPanel` show `detail.error.message` plus the support contact instead of a generic error.
 Contract ref: contracts/API_CHANGES.md#ar-002
+
+## [OPEN] AR-005 — admin skill-proof viewer needs an authenticated fetch; new upload errors
+From: backend | Date: 2026-10-29 | Priority: normal
+What changed: Skill-request `proof_url` is now `/api/v1/skill-requests/{id}/proof` and needs the login
+token (it was a public `/uploads/...` link that returned 404 for admins). Uploads now answer 415
+`UPLOAD_TYPE_NOT_ALLOWED` or 413 `UPLOAD_TOO_LARGE` (standard error body) instead of 400. Allowed: photos
+jpg/png/webp up to 5 MB, documents also pdf up to 10 MB. `/uploads/*` only serves those image types.
+Why: SU-008 (stored XSS from disguised files; admins could not see skill proofs).
+Action needed in this workstream: (1) In the admin skill-requests panel, fetch `proof_url` with the
+Authorization header and open it as a blob, the same way you do for Aadhaar and bank proofs. Old requests
+still work through the same route. (2) Show `detail.error.message` for 413/415 on the registration form,
+profile photo and skill-proof uploads. (3) Optional: accept only `image/jpeg,image/png,image/webp` (and PDF
+for documents) in the file inputs.
+Contract ref: contracts/API_CHANGES.md#ar-005

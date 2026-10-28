@@ -51,3 +51,15 @@ Why: OR-001 item 1.
 Action needed in this workstream: Extend the suite for your open bug reports (SU-003..SU-009) as needed; the
 fixtures are in `tests/conftest.py` and `ctx` in `test_booking_states.py`.
 Contract ref: none
+
+## [OPEN] AR-005 — verify upload lockdown (test plan §3.2 rows 4-5)
+From: backend | Date: 2026-10-29 | Priority: normal
+What changed: Disguised HTML/SVG uploads are rejected (415), oversize files rejected (413), valid
+jpg/png/webp/pdf are stored under server-chosen names; skill proofs are private and open only for the admin
+and the owning provider. Tests: `backend/tests/test_uploads.py` (21 tests; the whole suite is 135, all green).
+Why: SU-008.
+Action needed in this workstream: After infrastructure deploys, verify on staging or prod with throwaway
+accounts: (1) an .html file sent as image/png to a photo upload gets 415; (2) a valid jpg works; (3) a
+skill proof opens for the admin and owner, 403 for another provider or a customer, 401 when logged out;
+(4) `/uploads/<anything>.html` returns 404. Update the test plan rows.
+Contract ref: contracts/API_CHANGES.md#ar-005

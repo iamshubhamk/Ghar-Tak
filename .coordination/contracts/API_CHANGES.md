@@ -40,3 +40,27 @@ Why: the reset had no OTP, so anyone could take over any account (SU-002, ADR 00
 OTP-based reset comes later.
 Clients affected: web (forgot-password flow must show the support message from the 403), mobile (do not
 build a reset screen yet).
+
+## AR-005
+Date: 2026-10-29 | Breaking: no for mobile; one behaviour change for web (skill-proof links)
+Added: `GET /api/v1/skill-requests/{request_id}/proof` — returns the proof file. Needs a login token:
+ADMIN or the provider who owns the request (403 for anyone else, 401 when not logged in). Fetch it with the
+Authorization header and show it as a blob, like Aadhaar and bank proofs.
+Changed: `SkillRequestResponse.proof_url` — now `/api/v1/skill-requests/{id}/proof` (needs auth) instead of
+`/uploads/skill_proof_...` (public, and 404 for admins). Same field, same type. Old requests keep their old
+`proof_url`; the new route still serves them.
+Changed (all upload routes: `POST /customer/me/photo`, `POST /provider/me/documents`,
+`POST /provider/me/resubmit`, `POST /provider/me/skill-requests`, multipart `POST /auth/register/provider`):
+the real file type is read from the file's first bytes (content type and filename are ignored).
+- photos: jpg, png, webp, max 5 MB. Documents (Aadhaar, bank proof, skill proof): jpg, png, webp, pdf, max 10 MB.
+- Wrong type: **415** `UPLOAD_TYPE_NOT_ALLOWED`. Too big: **413** `UPLOAD_TOO_LARGE`. Standard body
+  `{"detail": {"error": {"code", "message", "details"}}}`. These replace the old 400 messages (400 with a
+  plain string, or 400 `VALIDATION_ERROR` on registration).
+- Stored names are server-chosen (`<uuid>.<jpg|png|webp|pdf>`, with an `adhaar_` / `bank_proof_` /
+  `skill_proof_` prefix on private documents). Returned URLs keep their shape (`/uploads/<file>` for photos).
+- `/uploads/*` now serves only .jpg/.jpeg/.png/.webp, with `X-Content-Type-Options: nosniff`. Everything
+  else under it returns 404.
+- Private downloads (`/providers/{id}/adhaar`, `/bank-proof`, skill proof) also send `nosniff`.
+Deprecated: nothing. Old files already on disk are not moved or deleted.
+Clients affected: web (admin skill-request viewer must fetch `proof_url` with the token; show the 413/415
+message to users), mobile (handle 413/415 on photo and document upload; only jpg/png/webp/pdf).

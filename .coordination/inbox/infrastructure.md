@@ -91,3 +91,16 @@ Action needed in this workstream:
    OK the branch plan (AR-003 step 3).
 Acceptance criteria: the human confirms the prod env is set; prod boots after the AR-006 deploy.
 Contract ref: none
+
+## [OPEN] AR-005 — deploy upload lockdown; run the read-only upload audit on prod
+From: backend | Date: 2026-10-29 | Priority: normal
+What changed: New upload validator and storage-adapter changes (see API_CHANGES#ar-005). New read-only
+script `backend/scripts/audit_uploads.py`. No new dependencies. New optional settings
+`UPLOAD_MAX_PHOTO_BYTES` (default 5 MB) and `UPLOAD_MAX_DOCUMENT_BYTES` (default 10 MB).
+Why: SU-008. Existing prod files are not touched by the deploy (Rule 11).
+Action needed in this workstream: After deploying, run from `backend/` on prod:
+`python -m scripts.audit_uploads` (add `--json` for a machine-readable list; exit code 1 means it found
+files to review, 2 means the folder is missing). It changes nothing. Send the list to the human, who decides
+what to remove. Expect legacy skill proofs in the `uploads/` root; they stay readable by admins through
+the new route. Note: Render's disk is ephemeral, so the audit only sees files since the last deploy (T1-13).
+Contract ref: contracts/API_CHANGES.md#ar-005

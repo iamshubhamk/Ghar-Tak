@@ -7,7 +7,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
@@ -16,6 +15,7 @@ from app.core.logger import setup_logger
 from app.db.init_db import create_database_tables
 from app.db.session import get_db
 from app.services.categories import CategoryService
+from app.services.uploads import PublicUploadFiles
 
 settings = get_settings()
 logger = setup_logger("ghartak.api")
@@ -56,7 +56,7 @@ app.include_router(api_router)
 
 # Mount ONLY the public uploads directory (avatars/photos).
 # Sensitive Aadhaar files in private are NOT publicly accessible.
-app.mount("/uploads", StaticFiles(directory=public_upload_dir), name="uploads")
+app.mount("/uploads", PublicUploadFiles(directory=public_upload_dir), name="uploads")
 
 
 @app.exception_handler(HTTPException)

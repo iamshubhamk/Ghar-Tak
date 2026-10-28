@@ -1,19 +1,17 @@
 import json
-import os
-from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.config import get_settings
 from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
 from app.core.errors import AppErrorCode, app_http_error
 from app.core.logger import setup_logger
 from app.schemas.auth import clean_optional
 from app.schemas.provider import ProviderProfileUpdateRequest
 from app.services.notifications import NotificationService
+from app.services.uploads import has_file, store_upload
 
 logger = setup_logger("ghartak.providers")
 
@@ -25,7 +23,7 @@ class ProviderService:
         self,
         provider_user: dict[str, Any],
         category_name: str,
-        proof_url: str,
+        proof_filename: str,
         notes: str | None = None,
     ) -> dict[str, Any]:
         provider = await self.get_provider_profile_for_user(provider_user)
@@ -50,12 +48,14 @@ class ProviderService:
             )
 
         now = datetime.now(UTC)
+        request_id = str(uuid.uuid4())
         request_doc = {
-            "id": str(uuid.uuid4()),
+            "id": request_id,
             "provider_id": provider["id"],
             "provider_name": provider["name"],
             "category_name": category_name,
-            "proof_url": proof_url,
+            "proof_filename": proof_filename,
+            "proof_url": f"/api/v1/skill-requests/{request_id}/proof",
             "notes": notes,
             "status": "PENDING",
             "rejection_reason": None,
@@ -301,7 +301,6 @@ class ProviderService:
     async def resubmit_application(self, user: dict[str, Any], form: Any) -> dict[str, Any]:
         user = await self.get_provider_profile_for_user(user)
         user_id = user["id"]
-        settings = get_settings()
 
         update_data: dict[str, Any] = {
             "provider_profile.verification_status": VerificationStatus.PENDING_VERIFICATION.value,
@@ -312,25 +311,10 @@ class ProviderService:
 
         # Handle Aadhaar card file if uploaded
         adhaar_card = form.get("adhaar_card")
-        if adhaar_card and getattr(adhaar_card, "filename", None):
-            allowed = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
-            if getattr(adhaar_card, "content_type", "") not in allowed:
-                raise app_http_error(
-                    400,
-                    AppErrorCode.VALIDATION_ERROR,
-                    "Aadhaar card must be a PDF or image (JPG/PNG).",
-                )
-            private_dir = Path(settings.local_upload_dir) / "private"
-            os.makedirs(private_dir, exist_ok=True)
-            adhaar_filename_orig = getattr(adhaar_card, "filename", "") or ""
-            ext = os.path.splitext(adhaar_filename_orig)[1].lower() or ".jpg"
-            saved_name = f"adhaar_{user_id}_{uuid.uuid4().hex[:8]}{ext}"
-            saved_path = private_dir / saved_name
-            content = await adhaar_card.read()
-            with open(saved_path, "wb") as f:
-                f.write(content)
+        if has_file(adhaar_card):
+            stored = await store_upload(adhaar_card, "document", "private", prefix="adhaar_")
             update_data["provider_profile.adhaar_card_url"] = f"/api/v1/providers/{user_id}/adhaar"
-            update_data["provider_profile.adhaar_card_filename"] = saved_name
+            update_data["provider_profile.adhaar_card_filename"] = stored.filename
 
         # Parse bank details
         bank_holder = clean_optional(form.get("bank_account_holder"))

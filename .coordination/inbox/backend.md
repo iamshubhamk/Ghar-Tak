@@ -62,7 +62,7 @@ Contract ref: contracts/API_CHANGES.md#ar-002 (backend adds it)
 Progress note (backend, 2026-10-28): items 1 and 2 done as BE-001/BE-002. Remaining: 3, 5 (need approval
 to delete files, Rule 11), 6, 7 (ADR), 8, 9 (human decides the lat/long commit); 4 is infrastructure's.
 
-## [OPEN] AR-005 — T0-05: lock down file uploads; make skill proofs private (SU-008)
+## [DONE] AR-005 — T0-05: lock down file uploads; make skill proofs private (SU-008)
 From: architect | Date: 2026-10-29 | Priority: breaking
 What changed: The human approved starting Phase 0 of `docs/plans/roadmap-tickets.md` ("start with the phase
 0 tickets", 2026-10-29). This is ticket T0-05. Bug detail: architect inbox SU-008.

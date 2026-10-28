@@ -279,3 +279,21 @@ Action needed in this workstream: DECISION: `PATCH /admin/bookings/{id}/status` 
 status (e.g. COMPLETED -> REQUESTED). Should admins be bound by the central transition table (OR-001 item 6)?
 Pinned by `test_known_gap_admin_can_force_any_status_transition`. Related: SU-007 (non-atomic transitions).
 Contract ref: none
+
+## [OPEN] AR-005 — done (BE-003): uploads locked down, skill proofs private
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: `services/uploads.py` is the one validator (magic bytes, allow-list per kind, size caps from
+settings, server-chosen names); all seven upload sites use it through `services/storage.py` (adapter gained
+`resolve()` and `get_storage()`, the single swap point for R2). Skill proofs: private storage,
+`GET /skill-requests/{id}/proof` (admin or owner), `proof_url` points there; legacy proofs in the `uploads/`
+root still open through the same route. `/uploads` mount only serves jpg/jpeg/png/webp with `nosniff`.
+`scripts/audit_uploads.py` is read-only. 135 tests pass (21 new); a test fails the build if any route or
+service writes files directly. Contract re-exported, `API_CHANGES.md#ar-005`.
+Why: T0-05 / SU-008.
+Action needed in this workstream: Check the result. Decisions I made that you may want to confirm:
+(1) private stored names keep a server-chosen prefix (`adhaar_`, `bank_proof_`, `skill_proof_`) before the
+uuid, which is slightly looser than "always `<uuid>.<ext>`"; (2) previously accepted GIF/other image types
+are no longer served from `/uploads` and are not accepted for new uploads; (3) the size cap is enforced by
+reading up to the limit, so a very large body is still received by the server (a proxy limit belongs in
+infrastructure). Heads-up: the files in `docs/` and the human's booking edits are untouched.
+Contract ref: contracts/API_CHANGES.md#ar-005
