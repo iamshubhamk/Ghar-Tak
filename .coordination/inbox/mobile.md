@@ -23,3 +23,12 @@ What changed: `POST /bookings` accepts optional `latitude` / `longitude`; every 
 Why: AR-008 step 0 (location pin for the provider).
 Action needed in this workstream: None now; use them when the booking screen has a location picker.
 Contract ref: contracts/API_CHANGES.md#be-006
+
+## [OPEN] BE-007 — use /start (not /in_progress); booking status rules are now in one table
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: `/provider/bookings/{id}/in_progress` is deprecated; use `/start` (customer OTP required).
+Status rules are unchanged for customers and providers. Errors are 422 `BOOKING_INVALID_STATUS`; show the
+server's status, never assume a transition worked (Rule 8).
+Why: T1-04.
+Action needed in this workstream: Use `/start` in the provider flow.
+Contract ref: contracts/API_CHANGES.md#be-007

@@ -296,12 +296,52 @@ def test_each_transition_notifies_the_customer(ctx: Ctx) -> None:
     assert any("ACCEPTED" in n["message"] for n in notifications)
 
 
-def test_known_gap_admin_can_force_any_status_transition(ctx: Ctx) -> None:
-    """KNOWN GAP (raised to the Architect in BE-002): admin_update_status skips transition rules.
+ADMIN_ALLOWED = {
+    (S.REQUESTED, S.CANCELLED_BY_ADMIN),
+    (S.ACCEPTED, S.CANCELLED_BY_ADMIN),
+    (S.ON_THE_WAY, S.CANCELLED_BY_ADMIN),
+    (S.IN_PROGRESS, S.CANCELLED_BY_ADMIN),
+    (S.IN_PROGRESS, S.COMPLETED),
+}
+ADMIN_CASES = [(f, t) for f in S for t in S]
 
-    When the central transition table lands (OR-001 item 6) and the Architect decides admins are
-    bound by it, flip this test to expect 422.
-    """
+
+@pytest.mark.parametrize(("from_status", "target"), ADMIN_CASES)
+def test_admin_status_override_is_bound_by_the_transition_table(
+    ctx: Ctx, from_status, target
+) -> None:
+    ctx.set_status(from_status)
+    history_before = len(ctx.booking()["status_history"])
+
+    response = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/status",
+        headers=ctx.headers(ctx.admin_token),
+        json={"status": target.value},
+    )
+
+    if (from_status, target) in ADMIN_ALLOWED:
+        assert response.status_code == 200
+        assert response.json()["status"] == target.value
+        assert len(ctx.booking()["status_history"]) == history_before + 1
+    else:
+        assert response.status_code == 422
+        assert response.json()["detail"]["error"]["code"] == "BOOKING_INVALID_STATUS"
+        assert ctx.booking()["status"] == from_status.value
+        assert len(ctx.booking()["status_history"]) == history_before
+
+
+def test_blocked_admin_override_does_not_write_final_amount(ctx: Ctx) -> None:
+    response = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/status",
+        headers=ctx.headers(ctx.admin_token),
+        json={"status": "COMPLETED", "final_amount": 9999},
+    )
+
+    assert response.status_code == 422
+    assert ctx.booking().get("final_amount") in (None, 0)
+
+
+def test_admin_cannot_reopen_a_finished_booking(ctx: Ctx) -> None:
     ctx.set_status(S.COMPLETED)
 
     response = ctx.client.patch(
@@ -310,8 +350,40 @@ def test_known_gap_admin_can_force_any_status_transition(ctx: Ctx) -> None:
         json={"status": S.REQUESTED.value},
     )
 
-    assert response.status_code == 200
-    assert response.json()["status"] == S.REQUESTED.value
+    assert response.status_code == 422
+    assert ctx.booking()["status"] == S.COMPLETED.value
+
+
+def test_transition_table_matches_the_documented_rules() -> None:
+    from app.services.booking_rules import TRANSITIONS, Actor
+
+    expected = {
+        (Actor.CUSTOMER, S.REQUESTED): {S.CANCELLED_BY_CUSTOMER},
+        (Actor.CUSTOMER, S.ACCEPTED): {S.CANCELLED_BY_CUSTOMER},
+        (Actor.PROVIDER, S.REQUESTED): {S.ACCEPTED, S.REJECTED},
+        (Actor.PROVIDER, S.ACCEPTED): {S.ON_THE_WAY, S.IN_PROGRESS},
+        (Actor.PROVIDER, S.ON_THE_WAY): {S.IN_PROGRESS},
+        (Actor.PROVIDER, S.IN_PROGRESS): {S.COMPLETED},
+        (Actor.ADMIN, S.REQUESTED): {S.CANCELLED_BY_ADMIN},
+        (Actor.ADMIN, S.ACCEPTED): {S.CANCELLED_BY_ADMIN},
+        (Actor.ADMIN, S.ON_THE_WAY): {S.CANCELLED_BY_ADMIN},
+        (Actor.ADMIN, S.IN_PROGRESS): {S.CANCELLED_BY_ADMIN, S.COMPLETED},
+    }
+    assert {k: set(v) for k, v in TRANSITIONS.items()} == expected
+    final = {S.COMPLETED, S.REJECTED, S.CANCELLED_BY_CUSTOMER, S.CANCELLED_BY_PROVIDER,
+             S.CANCELLED_BY_ADMIN}
+    assert not any(current in final for (_, current) in TRANSITIONS)
+
+
+def test_in_progress_alias_is_marked_deprecated_in_the_contract() -> None:
+    from app.main import app
+
+    paths = app.openapi()["paths"]
+    operation = paths["/api/v1/provider/bookings/{booking_id}/in_progress"]["patch"]
+    start = paths["/api/v1/provider/bookings/{booking_id}/start"]["patch"]
+
+    assert operation["deprecated"] is True
+    assert not start.get("deprecated")
 
 
 def _new_booking(ctx: Ctx, **extra: Any) -> Any:

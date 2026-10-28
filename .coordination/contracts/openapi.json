@@ -4629,6 +4629,7 @@
     },
     "/api/v1/provider/bookings/{booking_id}/in_progress": {
       "patch": {
+        "deprecated": true,
         "operationId": "start_booking_in_progress_api_v1_provider_bookings__booking_id__in_progress_patch",
         "parameters": [
           {
@@ -4685,7 +4686,7 @@
             "OAuth2PasswordBearer": []
           }
         ],
-        "summary": "Start Booking In Progress",
+        "summary": "Start Booking In Progress (deprecated alias of /start)",
         "tags": [
           "bookings"
         ]

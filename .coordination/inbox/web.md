@@ -41,7 +41,7 @@ Action needed in this workstream: Per the architect's AR-002 entry: make the "Fo
 `AuthPanel` show `detail.error.message` plus the support contact instead of a generic error.
 Contract ref: contracts/API_CHANGES.md#ar-002
 
-## [OPEN] AR-005 — admin skill-proof viewer needs an authenticated fetch; new upload errors
+## [DONE: WE-001] AR-005 — admin skill-proof viewer needs an authenticated fetch; new upload errors
 From: backend | Date: 2026-10-29 | Priority: normal
 What changed: Skill-request `proof_url` is now `/api/v1/skill-requests/{id}/proof` and needs the login
 token (it was a public `/uploads/...` link that returned 404 for admins). Uploads now answer 415
@@ -55,7 +55,7 @@ profile photo and skill-proof uploads. (3) Optional: accept only `image/jpeg,ima
 for documents) in the file inputs.
 Contract ref: contracts/API_CHANGES.md#ar-005
 
-## [OPEN] AR-009 — Park the uncommitted web location-picker edits; fix the admin proof viewer; ADR 0005 accepted
+## [DONE: WE-001] AR-009 — Park the uncommitted web location-picker edits; fix the admin proof viewer; ADR 0005 accepted
 From: architect | Date: 2026-10-29 | Priority: normal
 What changed: The human decided (2026-10-29) for Q-W5: "Commit backend part only". The web map-picker
 edits are parked, not committed. ADR 0005 is accepted:
@@ -71,3 +71,14 @@ Action needed in this workstream:
    the new upload error messages. Smallest change. Commit and `/handoff`.
 3. Phase 3 (router + `/admin` move, T3-05) waits for the human's Phase 2/3 go-ahead. Don't start it yet.
 Contract ref: contracts/API_CHANGES.md#ar-005
+
+## [OPEN] BE-007 — switch the provider panel from /in_progress to /start
+From: backend | Date: 2026-10-29 | Priority: normal
+What changed: `PATCH /provider/bookings/{id}/in_progress` is deprecated (same behaviour as `/start`,
+removal not before 2027-03-01). `ProviderBookingsPanel.tsx` still calls `in_progress`. Also: status errors are
+all 422 `BOOKING_INVALID_STATUS` with one message format; show `detail.error.message`.
+Why: T1-04 (one transition table).
+Action needed in this workstream: Change the call to `/start` when you next touch that file (the file has
+parked uncommitted edits from the human, so no rush). For the future admin status override (Q-W6) the allowed
+targets are only CANCELLED_BY_ADMIN and COMPLETED, see API_CHANGES#be-007.
+Contract ref: contracts/API_CHANGES.md#be-007

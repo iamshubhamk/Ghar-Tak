@@ -192,7 +192,12 @@ async def start_booking(
     return BookingService.serialize(booking, actor=current_user)
 
 
-@router.patch("/provider/bookings/{booking_id}/in_progress", response_model=BookingResponse)
+@router.patch(
+    "/provider/bookings/{booking_id}/in_progress",
+    response_model=BookingResponse,
+    deprecated=True,
+    summary="Start Booking In Progress (deprecated alias of /start)",
+)
 async def start_booking_in_progress(
     booking_id: str,
     payload: BookingStatusUpdateRequest | None = None,

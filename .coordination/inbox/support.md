@@ -91,3 +91,29 @@ Action needed in this workstream:
    matching T1-04..T1-09 tickets land; mark those with `xfail(strict=True)` and the ticket ID.
 3. Keep verifying the Phase 0 items on prod after infrastructure's deploy (your AR-002/005/006 entries).
 Contract ref: none
+
+---
+
+## [OPEN] WE-001 — verify admin skill-proof viewer and upload error messages
+From: web | Date: 2026-10-29 | Priority: normal
+What changed: In the admin panel, "View Proof Document" now fetches `/skill-requests/{id}/proof` with the
+token and opens it as a blob (built from the request id, so old requests work too). Customer photo upload
+and provider document upload now show `detail.error.message` for 413/415 (registration, resubmit and
+skill-request forms already did).
+Why: AR-005 / SU-008 (skill proofs were a public `/uploads/` link that returned 404 for admins).
+Action needed in this workstream: With a pending skill request, log in as admin and open the proof
+(png, jpg, pdf); an old request should open too. Try a non-image renamed to .jpg and a file over the cap on
+customer photo and provider documents: the page should show the server message, not "Upload failed".
+Not covered: provider-side profile photo upload in `ProviderBookingsPanel` was not changed.
+Contract ref: contracts/API_CHANGES.md#ar-005
+
+## [OPEN] BE-007 — verify the booking transition matrix (SU-003; test plan §1)
+From: backend | Date: 2026-10-29 | Priority: normal
+What changed: One transition table for customer, provider and admin. Admin override is limited to
+CANCELLED_BY_ADMIN (from REQUESTED/ACCEPTED/ON_THE_WAY/IN_PROGRESS) and COMPLETED (from IN_PROGRESS);
+everything else gives 422 and writes nothing. Automated: the whole admin 9x9 grid, provider and customer
+grids, and a table-vs-spec check in `tests/test_booking_states.py` (242 tests pass).
+Why: SU-003 / T1-04.
+Action needed in this workstream: After deploy, spot-check on staging or prod with throwaway data that an
+admin cannot reopen a COMPLETED booking, and update the matrix rows in the test plan.
+Contract ref: contracts/API_CHANGES.md#be-007

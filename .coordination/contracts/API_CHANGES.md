@@ -72,3 +72,21 @@ the range give 422. `BookingResponse` (all booking endpoints) returns `latitude`
 not sent). These fields were already in the baseline export from the working copy; this change commits the
 code and adds the range check and tests.
 Clients affected: mobile (send the pin location when the customer picks one), web (parked).
+
+## BE-007
+Date: 2026-10-29 | Breaking: yes for the admin status override only (no client uses it yet); migration below
+Changed: `PATCH /api/v1/admin/bookings/{id}/status` — admins are now bound by the same transition table as
+everyone else. Allowed targets: `CANCELLED_BY_ADMIN` (from REQUESTED, ACCEPTED, ON_THE_WAY, IN_PROGRESS) and
+`COMPLETED` (from IN_PROGRESS). Anything else returns **422** `BOOKING_INVALID_STATUS` with
+`details: {current, requested, actor}`, and nothing is written (before, an admin could move any booking to any
+status, for example reopen a COMPLETED one). `final_amount` is no longer saved when the change is refused.
+Changed: all booking status errors now use one message format
+"A booking that is X cannot be changed to Y by the <actor>." (code and HTTP status are unchanged: 422
+`BOOKING_INVALID_STATUS`). Clients should show `detail.error.message`, not match on its text.
+Deprecated: `PATCH /api/v1/provider/bookings/{id}/in_progress` — identical to `/start` (both need the
+customer's start OTP). Marked `deprecated` in OpenAPI. Use `/start`. Removal not before 2027-03-01.
+Migration path: the admin panel has no status-override screen yet (Q-W6), so nothing to migrate; build it
+against the table above. Web's provider panel still calls `/in_progress`; switch it to `/start`.
+Provider and customer rules are unchanged (the table is the same behaviour they had, now in one place:
+`backend/app/services/booking_rules.py`).
+Clients affected: web (switch `/in_progress` to `/start`; future admin override), mobile (use `/start`).

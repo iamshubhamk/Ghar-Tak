@@ -16,21 +16,18 @@ from app.core.enums import (
 from app.core.errors import AppErrorCode, app_http_error
 from app.core.logger import setup_logger
 from app.schemas.booking import BookingCreateRequest
+from app.services.booking_rules import (
+    PROVIDER_ACTION_TARGETS,
+    Actor,
+    ensure_assignable,
+    ensure_transition,
+)
 from app.services.notifications import NotificationService
 
 logger = setup_logger("ghartak.bookings")
 
 
 class BookingService:
-    provider_transitions = {
-        "accept": (BookingStatus.REQUESTED, BookingStatus.ACCEPTED),
-        "reject": (BookingStatus.REQUESTED, BookingStatus.REJECTED),
-        "on_the_way": (BookingStatus.ACCEPTED, BookingStatus.ON_THE_WAY),
-        "start": (BookingStatus.ON_THE_WAY, BookingStatus.IN_PROGRESS),
-        "in_progress": (BookingStatus.ON_THE_WAY, BookingStatus.IN_PROGRESS),
-        "complete": (BookingStatus.IN_PROGRESS, BookingStatus.COMPLETED),
-    }
-
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
         self.db = db
 
@@ -190,12 +187,7 @@ class BookingService:
             raise app_http_error(403, AppErrorCode.FORBIDDEN, "Only admins can assign providers.")
 
         booking = await self._get(booking_id)
-        if booking["status"] not in {BookingStatus.REQUESTED.value, BookingStatus.REJECTED.value}:
-            raise app_http_error(
-                422,
-                AppErrorCode.BOOKING_INVALID_STATUS,
-                "Provider can only be assigned while a request is pending or rejected.",
-            )
+        ensure_assignable(BookingStatus(booking["status"]))
 
         provider = await self._get_public_provider(provider_id)
         category_names = provider.get("provider_profile", {}).get("category_names", [])
@@ -289,12 +281,9 @@ class BookingService:
         if booking["customer_id"] != customer["id"]:
             raise app_http_error(403, AppErrorCode.FORBIDDEN, "You can only cancel your bookings.")
 
-        if booking["status"] not in {BookingStatus.REQUESTED.value, BookingStatus.ACCEPTED.value}:
-            raise app_http_error(
-                422,
-                AppErrorCode.BOOKING_INVALID_STATUS,
-                "Booking cannot be cancelled after service has started.",
-            )
+        ensure_transition(
+            Actor.CUSTOMER, BookingStatus(booking["status"]), BookingStatus.CANCELLED_BY_CUSTOMER
+        )
 
         await self._transition(
             booking,
@@ -316,6 +305,7 @@ class BookingService:
             raise app_http_error(403, AppErrorCode.FORBIDDEN, "Only admins can update bookings.")
 
         booking = await self._get(booking_id)
+        ensure_transition(Actor.ADMIN, BookingStatus(booking["status"]), status)
         update_data = {}
         if status == BookingStatus.COMPLETED and final_amount is not None:
             update_data["final_amount"] = float(final_amount)
@@ -342,25 +332,8 @@ class BookingService:
         ):
             raise app_http_error(403, AppErrorCode.FORBIDDEN, "Booking is not assigned to you.")
 
-        expected_status, next_status = self.provider_transitions[action]
-        # Flexible transition for start / in_progress: allow from either ACCEPTED or ON_THE_WAY
-        if action in ("start", "in_progress"):
-            if booking["status"] not in (
-                BookingStatus.ACCEPTED.value,
-                BookingStatus.ON_THE_WAY.value,
-            ):
-                raise app_http_error(
-                    422,
-                    AppErrorCode.BOOKING_INVALID_STATUS,
-                    "Booking must be ACCEPTED or ON_THE_WAY before starting service.",
-                )
-        else:
-            if booking["status"] != expected_status.value:
-                raise app_http_error(
-                    422,
-                    AppErrorCode.BOOKING_INVALID_STATUS,
-                    f"Booking must be {expected_status.value} before this action.",
-                )
+        next_status = PROVIDER_ACTION_TARGETS[action]
+        ensure_transition(Actor.PROVIDER, BookingStatus(booking["status"]), next_status)
 
         if action in ("start", "in_progress"):
             if not otp or not str(otp).strip():

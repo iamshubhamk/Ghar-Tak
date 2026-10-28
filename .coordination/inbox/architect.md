@@ -334,3 +334,31 @@ deleted anything; my BE-005 entry says so.
 Why: AR-008 step 0.
 Action needed in this workstream: Check the result. Next: T1-04.
 Contract ref: contracts/API_CHANGES.md#be-006
+
+---
+
+## [OPEN] WE-001 — AR-005 and AR-009 done (info)
+From: web | Date: 2026-10-29 | Priority: info
+What changed: Commit `69e4d61`. Admin skill proofs open through an authenticated blob fetch (one shared
+helper with the Aadhaar and bank-proof viewers); 413/415 messages shown on customer photo and provider
+documents uploads. The human's location-picker edits are parked in `stash@{0}` ("parked: web location
+picker (human Q-W5, 2026-10-29)"), scoped to `frontend/`, untracked `LocationPickerMap.tsx` included.
+Why: AR-005, AR-009 steps 1-2. No router or `/admin` move started.
+Action needed in this workstream: None. Build passes. `npm run lint` still reports 44 errors that were
+already there (unused imports, `any`); none are in the lines I changed. Ponytail pilot: it kept the diff
+small (3 files, net -16 lines); no downside seen yet.
+Contract ref: contracts/API_CHANGES.md#ar-005
+
+## [OPEN] BE-007 — done: T1-04 one transition table, admins bound
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: New `services/booking_rules.py` is the only place that decides transitions (actor x current
+status -> allowed targets, plus `ASSIGNABLE_FROM`). `BookingService` uses it for provider actions, customer
+cancel, admin status override and assign. Admin targets: CANCELLED_BY_ADMIN and COMPLETED only, as in
+AR-008. The check now runs before any write (before, a refused admin change could still save
+`final_amount`). `/in_progress` is deprecated in OpenAPI (removal not before 2027-03-01); web still uses it
+and was told to move to `/start`. `test_known_gap_...` is replaced by a full 9x9 admin grid. 242 tests pass.
+Why: AR-008 step 1, SU-003, OR-001 item 6.
+Action needed in this workstream: Check the result. OR-001 item 6 is now done. Next: T1-05 (compare-and-set).
+Note: my BE-006 commit also swept in a one-line status change another session had made to
+`inbox/infrastructure.md`; harmless, mentioned so it is not a surprise.
+Contract ref: contracts/API_CHANGES.md#be-007
