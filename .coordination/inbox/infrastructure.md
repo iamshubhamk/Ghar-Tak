@@ -104,3 +104,19 @@ files to review, 2 means the folder is missing). It changes nothing. Send the li
 what to remove. Expect legacy skill proofs in the `uploads/` root; they stay readable by admins through
 the new route. Note: Render's disk is ephemeral, so the audit only sees files since the last deploy (T1-13).
 Contract ref: contracts/API_CHANGES.md#ar-005
+
+## [OPEN] AR-006 — CONFIRM prod env BEFORE deploying: the app now refuses to start with a weak JWT secret
+From: backend | Date: 2026-10-29 | Priority: breaking
+What changed: At startup, if `ENVIRONMENT` is anything other than `local` and `JWT_SECRET_KEY` is the
+default (`change-this-local-secret`), empty or shorter than 32 characters, or `MONGODB_URL` is empty, the app
+exits with "Refusing to start ...". `backend/.env.example` has a short placeholder and the command to
+generate a secret.
+Why: If prod ever started without the variable, anyone could forge admin tokens (SU-009 #7).
+Action needed in this workstream: **Do not deploy this commit until you have confirmed in the prod
+environment settings that (1) `JWT_SECRET_KEY` is set to a random value of at least 32 characters (not the
+default, not a copy of `.env.example`) and (2) `ENVIRONMENT=production` (or `staging`) is set.** If
+`ENVIRONMENT` is missing it defaults to `local`, so the check is skipped; please set it. Do not paste the
+secret anywhere; just confirm it is set and long enough. If the secret has to change, every logged-in user
+is signed out once (tokens are signed with it); that is expected. Also check staging, CI and any other
+environment that runs the app. Reply by marking this DONE with the result.
+Contract ref: none

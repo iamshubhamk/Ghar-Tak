@@ -297,3 +297,17 @@ are no longer served from `/uploads` and are not accepted for new uploads; (3) t
 reading up to the limit, so a very large body is still received by the server (a proxy limit belongs in
 infrastructure). Heads-up: the files in `docs/` and the human's booking edits are untouched.
 Contract ref: contracts/API_CHANGES.md#ar-005
+
+## [OPEN] AR-006 — done (BE-004): app refuses to boot with a weak JWT secret outside local
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: `core/config.py` has a settings validator: when `ENVIRONMENT` is not `local`
+(case-insensitive), it raises if the secret is the default, empty or under 32 characters, or `MONGODB_URL`
+is empty, with a message that shows how to generate a secret. `.env.example` placeholder is deliberately
+too short to pass. Tests: `tests/test_config_safety.py` (19: unit cases plus real subprocess boots for
+production-default fails, production-strong works, local-default works). Suite: 154 pass. No contract change.
+Why: T0-06 / SU-009 #7.
+Action needed in this workstream: Check the result. It must not deploy until infrastructure confirms the
+prod env (their AR-006 entry is marked breaking). Note the check is skipped when `ENVIRONMENT` is unset
+(it defaults to `local`), so I asked infrastructure to set it explicitly in prod. Phase 0 tickets AR-005 and
+AR-006 are both handed off, so I will resume OR-001 (items 3 and 5 still need the human's OK to delete files).
+Contract ref: none

@@ -63,3 +63,12 @@ accounts: (1) an .html file sent as image/png to a photo upload gets 415; (2) a 
 skill proof opens for the admin and owner, 403 for another provider or a customer, 401 when logged out;
 (4) `/uploads/<anything>.html` returns 404. Update the test plan rows.
 Contract ref: contracts/API_CHANGES.md#ar-005
+
+## [OPEN] AR-006 — verify after infrastructure's go-ahead: boot checks
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: The app exits at startup outside `local` with a default/weak JWT secret (see
+`tests/test_config_safety.py`).
+Why: SU-009 #7.
+Action needed in this workstream: After infrastructure confirms the prod env and deploys, check that the
+site is up and login works. Nothing else to test by hand; the cases are automated.
+Contract ref: none

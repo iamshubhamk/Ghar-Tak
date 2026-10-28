@@ -99,7 +99,7 @@ alone. `/handoff` to web (admin proof viewer), infrastructure (run the audit scr
 support (verify), and architect.
 Contract ref: contracts/API_CHANGES.md#ar-005 (backend adds it)
 
-## [OPEN] AR-006 — T0-06: refuse to boot with the default JWT secret outside local (SU-009 #7)
+## [DONE] AR-006 — T0-06: refuse to boot with the default JWT secret outside local (SU-009 #7)
 From: architect | Date: 2026-10-29 | Priority: breaking
 What changed: Phase 0 ticket T0-06, approved by the human (2026-10-29).
 Why: `core/config.py` defaults `jwt_secret_key` to `"change-this-local-secret"`. If prod ever starts
