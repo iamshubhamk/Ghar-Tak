@@ -1,7 +1,7 @@
 # GharTak — phased development tickets
 
 Status: **proposed** (2026-10-28). Owner: architect (AR-004). Needs the human's approval, one phase at a
-time.
+time. **Phase 0 approved and dispatched 2026-10-29.**
 
 ## How to read this
 
@@ -44,12 +44,12 @@ else matters until these are closed. Approved by you on 2026-10-28.
 
 | ID | Ticket | Owner | Depends on | Size | Done when | Source | State |
 |---|---|---|---|---|---|---|---|
-| T0-01 | Disable self-service password reset | backend | — | S | Both reset endpoints return 403 `PASSWORD_RESET_DISABLED` | SU-002, AR-002 | ✅ code done (`9353c78`) |
+| T0-01 | Disable self-service password reset | backend | — | S | Both reset endpoints return 403 `PASSWORD_RESET_DISABLED` | SU-002, AR-002 | ✅ done, 8/8 tests verified by architect (`9353c78`) |
 | T0-02 | Rotate prod admin password; remove demo login from README | infra + **you** | — | S | The old password no longer logs in; README has no credentials | OR-004, AR-003 | README done (`3b0c258`); rotation waiting on you |
 | T0-03 | Deploy T0-01 to prod | infra | T0-01 | S | Prod returns 403 on reset | AR-003 | waiting for the branch/deploy OK from you |
 | T0-04 | Verify T0-01..03 on prod | support | T0-03 | S | Support report in the architect inbox | AR-002 | waiting |
-| T0-05 | Lock down uploads: allow-list jpg/png/webp/pdf, magic-byte check, size cap, server-chosen extension. Skill proofs move to private storage behind an admin-only route | backend | — | M | An HTML file disguised as an image is rejected; an admin can open a skill proof and the public cannot | SU-008 | new |
-| T0-06 | Refuse to start outside `local` when `JWT_SECRET_KEY` is the default; confirm prod has a strong secret | backend + infra | — | S | App exits with a clear error on the default secret; infra confirms the prod value is set | SU-009 #7 | new |
+| T0-05 | Lock down uploads: allow-list jpg/png/webp/pdf, magic-byte check, size cap, server-chosen extension. Skill proofs move to private storage behind an admin-only route | backend | — | M | An HTML file disguised as an image is rejected; an admin can open a skill proof and the public cannot | SU-008 | dispatched AR-005 (backend) |
+| T0-06 | Refuse to start outside `local` when `JWT_SECRET_KEY` is the default; confirm prod has a strong secret | backend + infra | — | S | App exits with a clear error on the default secret; infra confirms the prod value is set | SU-009 #7 | dispatched AR-006 (backend + infra) |
 
 ---
 
@@ -63,7 +63,7 @@ first means everything after it is built on tested, safe ground.
 ### 1a. Backend health
 | ID | Ticket | Owner | Depends on | Size | Done when | Source |
 |---|---|---|---|---|---|---|
-| T1-01 | Make the test suite run on MongoDB (fixtures, `email-validator`, `requirements-dev.txt`) | backend | — | M | `pytest` runs green on a clean install | OR-001 #1–2 (**done as BE-002, architect to verify**) |
+| T1-01 | Make the test suite run on MongoDB (fixtures, `email-validator`, `requirements-dev.txt`) | backend | — | M | `pytest` runs green on a clean install | OR-001 #1–2 (✅ BE-002, 114 tests verified by architect) |
 | T1-02 | Remove dead SQLAlchemy code and stray root scripts | backend | T1-01 | S | No imports of missing modules; `drop_cat.py`/`test_cat.py` gone (deleting files → your OK, Rule 11) | OR-001 #3, #5 |
 | T1-03 | Decide what happens to the uncommitted `dev` changes (booking lat/long + web map picker) | **you** → backend/web | Q-W5 | S | Committed or discarded; backend and web know which | OR-001 #9 |
 

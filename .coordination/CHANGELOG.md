@@ -13,3 +13,5 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-28 | BE-001 | backend | Add missing email-validator to requirements.txt | inbox: architect (BE-002)
 - 2026-10-28 | BE-002 | backend | Mongo test fixtures (mongomock-motor), ported tests, booking-state tests; fix category create 500 | inbox: architect, support, infrastructure
 - 2026-10-28 | AR-004 | architect | Proposed phased ticket backlog (Phases 0-7, 59 tickets, policy proposals P-1..P-4) in docs/plans/roadmap-tickets.md | inbox: none (awaiting human approval)
+- 2026-10-29 | AR-005 | architect | Dispatched Phase 0 T0-05: upload validator + private skill proofs (SU-008); verified AR-002 (8/8) and BE-002 (114 tests) | inbox: backend (breaking)
+- 2026-10-29 | AR-006 | architect | Dispatched Phase 0 T0-06: refuse boot with default JWT secret outside local (SU-009 #7) | inbox: backend (breaking), infrastructure (confirm prod env first)

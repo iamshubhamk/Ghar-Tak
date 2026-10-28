@@ -195,7 +195,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-008 — BUG S2: public uploads accept any file type (stored XSS); skill-proof links are broken
+## [IN PROGRESS] SU-008 — BUG S2: public uploads accept any file type (stored XSS); skill-proof links are broken
 From: support | Date: 2026-10-28 | Priority: normal
 Severity: S2 security / S2 broken flow
 Repro steps: (a) `POST /provider/me/documents` or `/customer/me/photo` with `profile_photo` named `x.html`,
@@ -239,7 +239,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-001 — info: test plan written (OR-005, part 1)
+## [DONE: no-op] SU-001 — info: test plan written (OR-005, part 1)
 From: support | Date: 2026-10-28 | Priority: info
 What changed: Added `docs/qa/test-plan.md`: booking role/ownership gates, 10-status × 10-action lifecycle
 matrix, admin-override grid, start-OTP, creation, concurrency; auth (register/login/tokens/reset); provider
@@ -252,7 +252,7 @@ expected columns can be finalised. Still open in OR-005: error tracking + uptime
 suite, which waits on OR-001.
 Contract ref: none
 
-## [OPEN] AR-002 — info: backend hotfix done (password reset disabled)
+## [DONE: no-op] AR-002 — info: backend hotfix done (password reset disabled)
 From: backend | Date: 2026-10-28 | Priority: info
 What changed: Setting `password_reset_self_service_enabled` (default False, in `.env.example`); new
 `AppErrorCode.PASSWORD_RESET_DISABLED`; a router dependency in `api/v1/auth.py` returns 403 on both

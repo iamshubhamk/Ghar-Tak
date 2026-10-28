@@ -61,3 +61,57 @@ Contract ref: contracts/API_CHANGES.md#ar-002 (backend adds it)
 
 Progress note (backend, 2026-10-28): items 1 and 2 done as BE-001/BE-002. Remaining: 3, 5 (need approval
 to delete files, Rule 11), 6, 7 (ADR), 8, 9 (human decides the lat/long commit); 4 is infrastructure's.
+
+## [OPEN] AR-005 — T0-05: lock down file uploads; make skill proofs private (SU-008)
+From: architect | Date: 2026-10-29 | Priority: breaking
+What changed: The human approved starting Phase 0 of `docs/plans/roadmap-tickets.md` ("start with the phase
+0 tickets", 2026-10-29). This is ticket T0-05. Bug detail: architect inbox SU-008.
+Why: Today a file named `x.html` sent as `image/png` is stored under the client's extension and served
+from the API origin at `/uploads/...`. That's stored XSS on our domain. Skill-request proofs are written
+outside `uploads/public`, so admins get 404, and if fixed naively they'd be public.
+Action needed in this workstream (do this before other OR-001 items; Rule 1):
+1. One shared upload validator used by **every** upload route (customer photo, provider photo,
+   documents, Aadhaar, bank proof, skill proof, provider registration form):
+   - allow-list per route: photos jpg/png/webp; documents jpg/png/webp/pdf
+   - check magic bytes (sniff the real type; don't trust `content_type` or the filename)
+   - size cap from settings (suggest 5 MB photos, 10 MB documents)
+   - the stored name is always `<uuid>.<ext from the sniffed type>`; never reuse the client's extension
+   - 415 `UPLOAD_TYPE_NOT_ALLOWED` / 413 `UPLOAD_TOO_LARGE` with the standard error body
+2. Skill proofs go to private storage (like Aadhaar) and are served through an authenticated route that
+   only an ADMIN or the owning provider can read. `proof_url` points to that route.
+3. Public static serving: only image types are served from `/uploads`. Set `X-Content-Type-Options:
+   nosniff` on that mount.
+4. Go through the storage adapter (`services/storage.py`), not new direct `open()` calls, so the R2
+   move (T1-13) only swaps the adapter.
+5. Don't move or delete existing files on prod (Rule 11). Write a read-only script
+   `scripts/audit_uploads.py` that lists files in `uploads/` whose extension or sniffed type isn't
+   allowed. Infrastructure runs it on prod and the human decides what to remove.
+6. Tests (Rule 9): disguised HTML rejected; oversize rejected; valid jpg/pdf accepted and stored with
+   our extension; skill proof readable by admin and owner, 403 for another provider/customer, 401
+   anonymous. Rows in test plan §3.2.
+7. Contract: re-export `openapi.json` and add `API_CHANGES.md#ar-005`. New error codes, plus
+   `proof_url` now needs auth, so web's admin panel must fetch it as a blob like Aadhaar. Tell web in
+   the handoff.
+Acceptance criteria: test plan §3.2 rows 4–5 pass; all upload routes use the validator (grep shows no
+other `open(..., "wb")` in routes); the full suite stays green.
+Commit as your next BE-xxx ("AR-005" in the message), and leave the human's uncommitted booking edits
+alone. `/handoff` to web (admin proof viewer), infrastructure (run the audit script on prod, deploy),
+support (verify), and architect.
+Contract ref: contracts/API_CHANGES.md#ar-005 (backend adds it)
+
+## [OPEN] AR-006 — T0-06: refuse to boot with the default JWT secret outside local (SU-009 #7)
+From: architect | Date: 2026-10-29 | Priority: breaking
+What changed: Phase 0 ticket T0-06, approved by the human (2026-10-29).
+Why: `core/config.py` defaults `jwt_secret_key` to `"change-this-local-secret"`. If prod ever starts
+without the env var, anyone can forge admin tokens.
+Action needed in this workstream:
+1. At settings load: if `environment != "local"` and the secret is the default, empty or under 32 chars,
+   raise a clear error and refuse to start. Do the same for an empty `MONGODB_URL`.
+2. `.env.example`: a placeholder secret plus a comment on generating one
+   (`python -c "import secrets; print(secrets.token_urlsafe(48))"`).
+3. Tests: boot fails in `production` with the default secret; boot works in `local`; tests keep running.
+4. **Coordinate with infrastructure before this deploys.** They must confirm prod has a strong
+   `JWT_SECRET_KEY` and `ENVIRONMENT` set, or this change would take prod down. Say so in the handoff.
+Acceptance criteria: tests above pass; infrastructure confirms the prod env before the deploy.
+Commit with "AR-006" in the message. `/handoff` to infrastructure and architect.
+Contract ref: none
