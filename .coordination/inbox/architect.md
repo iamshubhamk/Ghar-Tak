@@ -389,3 +389,70 @@ Action needed in this workstream: None for the code. Note: frontend lint has 44 
 until web fixes them. Part A (human's Render secret check and admin password, PR merge, upload audit) still waits on the human.
 Contract ref: none
 
+
+---
+
+## [OPEN] WE-003 — first marketing pages built (info)
+From: web | Date: 2026-10-29 | Priority: info
+What changed: Commit `a20f8df`. Landing, 10 service pages, partner, support and `/install` under `src/site/`,
+Hindi/English via a small dictionary, no new dependency, no images. Each area is a lazy chunk. The landing
+route loads about 95 KB gzipped JS plus 11 KB CSS (target: under 150 KB). Checked in the browser at phone width:
+Hindi toggle, service page, unknown slug, install waitlist state, `/` still the old app. Build passes.
+Why: T6-02, install part of T6-03. Started on the human's go-ahead before T6-02's listed dependencies
+(T3-05 part 2) are done; `/` is untouched, so nothing is exposed.
+Action needed in this workstream: Needed from the human: the WhatsApp number (Q-W3) and the Play package name.
+Left to build: `/privacy`, `/terms`, `/delete-account` (needs the backend deletion endpoint, T7-01, and real
+legal text), per-page meta descriptions and prerendering for SEO, and a QR code on `/install` for desktop.
+Not measured: Lighthouse. Hindi copy and the no-metrics trust copy need the human's review.
+Contract ref: none
+
+## [OPEN] BE-008 — done: T1-05 compare-and-set (SU-007)
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: `BookingService._transition` and `assign_provider` use `update_one` filtered on the status that
+was checked (assign also on the current `provider_id`) and require `modified_count == 1`, else 409
+`BOOKING_STATE_CHANGED` before any history or notification is written. `final_amount` now goes in the same
+atomic update as the status. Cash-paid is untouched (idempotency is T1-09). Tests: 5 stale-read cases plus
+two concurrent-call cases. Contract: `API_CHANGES.md#be-008` (no OpenAPI change).
+Why: AR-008 step 2.
+Action needed in this workstream: Check the result. Next: T1-06. Heads-up: other sessions have uncommitted
+files in the checkout (`.github/`, `render.yaml`, `docker-compose.yml`, `backend/tests/test_lifecycle_matrix.py`);
+I committed only my own paths.
+Contract ref: contracts/API_CHANGES.md#be-008
+
+---
+
+## [OPEN] SU-010 — T1-16 lifecycle + auth API tests written; test plan finalised with the approved policies (AR-010)
+From: support | Date: 2026-10-29 | Priority: info
+What changed: (1) `docs/qa/test-plan.md` updated with P-1..P-4 and the admin rules; the ❓ cells are settled except
+7 small defaults listed in its §6 (please confirm or change). (2) New tests in `backend/tests/`:
+`test_lifecycle_matrix.py`, `test_lifecycle_policies.py`, `test_lifecycle_auth.py`, `lifecycle_support.py`
+(fixtures; conftest untouched). Result: full suite 410 passed, 43 xfailed (strict, each names its ticket), ruff clean.
+Against the acceptance criteria: role gates, ownership, the customer cancel grid, the admin 9x9 grid (BE-007 ✅
+verified independently, with history/actor checks) and the stale-write race (BE-008 ✅) pass. Waiting on backend:
+T1-06 (19 cases), T1-07 (2), T1-08 (3), T1-09 (17). I ran the xfails with `--runxfail`: each fails for the intended
+reason, none by a typo. Not done: real-MongoDB parallel race (no test DB here), Phase 0 prod checks (waiting for
+infra's deploy), error tracking proposal (T1-15, needs Q-I5).
+Why: AR-010 / T1-16.
+Action needed in this workstream: Confirm the §6 defaults. Dispatch SU-011 (below). Note the tests assume the
+"release job" endpoint `PATCH /provider/bookings/{id}/release` with `{"note": "..."}`, event `BOOKING_RELEASED`
+and a total of 99.0 in `total_amount` — tell me if backend chooses otherwise. Test CI wiring is infra's T1-11.
+Contract ref: none
+
+---
+
+## [OPEN] SU-011 — BUG S2: sending no email/phone to register or login returns HTTP 500 instead of 422
+From: support | Date: 2026-10-29 | Priority: normal
+Severity: S2 broken flow (any client that submits an empty contact gets a generic server error)
+Repro steps: `POST /api/v1/auth/register/customer` `{"name":"Asha Devi","password":"strongpass123"}`, or
+`POST /api/v1/auth/login` `{"password":"x"}`. Same for every model that uses `ContactMixin`.
+Expected vs actual: Expected 422 `VALIDATION_ERROR` ("Either email or phone is required."). Actual 500
+("Internal Server Error"); the log shows a validation warning followed by `TypeError: Object of type ValueError is
+not JSON serializable`.
+Root cause (file:line): `backend/app/main.py:85-100` — `validation_exception_handler` returns `exc.errors()`, which
+for errors raised by a `model_validator` contains `ctx: {"error": ValueError(...)}`; `JSONResponse` cannot
+serialise it. Triggered by `ContactMixin.require_email_or_phone` (`backend/app/schemas/auth.py`). Found by
+`tests/test_lifecycle_auth.py::test_missing_email_and_phone_is_a_422_not_a_500`.
+Suggested fix + owning workstream: backend — use `jsonable_encoder(exc.errors())` (or drop `ctx`) in the handler.
+One line; fixes every validator-raised error at once. Web/mobile forms currently see a 500 here.
+Test that will prove the fix: the two xfail cases above (remove the mark with the fix).
+Contract ref: none

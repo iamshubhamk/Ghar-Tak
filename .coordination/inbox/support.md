@@ -41,7 +41,7 @@ non-existent accounts only). Local note: `pytest` still can't run through `tests
 the 5 DB-free tests pass with `pytest --noconftest tests/test_password_reset.py -k "when_disabled or defaults"`.
 Contract ref: contracts/API_CHANGES.md#ar-002
 
-## [OPEN] BE-002 — the backend test suite now runs
+## [DONE: SU-010] BE-002 — the backend test suite now runs
 From: backend | Date: 2026-10-28 | Priority: info
 What changed: From `backend/`: `pytest` (114 tests, ~6 s, no MongoDB needed; set `TEST_MONGODB_URL` to use a
 real test DB). `tests/test_booking_states.py` covers the provider status matrix, start OTP, cancel, assign and
@@ -73,7 +73,7 @@ Action needed in this workstream: After infrastructure confirms the prod env and
 site is up and login works. Nothing else to test by hand; the cases are automated.
 Contract ref: none
 
-## [OPEN] AR-010 — Phase 1 approved: automate the lifecycle + auth tests (T1-16); policies decided
+## [IN PROGRESS] AR-010 — Phase 1 approved: automate the lifecycle + auth tests (T1-16); policies decided
 From: architect | Date: 2026-10-29 | Priority: normal
 What changed: The human approved Phase 1 and the policies (2026-10-29):
 - P-1/P-3: a provider who is out, or releases a job, sends it back to the admin queue
@@ -107,7 +107,7 @@ customer photo and provider documents: the page should show the server message, 
 Not covered: provider-side profile photo upload in `ProviderBookingsPanel` was not changed.
 Contract ref: contracts/API_CHANGES.md#ar-005
 
-## [OPEN] BE-007 — verify the booking transition matrix (SU-003; test plan §1)
+## [IN PROGRESS] BE-007 — verify the booking transition matrix (SU-003; test plan §1)
 From: backend | Date: 2026-10-29 | Priority: normal
 What changed: One transition table for customer, provider and admin. Admin override is limited to
 CANCELLED_BY_ADMIN (from REQUESTED/ACCEPTED/ON_THE_WAY/IN_PROGRESS) and COMPLETED (from IN_PROGRESS);
@@ -142,3 +142,28 @@ Why: T1-11.
 Action needed in this workstream: None until the PR is merged and deployed (then verify AR-002/005/006).
 Contract ref: none
 
+
+---
+
+## [OPEN] WE-003 — check the new marketing pages (Hindi/English, low-end phone)
+From: web | Date: 2026-10-29 | Priority: normal
+What changed: Commit `a20f8df`. New pages: `/welcome` (landing), `/services/<slug>` (10 services), `/partner`,
+`/support`, `/install`. Hindi/English toggle in the header (remembered). `/` still shows the old app.
+Why: T6-02 and the install part of T6-03 (ADR 0005).
+Action needed in this workstream: On a throttled-3G low-end Android phone check that each page loads and reads
+well in both languages, that the "Get the app" buttons reach `/install`, and that Hindi text is not cut off.
+Hindi copy was written by me and needs a native reader. `/install` currently shows the WhatsApp waitlist
+card because no Play URL or WhatsApp number is set yet. Not built yet: `/privacy`, `/terms`,
+`/delete-account` (Play needs them).
+Contract ref: none
+
+## [IN PROGRESS] BE-008 — SU-007 fixed: verify the race rows
+From: backend | Date: 2026-10-29 | Priority: normal
+What changed: Compare-and-set on every transition and on assign (409 `BOOKING_STATE_CHANGED`, nothing
+written for the loser). Tests in `tests/test_booking_states.py` (stale read then DB changed; two concurrent
+accept/reject; two admins assigning different providers).
+Why: SU-007 / T1-05.
+Action needed in this workstream: Update the concurrency rows in the test plan and your lifecycle tests. On
+real MongoDB, if you can, run the accept-vs-reject race with `TEST_MONGODB_URL` set; the in-memory mock
+cannot prove true parallel behaviour.
+Contract ref: contracts/API_CHANGES.md#be-008

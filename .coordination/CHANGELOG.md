@@ -27,3 +27,6 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-29 | BE-007 | backend | T1-04: one booking transition table (booking_rules.py), admins bound, /in_progress deprecated | inbox: web, mobile, support, architect
 - 2026-10-29 | WE-002 | web | T3-05 part 1: react-router, /admin/login + guarded /admin with own shell, admin panel moved to src/admin; tag web-v1-full | inbox: support, infrastructure, architect
 - 2026-10-29 | IN-001 | infrastructure | T1-10..12: Mongo docker-compose, local/prod env examples, GitHub Actions CI (backend, frontend, openapi drift), render.yaml (free, Singapore, not yet applied); README demo login removed (AR-003) | inbox: architect, web, support
+- 2026-10-29 | WE-003 | web | T6-02/T6-03 part: bilingual marketing pages (/welcome, /services/:slug, /partner, /support, /install); old app still at / | inbox: support, infrastructure, architect
+- 2026-10-29 | BE-008 | backend | T1-05: compare-and-set on every booking transition and assign (409 BOOKING_STATE_CHANGED) | inbox: mobile, web, support, architect
+- 2026-10-29 | SU-010 | support | T1-16: lifecycle + auth API tests (410 pass, 43 strict xfail by ticket), test plan finalised with P-1..P-4, bug SU-011 | inbox: architect (SU-010 info, SU-011), backend (SU-010)

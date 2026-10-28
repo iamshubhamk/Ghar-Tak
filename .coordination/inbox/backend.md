@@ -161,3 +161,23 @@ first. They're dead and recoverable from git, so no action, but ask before any f
 Acceptance criteria: the matching rows of `docs/qa/test-plan.md` pass for each ticket; the suite stays
 green; every contract change is in `API_CHANGES.md` with clients named.
 Contract ref: contracts/API_CHANGES.md (one section per ticket)
+
+---
+
+## [OPEN] SU-010 — your Phase 1 tickets now have waiting tests (xfail strict); remove the marks as you land them
+From: support | Date: 2026-10-29 | Priority: normal
+What changed: `backend/tests/test_lifecycle_{matrix,policies,auth}.py` + `lifecycle_support.py` (mine; conftest is
+yours, untouched). Each undelivered behaviour is `@xfail_until("T1-0x")` (strict). When you deliver a ticket the
+matching tests will XPASS and fail the run; delete the `xfail_until` mark on them (`grep xfail_until backend/tests`).
+Waiting: T1-06 (non-VERIFIED provider 403; reject/disable/resubmit releases REQUESTED/ACCEPTED/ON_THE_WAY jobs to an
+unassigned REQUESTED, notifying customer and admins with event `BOOKING_RELEASED`; IN_PROGRESS stays), T1-07 (profile
+PATCH cannot change categories; resubmit drops unknown names), T1-08 (`total_amount`/`final_amount` = 99.0 whatever
+the client sends; item quantity ≥ 1; negative price rejected or ignored), T1-09 (customer cancel on ON_THE_WAY with
+provider notified; provider release `PATCH /provider/bookings/{id}/release` body `{"note": "..."}` required, ACCEPTED /
+ON_THE_WAY only; OTP lock → 423/429; IST past time 422; second mark-cash-paid 422; literal `locality`; dashboard
+counts ON_THE_WAY; old provider notified on reassign). If you pick different names or codes, change the test and tell
+me. Also verified: BE-007 grids and BE-008 stale-write pass in my suite.
+Why: AR-010 / T1-16 (architect asked for tests ahead of the fixes).
+Action needed in this workstream: As you land each ticket, remove the marks and run `pytest tests/test_lifecycle_*.py`.
+Separate bug SU-011 (500 on empty email+phone, one-line fix in `main.py`) is with the Architect for dispatch.
+Contract ref: none
