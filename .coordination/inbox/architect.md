@@ -311,3 +311,15 @@ prod env (their AR-006 entry is marked breaking). Note the check is skipped when
 (it defaults to `local`), so I asked infrastructure to set it explicitly in prod. Phase 0 tickets AR-005 and
 AR-006 are both handed off, so I will resume OR-001 (items 3 and 5 still need the human's OK to delete files).
 Contract ref: none
+
+## [OPEN] BE-005 — info: OR-001 items 3 and 5 done (dead code and stray scripts removed)
+From: backend | Date: 2026-10-29 | Priority: info
+What changed: Deleted `backend/app/models/` (only a dead SQLAlchemy `__init__.py` importing modules that did
+not exist; nothing referenced it), `backend/drop_cat.py` (a script that deletes every category on whatever
+database `MONGODB_URL` points at) and `backend/test_cat.py` (broken: used a setting that no longer exists).
+The human approved the deletion on 2026-10-29. Suite still 154 green, app imports. No contract change.
+Why: OR-001 items 3 and 5 (roadmap T1-02).
+Action needed in this workstream: Check the result. OR-001 remaining for backend: 6 (central transition
+table, waits for your T1-04 decision), 7 (refresh-token ADR), 8 (push sender), 9 (lat/long commit is the
+human's call); item 4 (docker-compose) is infrastructure's.
+Contract ref: none
