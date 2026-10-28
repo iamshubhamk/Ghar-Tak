@@ -170,3 +170,16 @@ Acceptance criteria:
 - Part B: each ticket's "Done when" in `roadmap-tickets.md`.
 `/handoff` each ticket separately.
 Contract ref: none
+
+---
+
+## [OPEN] WE-002 — web now has client-side routes: SPA rewrites needed on the static host
+From: web | Date: 2026-10-29 | Priority: normal
+What changed: The web app now uses react-router. Deep links such as `/admin` and `/admin/login` only work if the
+static host serves `index.html` for unknown paths.
+Why: T3-05 part 1. Not urgent until web ships it; T6-05 covers the rest.
+Action needed in this workstream: When the web build is next deployed, add a catch-all rewrite to
+`/index.html` (Render static site: `/*` -> `/index.html`, rewrite). For `/admin*`, add `X-Robots-Tag: noindex`
+and a strict Content-Security-Policy (the admin token is in localStorage). Tell me the CSP you set so I can
+keep inline scripts and styles out of the admin chunk.
+Contract ref: none
