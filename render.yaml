@@ -1,0 +1,49 @@
+# Render Blueprint for GharTak (T1-12). Free tier, Singapore.
+# NOTE: free web services sleep after ~15 min idle, so the first request after a pause is slow.
+# Revisit the paid tier before the Play Store launch.
+# Secrets (sync: false) are set in the Render dashboard, never in git.
+# Service names must match the existing services, or Render will create new ones.
+services:
+  - type: web
+    name: ghartak-api
+    runtime: python
+    region: singapore
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: PASSWORD_RESET_SELF_SERVICE_ENABLED
+        value: "false"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: MONGODB_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+
+  - type: web
+    name: ghar-tak-frontend
+    runtime: static
+    region: singapore
+    branch: main
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -23,7 +23,7 @@ frontend/.env
 # Local data
 uploads/
 backend/uploads/
-postgres-data/
+mongo-data/
 
 # OS/editor
 .DS_Store
