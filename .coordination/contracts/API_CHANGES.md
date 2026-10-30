@@ -188,3 +188,17 @@ sends the previous provider a `BOOKING_REASSIGNED_AWAY` notification.
 Clients affected: mobile (release button, 423 handling, cancel in ON_THE_WAY/REJECTED, phone now only on a
 booking), web (admin: reset-otp and otp_locked badge; provider: release; do not read provider phone on the
 public list).
+
+## BE-014
+Date: 2026-10-31 | Breaking: no (off by default; local storage stays the default)
+Added: Cloudflare R2 file storage, selected with `STORAGE_BACKEND=r2` (default `local`). Settings:
+`R2_ACCOUNT_ID` (or `R2_ENDPOINT_URL`), `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, optional
+`SIGNED_URL_TTL_SECONDS` (default 300). With `r2` selected and a setting missing, the app refuses to start.
+Changed (only when STORAGE_BACKEND=r2): the private download routes `GET /providers/{id}/adhaar`,
+`GET /providers/{id}/bank-proof` and `GET /skill-requests/{id}/proof` still check who is asking (401/403 as
+before) but answer **302** with a short-lived signed URL (`Location`) instead of the file bytes, and
+`Cache-Control: private, no-store`. `GET /uploads/{name}` (public photos) answers 302 to a signed URL for
+image types only. URLs stored in the database do not change. Browsers and apps that fetch with a token must
+follow the redirect; the bucket needs a CORS rule that allows GET from the web origin.
+Clients affected: web (admin viewers that fetch documents as a blob: the redirect must be followed and the
+bucket CORS allow the origin), mobile (follow the redirect when downloading). No change while storage is local.

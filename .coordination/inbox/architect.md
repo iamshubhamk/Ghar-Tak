@@ -610,3 +610,10 @@ What changed: Transition table now includes customer cancel from ON_THE_WAY/REJE
 Why: AR-012 / AR-008 step 6.
 Action needed in this workstream: Check the result. Next: R2 adapter (mocked S3).
 Contract ref: contracts/API_CHANGES.md#be-013
+
+## [OPEN] BE-014 — T1-13 backend part done: R2 adapter (AR-012 step 3)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: `R2FileStorageService` (boto3, s3v4, region auto) behind `STORAGE_BACKEND`; `get_storage()` chooses; signed URLs for private files (302), public photos by redirect route; startup validation of the R2 settings; local stays the default. Two new dependencies: boto3 and moto[s3] (tests). Existing files are not migrated. All AR-012 backend items are now delivered (SU-011, T1-06..T1-09, R2); SU-015 and SU-016 are waiting for your dispatch.
+Why: AR-012 step 3 (T1-13 backend).
+Action needed in this workstream: Check the result. Tell me if the migration script for existing uploads should be mine (it needs the human's OK, Rule 11).
+Contract ref: contracts/API_CHANGES.md#be-014

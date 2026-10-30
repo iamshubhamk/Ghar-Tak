@@ -27,7 +27,13 @@ class Settings(BaseSettings):
     # Interim hotfix (AR-002): reset has no OTP, so it stays off unless enabled for local dev.
     password_reset_self_service_enabled: bool = False
 
-    storage_backend: str = "local"
+    storage_backend: str = "local"  # "local" or "r2" (Cloudflare R2, T1-13)
+    r2_account_id: str = ""
+    r2_access_key_id: str = ""
+    r2_secret_access_key: str = ""
+    r2_bucket: str = ""
+    r2_endpoint_url: str = ""  # optional; defaults to https://<account id>.r2.cloudflarestorage.com
+    signed_url_ttl_seconds: int = Field(default=300, ge=30, le=3600)
     local_upload_dir: Path = Path("uploads")
     upload_max_photo_bytes: int = 5 * 1024 * 1024
     upload_max_document_bytes: int = 10 * 1024 * 1024
@@ -45,6 +51,31 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def require_r2_settings_when_selected(self) -> "Settings":
+        if self.storage_backend.strip().lower() != "r2":
+            return self
+        missing = [
+            name
+            for name, value in (
+                ("R2_ACCESS_KEY_ID", self.r2_access_key_id),
+                ("R2_SECRET_ACCESS_KEY", self.r2_secret_access_key),
+                ("R2_BUCKET", self.r2_bucket),
+            )
+            if not value.strip()
+        ]
+        if not (self.r2_endpoint_url.strip() or self.r2_account_id.strip()):
+            missing.append("R2_ACCOUNT_ID (or R2_ENDPOINT_URL)")
+        if missing:
+            raise ValueError("STORAGE_BACKEND=r2 needs: " + ", ".join(missing))
+        return self
+
+    @property
+    def r2_endpoint(self) -> str:
+        if self.r2_endpoint_url.strip():
+            return self.r2_endpoint_url.strip()
+        return f"https://{self.r2_account_id.strip()}.r2.cloudflarestorage.com"
 
     @model_validator(mode="after")
     def refuse_unsafe_config_outside_local(self) -> "Settings":

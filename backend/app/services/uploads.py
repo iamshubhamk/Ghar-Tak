@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Literal
 
 from fastapi import HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.core.config import get_settings
@@ -111,16 +111,45 @@ def has_file(upload: Any) -> bool:
 def private_file_response(
     filename: str, download_name: str, missing_message: str
 ) -> FileResponse:
-    """Serve a stored private file (private/, or the uploads/ root for pre-AR-005 files)."""
+    """Serve a stored private file (private/, or the uploads/ root for pre-AR-005 files).
+
+    Local storage streams the file. Remote storage (R2) redirects to a short-lived signed URL,
+    after the caller has already been authorised by the route.
+    """
     storage = get_storage()
-    path: Path | None = storage.resolve(f"private/{filename}") or storage.resolve(filename)
-    if path is None:
+    key = next((k for k in (f"private/{filename}", filename) if storage.exists(k)), None)
+    if key is None:
         raise HTTPException(404, missing_message)
-    ext = path.suffix.lower().lstrip(".")
-    media_type = MEDIA_TYPES.get(ext, "application/octet-stream")
-    return FileResponse(
-        path,
-        media_type=media_type,
-        filename=f"{download_name}{path.suffix.lower()}",
-        headers={"X-Content-Type-Options": "nosniff"},
+    suffix = Path(key).suffix.lower()
+    media_type = MEDIA_TYPES.get(suffix.lstrip("."), "application/octet-stream")
+    headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"}
+
+    signed = storage.signed_url(
+        key,
+        get_settings().signed_url_ttl_seconds,
+        download_name=f"{download_name}{suffix}",
+        content_type=media_type,
     )
+    if signed:
+        return RedirectResponse(signed, status_code=302, headers=headers)
+    return FileResponse(
+        storage.resolve(key),
+        media_type=media_type,
+        filename=f"{download_name}{suffix}",
+        headers=headers,
+    )
+
+
+def public_upload_redirect(filename: str) -> RedirectResponse:
+    """Remote storage: `/uploads/<name>` redirects to a signed URL for the public image."""
+    if Path(filename).suffix.lower() not in PUBLIC_SERVE_SUFFIXES or "/" in filename:
+        raise HTTPException(404)
+    storage = get_storage()
+    key = f"public/{filename}"
+    if not storage.exists(key):
+        raise HTTPException(404)
+    signed = storage.signed_url(key, 3600)
+    if not signed:
+        raise HTTPException(404)
+    headers = {"X-Content-Type-Options": "nosniff", "Cache-Control": "public, max-age=300"}
+    return RedirectResponse(signed, status_code=302, headers=headers)

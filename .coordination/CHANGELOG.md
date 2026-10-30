@@ -44,3 +44,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | BE-012 | backend | T1-08: server-set visit charge (99, from settings) + provider extra; client totals ignored | inbox: mobile, web, support, architect
 - 2026-10-31 | SU-014 | support | WE-001 verified in a browser on a local stack; found SU-015 (stale document-upload response) and SU-016 (null in unique email/phone indexes on real MongoDB) | inbox: architect (SU-014), backend (SU-014)
 - 2026-10-31 | BE-013 | backend | T1-09: provider release, start-OTP lock + admin reset, wider customer/admin cancel, idempotent cash-paid, IST past-time check, literal filters, public phone hidden | inbox: mobile, web, support, architect
+- 2026-10-31 | BE-014 | backend | T1-13 backend: Cloudflare R2 storage adapter (signed URLs), off by default; boto3 + moto added | inbox: infrastructure, web, support, architect
