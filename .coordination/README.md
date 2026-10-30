@@ -48,6 +48,7 @@ backend → mobile → support → infrastructure.
 | `/sync`    | every chat | read own inbox, summarise OPEN items, propose an order |
 | `/handoff` | every chat | after a change: CHANGELOG + contract files + downstream inbox entries |
 | `/status`  | the human, Architect | summary of open items across all inboxes |
+| `/ask`     | the human | read-only Q&A chat: explains the software, changes nothing, no inbox or change IDs |
 
 ## Typical flows
 

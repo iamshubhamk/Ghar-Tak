@@ -32,3 +32,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-29 | SU-010 | support | T1-16: lifecycle + auth API tests (410 pass, 43 strict xfail by ticket), test plan finalised with P-1..P-4, bug SU-011 | inbox: architect (SU-010 info, SU-011), backend (SU-010)
 - 2026-10-29 | WE-004 | web | T6-03 part: draft /privacy, /terms, /delete-account pages with placeholders for legal review | inbox: support, architect
 - 2026-10-29 | IN-004 | infrastructure | T1-13/14 prep: daily mongodump-to-R2 workflow, storage/backup/staging runbook (needs human's Cloudflare account + GitHub secrets); render.yaml admin CSP + marketing vars | inbox: architect
+- 2026-10-31 | AR-011 | architect | Add read-only /ask Q&A chat command (no inbox, no change IDs) | inbox: none
