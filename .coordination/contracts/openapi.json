@@ -1673,6 +1673,8 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
+            "description": "Deprecated and ignored (T1-07). Skills change only through an admin-approved skill request. Accepted until the next release so older apps keep working.",
             "title": "Category Ids"
           },
           "experience_years": {

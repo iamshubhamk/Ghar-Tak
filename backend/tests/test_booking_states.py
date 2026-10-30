@@ -679,3 +679,51 @@ def test_only_open_jobs_of_that_provider_move(ctx: Ctx) -> None:
 
     assert ctx.booking()["status"] == "COMPLETED"
     assert ctx.booking()["provider_id"] == ctx.provider_id
+
+
+# ---------- T1-07: categories change only through an approved skill request ----------
+
+
+def _category_names(ctx: Ctx) -> list[str]:
+    user = run(ctx.db.users.find_one({"id": ctx.provider_id}))
+    return user["provider_profile"]["category_names"]
+
+
+def test_profile_patch_ignores_category_ids_but_still_updates_other_fields(ctx: Ctx) -> None:
+    before = _category_names(ctx)
+
+    response = ctx.client.patch(
+        "/api/v1/provider/me",
+        headers=ctx.headers(ctx.provider_token),
+        json={"category_ids": [], "bio": "New bio"},
+    )
+
+    assert response.status_code == 200
+    assert _category_names(ctx) == before  # an empty list no longer wipes the skills either
+    assert response.json()["bio"] == "New bio"
+
+
+def test_resubmit_stores_canonical_names_of_active_categories(ctx: Ctx) -> None:
+    response = ctx.client.post(
+        "/api/v1/provider/me/resubmit",
+        headers=ctx.headers(ctx.provider_token),
+        data={"categories": ["electrician"]},
+    )
+
+    assert response.status_code == 200
+    assert _category_names(ctx) == ["Electrician"]
+
+
+def test_resubmit_rejects_unknown_or_inactive_categories(ctx: Ctx) -> None:
+    run(ctx.db.categories.update_one({"id": ctx.category_id}, {"$set": {"is_active": False}}))
+    before = _category_names(ctx)
+
+    inactive = ctx.client.post(
+        "/api/v1/provider/me/resubmit",
+        headers=ctx.headers(ctx.provider_token),
+        data={"categories": ["Electrician"]},
+    )
+
+    assert inactive.status_code == 422
+    assert inactive.json()["detail"]["error"]["details"]["unknown_categories"] == ["Electrician"]
+    assert _category_names(ctx) == before

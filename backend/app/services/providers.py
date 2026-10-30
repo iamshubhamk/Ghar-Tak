@@ -168,12 +168,10 @@ class ProviderService:
             update_data["provider_profile.price_note"] = payload.price_note
             
         if payload.category_ids is not None:
-            if payload.category_ids:
-                categories = await self.db.categories.find({"id": {"$in": payload.category_ids}, "is_active": True}).to_list(length=None)
-                update_data["provider_profile.category_names"] = [c["name"] for c in categories]
-            else:
-                update_data["provider_profile.category_names"] = []
-                
+            # T1-07 (SU-006): categories change only through an admin-approved skill request.
+            # The field is still accepted for one release so shipped clients keep working.
+            logger.info(f"Ignoring category_ids in the profile update of provider {user['id']}.")
+
         if payload.localities is not None:
             update_data["provider_profile.locality_names"] = payload.localities
 
@@ -365,7 +363,9 @@ class ProviderService:
                 except Exception:
                     cat_list = [x.strip() for x in raw_cats.split(",") if x.strip()]
             if cat_list:
-                update_data["provider_profile.category_names"] = cat_list
+                update_data["provider_profile.category_names"] = await self._validate_category_names(
+                    cat_list
+                )
 
         # Parse localities
         raw_locs = form.getlist("localities") if hasattr(form, "getlist") else form.get("localities")
@@ -463,6 +463,27 @@ class ProviderService:
         )
         logger.info(f"Provider {provider_id} disabled by admin.")
         return await self._get(provider_id)
+
+    async def _validate_category_names(self, names: list[str]) -> list[str]:
+        """T1-07: keep only names of active categories (canonical spelling); unknown ones are a 422."""
+        active = await self.db.categories.find({"is_active": True}).to_list(None)
+        canonical = {c["name"].strip().lower(): c["name"] for c in active}
+        valid: list[str] = []
+        unknown: list[str] = []
+        for name in names:
+            match = canonical.get(name.strip().lower())
+            if match is None:
+                unknown.append(name)
+            elif match not in valid:
+                valid.append(match)
+        if unknown:
+            raise app_http_error(
+                422,
+                AppErrorCode.VALIDATION_ERROR,
+                "Some categories are not available: " + ", ".join(unknown) + ".",
+                {"unknown_categories": unknown},
+            )
+        return valid
 
     async def _get(self, provider_id: str) -> dict[str, Any]:
         user = await self.db.users.find_one({"id": provider_id, "role": UserRole.PROVIDER.value})

@@ -127,3 +127,15 @@ Added: `BookingResponse.needs_admin_attention` (boolean, default false) — show
 Clients affected: web (admin queue: show the flag; provider panel: handle 403 PROVIDER_NOT_VERIFIED by
 showing the profile status), mobile (same; customer sees the booking go back to "REQUESTED" and gets the
 BOOKING_RELEASED notification).
+
+## BE-011
+Date: 2026-10-31 | Breaking: no (field ignored for one release, Rule 7)
+Deprecated: `PATCH /api/v1/provider/me` field `category_ids` — now accepted but **ignored** (marked
+`deprecated` in OpenAPI). A provider's skills change only through `POST /provider/me/skill-requests`, which an
+admin approves. Other fields in the same request (`bio`, `experience_years`, `price_note`, `localities`) still
+work. Removal of the field: not before 2027-03-01.
+Changed: `POST /api/v1/provider/me/resubmit` — `categories` are checked against active categories (case-
+insensitive, stored with the official spelling). An unknown or inactive name returns **422**
+`VALIDATION_ERROR` with `details.unknown_categories` and nothing is saved.
+Clients affected: web (stop sending `category_ids` in the profile editor; send only names from the active
+category list on resubmit), mobile (same).

@@ -546,3 +546,10 @@ and admin (`BOOKING_RELEASED`); IN_PROGRESS stays put. This corrects the counts 
 Still waiting: T1-07 (2), T1-08 (3), T1-09 (20).
 Action needed in this workstream: close SU-005 and SU-011.
 Contract ref: none
+
+## [OPEN] BE-011 — T1-07 done (AR-012)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: `update_profile` ignores `category_ids` (logged, schema marks it deprecated); resubmit validates `categories` against active ones via `_validate_category_names` (422 on unknown). 3 new tests. Note: I changed support's expectation to 200 because AR-008 chose accept-and-ignore over reject.
+Why: AR-012 / AR-008 step 4.
+Action needed in this workstream: Check the result. Next: T1-08 (visit charge).
+Contract ref: contracts/API_CHANGES.md#be-011
