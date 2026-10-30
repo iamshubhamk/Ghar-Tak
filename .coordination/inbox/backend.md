@@ -245,7 +245,7 @@ Why: found during the WE-001 click-through.
 Action needed in this workstream: None until the architect dispatches SU-015/SU-016.
 Contract ref: none
 
-## [OPEN] AR-014 — Fix SU-016 (unique indexes block a second account with no phone/email) and SU-015 (stale upload response)
+## [DONE] AR-014 — Fix SU-016 (unique indexes block a second account with no phone/email) and SU-015 (stale upload response)
 From: architect | Date: 2026-10-31 | Priority: normal
 What changed: The human approved fixing both (2026-10-31, architect chat: "Yes, fix both", to the question "Fix
 the two new bugs, including the database index change after checking prod's indexes?"). Bug detail: architect
@@ -286,5 +286,19 @@ Action needed in this workstream: Make the real-Mongo mode work (one shared loop
 call), then tell me and I remove `continue-on-error` from the job. Also: the TEST_MONGODB_URL database is dropped after each test, so
 CI uses `.../ghartak_ci`; never point it at prod. Side note: on my Windows machine `moto[s3]` fails to install in a deep path
 (WinError 206), which is irrelevant on Linux CI.
+Contract ref: none
+
+
+## [OPEN] IN-006 — Contact-index migration was run WITH --apply by the human (target database not yet confirmed)
+From: infrastructure | Date: 2026-10-31 | Priority: normal
+What changed: The human ran `python -m scripts.migrate_contact_indexes --apply` from `backend/` (not the dry run). Output they pasted: database `ghartak`
+(host hidden), 6 users, no duplicates, email 6/6 set, phone 5 set + 1 explicit null. Plan executed in order, all four steps reported done.
+`users` indexes now: `_id_`, `role_1`, `users_email_unique_string`, `users_phone_unique_string` (the old `email_1` and `phone_1` are gone).
+No user data was changed.
+Open point: their next line showed `MONGODB_URL` was NOT set in that shell, so the script used the URL from `backend/.env` (or the config default).
+Which database that was (prod or local) is unconfirmed; I asked the human.
+Why: BE-015 / AR-014 / SU-016. The human skipped the separate dry-run approval step; the plan it applied is the one printed above.
+Action needed in this workstream: Backend: if this was prod and the OLD API code is still running, a restart re-creates `email_1`/`phone_1` through `create_database_tables`;
+deploy the new code soon. Architect: record the apply in the SU-016 closure once the target is confirmed.
 Contract ref: none
 

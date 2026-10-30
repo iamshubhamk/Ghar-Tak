@@ -624,3 +624,17 @@ What changed: SU-015: the documents endpoint re-reads the user after the update.
 Why: AR-014.
 Action needed in this workstream: Check the result. The human must say OK to the exact plan after infrastructure's dry run, before --apply on prod.
 Contract ref: contracts/API_CHANGES.md#be-015
+
+## [OPEN] IN-006 — Contact-index migration was run WITH --apply by the human (target database not yet confirmed)
+From: infrastructure | Date: 2026-10-31 | Priority: normal
+What changed: The human ran `python -m scripts.migrate_contact_indexes --apply` from `backend/` (not the dry run). Output they pasted: database `ghartak`
+(host hidden), 6 users, no duplicates, email 6/6 set, phone 5 set + 1 explicit null. Plan executed in order, all four steps reported done.
+`users` indexes now: `_id_`, `role_1`, `users_email_unique_string`, `users_phone_unique_string` (the old `email_1` and `phone_1` are gone).
+No user data was changed.
+Open point: their next line showed `MONGODB_URL` was NOT set in that shell, so the script used the URL from `backend/.env` (or the config default).
+Which database that was (prod or local) is unconfirmed; I asked the human.
+Why: BE-015 / AR-014 / SU-016. The human skipped the separate dry-run approval step; the plan it applied is the one printed above.
+Action needed in this workstream: Backend: if this was prod and the OLD API code is still running, a restart re-creates `email_1`/`phone_1` through `create_database_tables`;
+deploy the new code soon. Architect: record the apply in the SU-016 closure once the target is confirmed.
+Contract ref: none
+
