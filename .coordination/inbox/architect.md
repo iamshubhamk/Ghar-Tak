@@ -617,3 +617,10 @@ What changed: `R2FileStorageService` (boto3, s3v4, region auto) behind `STORAGE_
 Why: AR-012 step 3 (T1-13 backend).
 Action needed in this workstream: Check the result. Tell me if the migration script for existing uploads should be mine (it needs the human's OK, Rule 11).
 Contract ref: contracts/API_CHANGES.md#be-014
+
+## [OPEN] BE-015 — AR-014 done: SU-015 fix + SU-016 partial indexes + migration script (not applied anywhere)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: SU-015: the documents endpoint re-reads the user after the update. SU-016: `init_db.py` now creates partial unique indexes (`users_email_unique_string`, `users_phone_unique_string`, `$type: string`) under NEW names, wraps every index creation so a mismatch logs a warning and never crashes startup, never drops anything, and warns when the old `email_1`/`phone_1` are still there. `scripts/migrate_contact_indexes.py`: dry run by default (indexes, null/missing counts, duplicates, plan); `--apply` builds the new index before dropping the old one, refuses on duplicates, and refuses if an index with the new name has a different definition. Found and fixed during testing: my first script version would have trusted a wrongly-defined index that had the new name; the real-Mongo test caught it. Real MongoDB 7 verification: 15 new tests pass; full suite 515 passed with it enabled. Nothing was run against prod; infrastructure has the steps. Correction to record: the shared test fixture never supported `TEST_MONGODB_URL` (removed the dead branch); real-Mongo tests have their own file.
+Why: AR-014.
+Action needed in this workstream: Check the result. The human must say OK to the exact plan after infrastructure's dry run, before --apply on prod.
+Contract ref: contracts/API_CHANGES.md#be-015

@@ -55,6 +55,8 @@ async def upload_provider_documents(
     if update_data:
         await db.users.update_one({"id": current_user["id"]}, {"$set": update_data})
         logger.info(f"Provider {current_user['id']} uploaded new documents.")
+        # SU-015: `current_user` was read before the update; answer with the stored user.
+        current_user = await db.users.find_one({"id": current_user["id"]}) or current_user
 
     provider = await ProviderService(db).get_provider_profile_for_user(current_user)
     return ProviderService.serialize(provider, is_owner=True)

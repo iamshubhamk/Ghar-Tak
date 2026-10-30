@@ -202,3 +202,16 @@ image types only. URLs stored in the database do not change. Browsers and apps t
 follow the redirect; the bucket needs a CORS rule that allows GET from the web origin.
 Clients affected: web (admin viewers that fetch documents as a blob: the redirect must be followed and the
 bucket CORS allow the origin), mobile (follow the redirect when downloading). No change while storage is local.
+
+## BE-015
+Date: 2026-10-31 | Breaking: no (bug fixes; no schema change)
+Fixed (SU-015): `POST /api/v1/provider/me/documents` now answers with the stored provider, so
+`profile_photo_url` and the Aadhaar fields in the response show the files that were just uploaded (before, it
+answered with the profile as it was before the upload).
+Fixed (SU-016): a second account without a phone, or without an email, can now register. The unique indexes on
+`users.email` and `users.phone` only cover real text values (partial indexes), so missing/null values no
+longer collide. Duplicate real emails/phones are still rejected (409 `DUPLICATE_ACCOUNT`). This needs the
+one-time database step described in `backend/scripts/migrate_contact_indexes.py` (infrastructure runs it; a
+dry run first). Until it has run, an old database keeps its old indexes and the old behaviour; the API starts
+normally either way and logs a warning.
+Clients affected: none need to change. Web: the provider documents screen can trust the response now.

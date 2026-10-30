@@ -12,7 +12,7 @@ import pytest
 from app.core.enums import BookingStatus as S
 from app.services.bookings import BookingService
 from tests import lifecycle_support
-from tests.lifecycle_support import World, run, xfail_until
+from tests.lifecycle_support import World, run
 
 world = lifecycle_support.world  # fixture lives in the shared support module
 
@@ -357,7 +357,6 @@ def test_booking_with_an_unavailable_provider_is_still_allowed(world: World) -> 
 # --- found in the WE-001 click-through (SU-015, SU-016) -------------------------------------
 
 
-@xfail_until("SU-015")
 def test_documents_upload_response_shows_the_new_photo(world: World) -> None:
     png = base64.b64decode(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
@@ -377,7 +376,6 @@ def test_documents_upload_response_shows_the_new_photo(world: World) -> None:
 
 
 @pytest.mark.parametrize("field", ["email", "phone"])
-@xfail_until("SU-016")
 def test_unique_contact_indexes_ignore_missing_values(world: World, field) -> None:
     """A plain `sparse` unique index still indexes explicit nulls, so a 2nd email-only (or
     phone-only) account fails on real MongoDB. Registration stores None for the missing field."""

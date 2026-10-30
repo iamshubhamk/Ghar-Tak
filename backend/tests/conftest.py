@@ -1,12 +1,11 @@
 import asyncio
-import os
 from collections.abc import Callable, Generator
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 from mongomock_motor import AsyncMongoMockClient
-from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.security import create_access_token, password_context
 from app.db.init_db import create_database_tables
@@ -27,18 +26,17 @@ def run(coro: Any) -> Any:
 
 @pytest.fixture
 def db() -> Generator[AsyncIOMotorDatabase, None, None]:
-    """Fresh database per test: in-memory mongomock, or a real one if TEST_MONGODB_URL is set."""
-    real_url = os.environ.get("TEST_MONGODB_URL")
-    if real_url:
-        client = AsyncIOMotorClient(real_url)
-        database = client.get_default_database()
-    else:
-        client = AsyncMongoMockClient()
-        database = client["ghartak_test"]
+    """Fresh in-memory database per test (mongomock).
+
+    Tests that need a REAL MongoDB (index behaviour, true concurrency) live in their own files and
+    are skipped unless TEST_MONGODB_URL is set; see tests/test_contact_indexes_real_mongo.py. They
+    cannot share this fixture: a real Motor client is tied to one event loop, and `run()` below
+    starts a new loop per call.
+    """
+    client = AsyncMongoMockClient()
+    database = client["ghartak_test"]
     run(create_database_tables(database))
     yield database
-    if real_url:
-        run(client.drop_database(database.name))
     client.close()
 
 
