@@ -4,6 +4,7 @@ import traceback
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -95,7 +96,7 @@ async def validation_exception_handler(
                 "error": {
                     "code": AppErrorCode.VALIDATION_ERROR,
                     "message": "Please check the highlighted fields and try again.",
-                    "details": {"errors": exc.errors()},
+                    "details": {"errors": jsonable_encoder(exc.errors())},
                 }
             }
         },

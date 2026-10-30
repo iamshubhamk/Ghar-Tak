@@ -35,3 +35,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | AR-011 | architect | Add read-only /ask Q&A chat command (no inbox, no change IDs) | inbox: none
 - 2026-10-31 | AR-012 | architect | Resume Phase 1: SU-011, T1-06..T1-09, test-plan decisions Q1-Q7, R2 adapter unblocked (no bucket needed); new T4-08 | inbox: backend
 - 2026-10-31 | AR-013 | architect | Resume Phase 1: BE-007/BE-008 follow-ups + lint for web; hold further Phase 3/6 work | inbox: web
+- 2026-10-31 | BE-009 | backend | SU-011: validation errors are JSON-safe (missing email/phone is 422, not 500) | inbox: support, architect

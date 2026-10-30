@@ -11,7 +11,7 @@ from fastapi.testclient import TestClient
 
 from app.core.security import create_access_token
 from tests import lifecycle_support
-from tests.lifecycle_support import API, PASSWORD, World, bearer, run, xfail_until
+from tests.lifecycle_support import API, PASSWORD, World, bearer, run
 
 world = lifecycle_support.world  # fixture lives in the shared support module
 
@@ -39,7 +39,6 @@ def test_customer_can_register_with_email_or_phone_only(client: TestClient, cont
         ("/auth/login", {"password": PASSWORD}),
     ],
 )
-@xfail_until("SU-011")
 def test_missing_email_and_phone_is_a_422_not_a_500(client: TestClient, path, body) -> None:
     # The `client` fixture re-raises server errors; this one answers like production would.
     production_like = TestClient(client.app, raise_server_exceptions=False)

@@ -103,3 +103,10 @@ the last write won. `assign` also fails with 409 if another admin assigned a dif
 The 409 is not in the OpenAPI response lists (it can come from any of these routes); the code is documented here.
 Clients affected: mobile and web. On 409 `BOOKING_STATE_CHANGED`: reload the booking and show the status
 the server now has (Rule 8); do not retry blindly. Normal 422 `BOOKING_INVALID_STATUS` is unchanged.
+
+## BE-009
+Date: 2026-10-31 | Breaking: no (bug fix)
+Changed: validation errors (422 `VALIDATION_ERROR`) are now always JSON-safe. A request with neither email nor
+phone to `POST /auth/register/customer`, `POST /auth/login` or any other `ContactMixin` model used to crash
+with HTTP 500; it now returns 422 with `details.errors` (error entries from model validators no longer
+include the raw Python exception). Clients affected: web, mobile (forms can now show the 422 message).

@@ -482,3 +482,10 @@ Why: T1-13, T1-14.
 Action needed in this workstream: None now. T1-13 stays blocked on backend AR-008's R2 adapter; I'll migrate files after it is live.
 Contract ref: none
 
+
+## [OPEN] BE-009 — info: SU-011 done (AR-012 step 1)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: One-line fix in `main.py` (`jsonable_encoder(exc.errors())`), xfail removed, tests pass. `API_CHANGES.md#be-009`.
+Why: AR-012 step 1.
+Action needed in this workstream: Check the result. Next: T1-06.
+Contract ref: contracts/API_CHANGES.md#be-009
