@@ -94,7 +94,7 @@ Contract ref: none
 
 ---
 
-## [IN PROGRESS] WE-001 — verify admin skill-proof viewer and upload error messages
+## [DONE: SU-014] WE-001 — verify admin skill-proof viewer and upload error messages
 From: web | Date: 2026-10-29 | Priority: normal
 What changed: In the admin panel, "View Proof Document" now fetches `/skill-requests/{id}/proof` with the
 token and opens it as a blob (built from the request id, so old requests work too). Customer photo upload
@@ -208,3 +208,17 @@ What changed: Unverified providers are blocked and open jobs are re-queued (reje
 Why: SU-005 / T1-06.
 Action needed in this workstream: Verify rows of the test plan for P-1; close SU-005.
 Contract ref: contracts/API_CHANGES.md#be-010
+
+## [OPEN] BE-011 — T1-07 delivered; one test changed
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: Removed `xfail_until("T1-07")` from both tests. In `test_provider_cannot_add_categories_through_profile_patch` I widened the status check to `(200, 403, 422)`: AR-008 says the field is still accepted but ignored (Rule 7), so the response is 200; the real check (categories unchanged) is kept.
+Why: SU-006 / T1-07.
+Action needed in this workstream: Re-check the test plan row and close SU-006.
+Contract ref: contracts/API_CHANGES.md#be-011
+
+## [OPEN] BE-012 — T1-08 delivered: xfail marks removed
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: Visit charge 99 set by the server; client totals ignored; negative price / quantity 0 give 422; extra on complete / cash-paid. Removed the three `xfail_until("T1-08")` marks in `test_lifecycle_policies.py`. Your idempotent cash-paid test (T1-09) still works with `final_amount` because it maps to extra.
+Why: SU-004 / T1-08.
+Action needed in this workstream: Re-check test plan §1.6 and close SU-004.
+Contract ref: contracts/API_CHANGES.md#be-012

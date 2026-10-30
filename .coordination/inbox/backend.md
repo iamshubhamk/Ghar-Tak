@@ -231,3 +231,16 @@ Why: AR-012 decisions Q1, Q2, Q5.
 Action needed in this workstream: When T1-09 lands, delete the `xfail_until("T1-09")` marks (`grep -rn xfail_until
 backend/tests`); the strict run tells you which. Update `tests/test_booking_states.py` expectations for REJECTED too.
 Contract ref: none
+
+---
+
+## [OPEN] SU-014 — two new xfail tests in your working tree (SU-015, SU-016); I did not commit the test files
+From: support | Date: 2026-10-31 | Priority: info
+What changed: I added `test_documents_upload_response_shows_the_new_photo` (SU-015) and
+`test_unique_contact_indexes_ignore_missing_values` (SU-016) at the end of `tests/test_lifecycle_policies.py`
+(strict xfail; also re-added the `xfail_until` import there). That file also holds your uncommitted removal of the
+T1-09 marks, so I left both test files uncommitted rather than commit your half-finished state; include them in
+your next commit. Bug details are in the architect's SU-014 entry; the architect will dispatch them.
+Why: found during the WE-001 click-through.
+Action needed in this workstream: None until the architect dispatches SU-015/SU-016.
+Contract ref: none

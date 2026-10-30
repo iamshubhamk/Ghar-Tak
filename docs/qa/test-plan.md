@@ -191,6 +191,7 @@ Run with `asyncio.gather` on two clients against a real MongoDB (not mongomock).
 | Provider JSON registration | ✅ VERIFICATION `PENDING`, `is_public=false`, UNAVAILABLE, admins notified |
 | Provider multipart without Aadhaar | ⛔ 400 |
 | Provider multipart Aadhaar `.exe` / `.html` | ⛔ 400 |
+| Two accounts that both have no phone (or both no email) | ✅ both register · on real MongoDB the 2nd gets a 500 (null in a unique index) 🐞 SU-016; needs a real-MongoDB run in CI |
 | Provider with inactive / unknown `category_ids` | ✅, unknown ids silently dropped |
 | Registration body with `role: "ADMIN"` | role ignored, account is CUSTOMER/PROVIDER |
 | Hindi name | ✅ stored as-is |
@@ -249,7 +250,8 @@ Each action: provider notified; non-admin caller ⛔ 403; unknown id ⛔ 404.
 | `GET /providers/{id}/adhaar` & `/bank-proof` | admin ✅; owner ✅; other provider ⛔ 403; customer ⛔ 403; anonymous ⛔ 401 |
 | Files in `uploads/private` reachable through `/uploads/...` | ⛔ 404 always |
 | Profile photo / customer photo upload with `.html` / `.svg` filename and `image/png` content-type | ⛔ 400 expected · today stored and served from `/uploads` 🐞 **SU-008** |
-| Skill-request proof viewable by admin at returned `proof_url` | ✅ expected · today 404 (saved outside `public/`) 🐞 SU-008 |
+| Skill-request proof viewable by admin through `/skill-requests/{id}/proof` (old requests too) | ✅ verified 2026-10-31 in the admin UI and API (png, jpg, pdf, legacy); anon 401, customer 403, public `/uploads/` link 404 |
+| `POST /provider/me/documents` response reflects the files just saved | ✅ expected · today returns the stale profile 🐞 SU-015 |
 
 ### 3.3 Categories / skills
 

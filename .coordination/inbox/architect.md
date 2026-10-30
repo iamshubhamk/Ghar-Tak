@@ -572,3 +572,34 @@ What changed: Settings `LAUNCH_VISIT_CHARGE_INR` (99) and `LAUNCH_OFFER_ENDS_AT`
 Why: AR-012 / AR-008 step 5.
 Action needed in this workstream: Check the result and the final_amount decision. Next: T1-09.
 Contract ref: contracts/API_CHANGES.md#be-012
+
+---
+
+## [OPEN] SU-014 — info: WE-001 verified in a real browser (local stack); two new bugs found on real MongoDB
+From: support | Date: 2026-10-31 | Priority: info
+What changed: Ran the stack locally (throwaway MongoDB 7 container on port 27018, API on 8010, Vite on 5173; all
+stopped afterwards; `backend/.env` points at Atlas and was NOT used). WE-001 passes: logged in at `/admin/login`,
+Skill Verification lists 4 pending requests (png, jpg, pdf and a legacy one with a dead `/uploads/` link); each
+"View Proof Document" fetches `/skill-requests/{id}/proof` with the token and gets 200 with the right type (checked
+by curl: image/png, image/jpeg, application/pdf). Anonymous 401, customer 403, public `/uploads/` link 404. Customer
+photo and provider documents: an HTML file renamed .jpg gives 415 `UPLOAD_TYPE_NOT_ALLOWED`, a 6 MB photo gives 413,
+with the message in `detail.error.message` which both pages display (code read). Not seen: the proof opening in a new
+tab (the in-app browser pane does not show blob popups), and the 413 path for a >document-cap Aadhaar file.
+Two bugs the in-memory test database could not show:
+- SU-015 (S3): `POST /provider/me/documents` saves the file but answers with the stale profile
+  (`profile_photo_url`/`adhaar_card_url` unchanged). `providers.py` re-reads via `get_provider_profile_for_user`, which
+  returns the same `current_user` dict. The web onboarding panel does `setProvider(data)`, so a successful upload looks
+  like nothing happened until reload. Fix (backend): re-fetch the user after `update_one`. FYI mobile calls
+  `/providers/me/documents` (`mobile/src/api/client.ts:83`) while the route is `/provider/me/documents`: please check.
+- SU-016 (S2, S1 once phone-only sign-up exists): `db.users` unique indexes on `email` and `phone` are `sparse`, but
+  registration stores `None` for the missing one, and sparse indexes still index explicit nulls. On real MongoDB the
+  second account without a phone (or without an email) fails with `E11000 ... phone_1 dup key { phone: null }` and a 500.
+  I hit it seeding an admin (no phone) then an email-only provider. Fix (backend): partial unique indexes
+  (`partialFilterExpression: {phone: {$type: "string"}}`, same for email) and/or do not store null. Changing live indexes
+  is a Rule 11 item (needs the human's OK, plus check prod's current indexes). A real-MongoDB test needs CI to run
+  with `TEST_MONGODB_URL` (IN-002).
+Why: AR-012 asked me to verify WE-001 locally.
+Action needed in this workstream: Dispatch SU-015 and SU-016 to backend; get the human's OK for the index change.
+Close WE-001 (verified). Test: `test_documents_upload_response_shows_the_new_photo`,
+`test_unique_contact_indexes_ignore_missing_values` (strict xfail, uncommitted in the working tree, see below).
+Contract ref: none
