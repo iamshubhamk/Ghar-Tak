@@ -4,6 +4,7 @@ Each test names the backend ticket that delivers it. A test with `xfail_until(ti
 behaviour that ticket has not delivered yet; remove the mark when the ticket lands.
 """
 
+import base64
 from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
@@ -211,7 +212,6 @@ def test_resubmit_does_not_store_unknown_category_names(world: World) -> None:
 # --- SU-009 (T1-09): small fixes --------------------------------------------------------------
 
 
-@xfail_until("T1-09")
 def test_start_otp_locks_after_repeated_wrong_codes(world: World) -> None:
     booking = world.new_booking(status=S.ACCEPTED)
     wrong = "0000" if booking.otp != "0000" else "1111"
@@ -228,7 +228,6 @@ def test_start_otp_locks_after_repeated_wrong_codes(world: World) -> None:
     assert booking.status == S.ACCEPTED.value
 
 
-@xfail_until("T1-09")
 def test_booking_time_in_the_past_in_ist_is_rejected(world: World) -> None:
     one_hour_ago = datetime.now(IST) - timedelta(hours=1)
 
@@ -263,7 +262,6 @@ def test_booking_time_in_the_future_in_ist_is_accepted(world: World) -> None:
     assert response.status_code == 201
 
 
-@xfail_until("T1-09")
 def test_mark_cash_paid_is_idempotent_and_does_not_rewrite_the_amount(world: World) -> None:
     booking = world.new_booking(status=S.COMPLETED)
     path = f"/provider/bookings/{booking.id}/mark-cash-paid"
@@ -278,7 +276,6 @@ def test_mark_cash_paid_is_idempotent_and_does_not_rewrite_the_amount(world: Wor
     assert len(booking.doc()["status_history"]) == history
 
 
-@xfail_until("T1-09")
 def test_locality_filter_is_literal_text_not_a_regex(world: World) -> None:
     response = world.call("GET", "/providers", params={"locality": ".*"})
 
@@ -286,7 +283,6 @@ def test_locality_filter_is_literal_text_not_a_regex(world: World) -> None:
     assert response.json() == []
 
 
-@xfail_until("T1-09")
 def test_on_the_way_booking_counts_as_open_on_the_dashboard(world: World) -> None:
     world.new_booking(status=S.ON_THE_WAY)
 
@@ -295,7 +291,6 @@ def test_on_the_way_booking_counts_as_open_on_the_dashboard(world: World) -> Non
     assert summary["open_bookings"] == 1
 
 
-@xfail_until("T1-09")
 def test_reassigning_notifies_the_previous_provider(world: World) -> None:
     booking = world.new_booking()
 
@@ -315,7 +310,6 @@ def test_reassigning_notifies_the_previous_provider(world: World) -> None:
 # --- Q5 (T1-09): public provider phone is hidden --------------------------------------------
 
 
-@xfail_until("T1-09")
 def test_public_provider_phone_is_hidden(world: World) -> None:
     run(world.db.users.update_one({"id": world.provider_id}, {"$set": {"phone": "9876500099"}}))
 
@@ -358,3 +352,37 @@ def test_booking_with_an_unavailable_provider_is_still_allowed(world: World) -> 
     )
 
     assert response.status_code == 201
+
+
+# --- found in the WE-001 click-through (SU-015, SU-016) -------------------------------------
+
+
+@xfail_until("SU-015")
+def test_documents_upload_response_shows_the_new_photo(world: World) -> None:
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+    )
+
+    response = world.call(
+        "POST",
+        "/provider/me/documents",
+        world.provider,
+        files={"profile_photo": ("p.png", png, "image/png")},
+    )
+
+    assert response.status_code == 200
+    stored = world.call("GET", "/provider/me", world.provider).json()["profile_photo_url"]
+    assert stored
+    assert response.json()["profile_photo_url"] == stored
+
+
+@pytest.mark.parametrize("field", ["email", "phone"])
+@xfail_until("SU-016")
+def test_unique_contact_indexes_ignore_missing_values(world: World, field) -> None:
+    """A plain `sparse` unique index still indexes explicit nulls, so a 2nd email-only (or
+    phone-only) account fails on real MongoDB. Registration stores None for the missing field."""
+    indexes = run(world.db.users.index_information())
+    unique = [i for i in indexes.values() if i["key"] == [(field, 1)] and i.get("unique")]
+
+    assert unique, f"no unique index on {field}"
+    assert "partialFilterExpression" in unique[0]

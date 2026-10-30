@@ -70,6 +70,15 @@ class AdminBookingStatusUpdateRequest(BookingStatusUpdateRequest):
     status: BookingStatus
 
 
+class BookingReleaseRequest(BaseModel):
+    note: str = Field(min_length=3, max_length=500)
+
+    @field_validator("note", mode="before")
+    @classmethod
+    def strip_note(cls, value: str | None) -> str | None:
+        return clean_optional(value)
+
+
 class CashPaymentRequest(BaseModel):
     final_amount: Decimal | None = Field(default=None, ge=0, deprecated=True)
     extra_amount: Decimal | None = Field(default=None, ge=0, le=100000)
@@ -124,5 +133,6 @@ class BookingResponse(BaseModel):
     offer_ends_at: datetime | None = None
     otp: str | None = None
     needs_admin_attention: bool = False
+    otp_locked: bool = False
     created_at: datetime
     updated_at: datetime

@@ -1,10 +1,11 @@
 import secrets
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pymongo import ReturnDocument
 
 from app.core.config import get_settings
 from app.core.enums import (
@@ -26,6 +27,10 @@ from app.services.booking_rules import (
 from app.services.notifications import NotificationService
 
 logger = setup_logger("ghartak.bookings")
+
+IST = timezone(timedelta(hours=5, minutes=30))  # times without a zone are read as Patna time
+MAX_START_OTP_ATTEMPTS = 5
+PAST_TIME_GRACE = timedelta(minutes=5)
 
 # Jobs that go back to the admin queue when their provider stops being VERIFIED (T1-06).
 RELEASABLE_STATUSES = (
@@ -58,6 +63,17 @@ class BookingService:
 
         booking_id = str(uuid.uuid4())
         now = datetime.now(UTC)
+
+        preferred = payload.preferred_datetime
+        if preferred.tzinfo is None:
+            preferred = preferred.replace(tzinfo=IST)
+        preferred = preferred.astimezone(UTC)
+        if preferred < now - PAST_TIME_GRACE:
+            raise app_http_error(
+                422,
+                AppErrorCode.VALIDATION_ERROR,
+                "The preferred time is in the past. Please pick a time from now on.",
+            )
 
         provider = None
         if payload.provider_id:
@@ -110,7 +126,7 @@ class BookingService:
             "pincode": payload.pincode,
             "latitude": payload.latitude,
             "longitude": payload.longitude,
-            "preferred_datetime": payload.preferred_datetime,
+            "preferred_datetime": preferred,
             "issue_description": issue_desc,
             "items": item_dicts,
             "subtotal": visit_charge,
@@ -237,6 +253,18 @@ class BookingService:
             admin["id"],
             note or f"Assigned to {provider['name']}.",
         )
+        if previous_provider_id and previous_provider_id != provider["id"]:
+            await NotificationService(self.db).notify_user(
+                user_id=previous_provider_id,
+                title="Booking reassigned",
+                message=(
+                    f"Booking #{booking['id'][:8]} was given to another provider and is "
+                    "no longer yours."
+                ),
+                event_type="BOOKING_REASSIGNED_AWAY",
+                related_entity_type="booking",
+                related_entity_id=booking["id"],
+            )
         await NotificationService(self.db).notify_user(
             user_id=booking["customer_id"],
             title="Provider assigned",
@@ -354,6 +382,8 @@ class BookingService:
         ensure_transition(Actor.PROVIDER, BookingStatus(booking["status"]), next_status)
 
         if action in ("start", "in_progress"):
+            if int(booking.get("otp_failed_attempts") or 0) >= MAX_START_OTP_ATTEMPTS:
+                raise self._otp_locked_error()
             if not otp or not str(otp).strip():
                 raise app_http_error(
                     400,
@@ -362,15 +392,27 @@ class BookingService:
                 )
             expected_otp = str(booking.get("otp", "")).strip()
             if str(otp).strip() != expected_otp:
+                updated = await self.db.bookings.find_one_and_update(
+                    {"id": booking_id},
+                    {"$inc": {"otp_failed_attempts": 1}},
+                    return_document=ReturnDocument.AFTER,
+                )
+                attempts = (updated or {}).get("otp_failed_attempts", 1)
+                if attempts >= MAX_START_OTP_ATTEMPTS:
+                    await self._notify_otp_locked(booking)
+                    raise self._otp_locked_error()
                 raise app_http_error(
                     400,
                     AppErrorCode.VALIDATION_ERROR,
                     "Invalid OTP code. Please enter the 4-digit code shown on customer's tracker.",
+                    {"attempts_left": MAX_START_OTP_ATTEMPTS - attempts},
                 )
 
         extra_fields = {}
         if next_status == BookingStatus.COMPLETED:
             extra_fields = self._price_fields(booking, final_amount, extra_amount, extra_note)
+        if action in ("start", "in_progress"):
+            extra_fields["otp_failed_attempts"] = 0
 
         await self._transition(booking, next_status, provider_user["id"], note, extra_fields)
         return await self._get(booking["id"])
@@ -403,13 +445,29 @@ class BookingService:
                 "Cash can be marked paid only after booking is completed.",
             )
 
+        if booking.get("payment_status") == PaymentStatus.PAID_CASH.value:
+            raise app_http_error(
+                422,
+                AppErrorCode.BOOKING_INVALID_STATUS,
+                "Cash payment is already recorded for this booking.",
+            )
+
         update_data = {
             "payment_status": PaymentStatus.PAID_CASH.value,
             "updated_at": datetime.now(UTC),
         }
         update_data.update(self._price_fields(booking, final_amount, extra_amount, extra_note))
 
-        await self.db.bookings.update_one({"id": booking_id}, {"$set": update_data})
+        result = await self.db.bookings.update_one(
+            {
+                "id": booking_id,
+                "status": BookingStatus.COMPLETED.value,
+                "payment_status": {"$ne": PaymentStatus.PAID_CASH.value},
+            },
+            {"$set": update_data},
+        )
+        if result.modified_count != 1:
+            raise self._state_changed_error(booking_id)
 
         await NotificationService(self.db).notify_user(
             user_id=booking["customer_id"],
@@ -478,6 +536,7 @@ class BookingService:
             "extra_note": booking.get("extra_note"),
             "offer_ends_at": booking.get("offer_ends_at"),
             "needs_admin_attention": bool(booking.get("needs_admin_attention", False)),
+            "otp_locked": int(booking.get("otp_failed_attempts") or 0) >= MAX_START_OTP_ATTEMPTS,
             "otp": booking.get("otp") if can_view_otp else None,
             "created_at": booking.get("created_at"),
             "updated_at": booking.get("updated_at"),
@@ -509,6 +568,114 @@ class BookingService:
             f"Booking {booking['id']} status changed from {previous_status.value} "
             f"to {next_status.value} by user {actor_user_id}"
         )
+
+    @staticmethod
+    def _otp_locked_error():
+        return app_http_error(
+            423,
+            AppErrorCode.OTP_LOCKED,
+            "Too many wrong start codes. Please contact GharTak support to unlock this booking.",
+        )
+
+    async def _notify_otp_locked(self, booking: dict[str, Any]) -> None:
+        await NotificationService(self.db).notify_role(
+            role=UserRole.ADMIN,
+            title="Start code locked",
+            message=(
+                f"Booking #{booking['id'][:8]}: the provider entered a wrong start code "
+                f"{MAX_START_OTP_ATTEMPTS} times. Reset it if the visit is genuine."
+            ),
+            event_type="BOOKING_OTP_LOCKED",
+            related_entity_type="booking",
+            related_entity_id=booking["id"],
+        )
+
+    async def reset_start_otp(self, admin: dict[str, Any], booking_id: str) -> dict[str, Any]:
+        if admin.get("role") != UserRole.ADMIN.value:
+            raise app_http_error(403, AppErrorCode.FORBIDDEN, "Only admins can reset a start code.")
+        booking = await self._get(booking_id)
+        if booking["status"] not in (BookingStatus.ACCEPTED.value, BookingStatus.ON_THE_WAY.value):
+            raise app_http_error(
+                422,
+                AppErrorCode.BOOKING_INVALID_STATUS,
+                "A start code can only be reset while the booking is waiting to start.",
+            )
+        await self.db.bookings.update_one(
+            {"id": booking_id},
+            {
+                "$set": {
+                    "otp": f"{secrets.randbelow(9000) + 1000}",
+                    "otp_failed_attempts": 0,
+                    "updated_at": datetime.now(UTC),
+                }
+            },
+        )
+        notifications = NotificationService(self.db)
+        await notifications.notify_user(
+            user_id=booking["customer_id"],
+            title="New start code",
+            message="Your booking has a new start code. Open the booking to see it.",
+            event_type="BOOKING_OTP_RESET",
+            related_entity_type="booking",
+            related_entity_id=booking_id,
+        )
+        logger.info(f"Start code of booking {booking_id} reset by admin {admin['id']}.")
+        return await self._get(booking_id)
+
+    async def provider_release(
+        self, provider_user: dict[str, Any], booking_id: str, note: str
+    ) -> dict[str, Any]:
+        """P-3: the provider gives the job back. It returns to the admin queue as REQUESTED."""
+        self._ensure_provider_verified(provider_user)
+        booking = await self._get(booking_id)
+        if (
+            not provider_user.get("provider_profile")
+            or booking["provider_id"] != provider_user["id"]
+        ):
+            raise app_http_error(403, AppErrorCode.FORBIDDEN, "Booking is not assigned to you.")
+        previous = BookingStatus(booking["status"])
+        ensure_transition(Actor.PROVIDER, previous, BookingStatus.REQUESTED)
+
+        result = await self.db.bookings.update_one(
+            {"id": booking_id, "status": previous.value, "provider_id": provider_user["id"]},
+            {
+                "$set": {
+                    "provider_id": None,
+                    "status": BookingStatus.REQUESTED.value,
+                    "otp_failed_attempts": 0,
+                    "updated_at": datetime.now(UTC),
+                }
+            },
+        )
+        if result.modified_count != 1:
+            raise self._state_changed_error(booking_id)
+
+        await self._record_history(
+            booking, previous, BookingStatus.REQUESTED, provider_user["id"], note
+        )
+        notifications = NotificationService(self.db)
+        category_name = booking.get("category", {}).get("name", "service")
+        await notifications.notify_user(
+            user_id=booking["customer_id"],
+            title="We are finding you a new provider",
+            message=f"Your {category_name} booking is back in the queue. We will assign someone else.",
+            event_type="BOOKING_RELEASED",
+            related_entity_type="booking",
+            related_entity_id=booking_id,
+        )
+        await notifications.notify_role(
+            role=UserRole.ADMIN,
+            title="Provider released a booking",
+            message=(
+                f"{provider_user.get('name', 'A provider')} released booking "
+                f"#{booking_id[:8]}: {note}"
+            ),
+            event_type="BOOKING_RELEASED",
+            related_entity_type="booking",
+            related_entity_id=booking_id,
+        )
+        logger.info(f"Provider {provider_user['id']} released booking {booking_id}: {note}")
+        return await self._get(booking_id)
 
     @staticmethod
     def _price_fields(

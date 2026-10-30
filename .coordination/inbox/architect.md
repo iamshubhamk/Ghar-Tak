@@ -603,3 +603,10 @@ Action needed in this workstream: Dispatch SU-015 and SU-016 to backend; get the
 Close WE-001 (verified). Test: `test_documents_upload_response_shows_the_new_photo`,
 `test_unique_contact_indexes_ignore_missing_values` (strict xfail, uncommitted in the working tree, see below).
 Contract ref: none
+
+## [OPEN] BE-013 — T1-09 done (AR-012)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Transition table now includes customer cancel from ON_THE_WAY/REJECTED, admin cancel from REJECTED, and provider release (target REQUESTED from ACCEPTED/ON_THE_WAY). OTP lock = 5 tries, 423 `OTP_LOCKED`, admin `reset-otp` issues a new code. Idempotent cash-paid via compare-and-set. Naive times are IST, 5 minute grace for 'past'. Remaining open work from AR-012: the R2 storage adapter. Not in my queue: SU-015 and SU-016 (xfail in support's tests), please dispatch if wanted.
+Why: AR-012 / AR-008 step 6.
+Action needed in this workstream: Check the result. Next: R2 adapter (mocked S3).
+Contract ref: contracts/API_CHANGES.md#be-013

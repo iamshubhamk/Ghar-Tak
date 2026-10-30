@@ -1,4 +1,5 @@
 import json
+import re
 import uuid
 from datetime import UTC, datetime
 from typing import Any
@@ -38,7 +39,7 @@ class ProviderService:
 
         existing_pending = await self.db.skill_requests.find_one({
             "provider_id": provider["id"],
-            "category_name": {"$regex": f"^{category_name.strip()}$", "$options": "i"},
+            "category_name": {"$regex": f"^{re.escape(category_name.strip())}$", "$options": "i"},
             "status": "PENDING",
         })
         if existing_pending:
@@ -224,7 +225,10 @@ class ProviderService:
                 return []
                 
         if locality:
-            query["provider_profile.locality_names"] = {"$regex": f"^{locality.strip()}$", "$options": "i"}
+            query["provider_profile.locality_names"] = {
+                "$regex": f"^{re.escape(locality.strip())}$",
+                "$options": "i",
+            }
 
         cursor = self.db.users.find(query).sort("created_at", -1)
         return await cursor.to_list(length=None)
@@ -505,7 +509,7 @@ class ProviderService:
             "id": user["id"],
             "user_id": user["id"],
             "name": user["name"],
-            "phone": user.get("phone"),
+            "phone": user.get("phone") if can_view_sensitive else None,
             "bio": profile.get("bio"),
             "experience_years": profile.get("experience_years", 0),
             "verification_status": ver_status,

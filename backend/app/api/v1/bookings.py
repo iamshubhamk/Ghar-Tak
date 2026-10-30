@@ -10,6 +10,7 @@ from app.schemas.booking import (
     AdminBookingStatusUpdateRequest,
     BookingAssignProviderRequest,
     BookingCreateRequest,
+    BookingReleaseRequest,
     BookingResponse,
     BookingStatusUpdateRequest,
     CashPaymentRequest,
@@ -215,6 +216,29 @@ async def start_booking_in_progress(
         note=payload.note if payload else None,
         otp=payload.otp if payload else None,
     )
+    return BookingService.serialize(booking, actor=current_user)
+
+
+@router.patch("/provider/bookings/{booking_id}/release", response_model=BookingResponse)
+async def release_booking(
+    booking_id: str,
+    payload: BookingReleaseRequest,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Give the job back to the admin queue (ACCEPTED or ON_THE_WAY only). A reason is required."""
+    booking = await BookingService(db).provider_release(current_user, booking_id, payload.note)
+    return BookingService.serialize(booking, actor=current_user)
+
+
+@router.patch("/admin/bookings/{booking_id}/reset-otp", response_model=BookingResponse)
+async def admin_reset_start_otp(
+    booking_id: str,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Unlock a start code that was locked after too many wrong tries; issues a new code."""
+    booking = await BookingService(db).reset_start_otp(current_user, booking_id)
     return BookingService.serialize(booking, actor=current_user)
 
 

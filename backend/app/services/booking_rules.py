@@ -18,16 +18,21 @@ class Actor(StrEnum):
 
 # (who, current status) -> statuses they may move the booking to.
 TRANSITIONS: dict[tuple[Actor, S], frozenset[S]] = {
+    # The customer may cancel until the job starts (P-4), also after the provider rejected it (Q1).
     (Actor.CUSTOMER, S.REQUESTED): frozenset({S.CANCELLED_BY_CUSTOMER}),
     (Actor.CUSTOMER, S.ACCEPTED): frozenset({S.CANCELLED_BY_CUSTOMER}),
+    (Actor.CUSTOMER, S.ON_THE_WAY): frozenset({S.CANCELLED_BY_CUSTOMER}),
+    (Actor.CUSTOMER, S.REJECTED): frozenset({S.CANCELLED_BY_CUSTOMER}),
     (Actor.PROVIDER, S.REQUESTED): frozenset({S.ACCEPTED, S.REJECTED}),
-    (Actor.PROVIDER, S.ACCEPTED): frozenset({S.ON_THE_WAY, S.IN_PROGRESS}),
-    (Actor.PROVIDER, S.ON_THE_WAY): frozenset({S.IN_PROGRESS}),
+    # REQUESTED as a target is "release job" (P-3): back to the admin queue, provider removed.
+    (Actor.PROVIDER, S.ACCEPTED): frozenset({S.ON_THE_WAY, S.IN_PROGRESS, S.REQUESTED}),
+    (Actor.PROVIDER, S.ON_THE_WAY): frozenset({S.IN_PROGRESS, S.REQUESTED}),
     (Actor.PROVIDER, S.IN_PROGRESS): frozenset({S.COMPLETED}),
     (Actor.ADMIN, S.REQUESTED): frozenset({S.CANCELLED_BY_ADMIN}),
     (Actor.ADMIN, S.ACCEPTED): frozenset({S.CANCELLED_BY_ADMIN}),
     (Actor.ADMIN, S.ON_THE_WAY): frozenset({S.CANCELLED_BY_ADMIN}),
     (Actor.ADMIN, S.IN_PROGRESS): frozenset({S.CANCELLED_BY_ADMIN, S.COMPLETED}),
+    (Actor.ADMIN, S.REJECTED): frozenset({S.CANCELLED_BY_ADMIN}),
 }
 
 # Admin (re)assignment keeps or resets the booking to REQUESTED; it is only allowed from these.

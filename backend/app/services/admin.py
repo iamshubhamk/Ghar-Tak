@@ -25,6 +25,7 @@ class AdminService:
         open_statuses = [
             BookingStatus.REQUESTED.value,
             BookingStatus.ACCEPTED.value,
+            BookingStatus.ON_THE_WAY.value,
             BookingStatus.IN_PROGRESS.value,
         ]
         open_bookings = await self.db.bookings.count_documents({"status": {"$in": open_statuses}})

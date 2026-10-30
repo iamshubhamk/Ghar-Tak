@@ -158,3 +158,33 @@ Added to `BookingResponse`: `visit_charge`, `extra_amount`, `extra_note`, `offer
 before this change have `visit_charge` null; their amounts are unchanged and `final_amount` still works as before.
 Clients affected: mobile and web — customer UI shows "Visit charge Rs 99" (and the offer end date), never
 computes a total; provider UI sends `extra_amount` + `extra_note` at completion instead of `final_amount`.
+
+## BE-013
+Date: 2026-10-31 | Breaking: no (new endpoints/fields; the cancel rules get wider, nothing is removed)
+Added: `PATCH /api/v1/provider/bookings/{id}/release` body `{"note": "<reason, 3-500 chars>"}` — the assigned,
+verified provider gives the job back. Allowed from ACCEPTED and ON_THE_WAY only (else 422
+`BOOKING_INVALID_STATUS`; a missing note is 422 `VALIDATION_ERROR`). The booking becomes unassigned
+`REQUESTED` (`provider_id` null), the note is saved in `status_history`, the customer gets a `BOOKING_RELEASED`
+notification and every admin gets one too.
+Added: `PATCH /api/v1/admin/bookings/{id}/reset-otp` (admin only, booking ACCEPTED or ON_THE_WAY) — issues a new
+4-digit start code and clears the failed-attempt counter; the customer is notified.
+Added: start code lock. After **5** wrong codes on `/start` (or `/in_progress`) the call returns **423**
+`OTP_LOCKED` (also for the correct code) until an admin resets it. Wrong codes before that return 400
+`VALIDATION_ERROR` with `details.attempts_left`. Admins get a `BOOKING_OTP_LOCKED` notification.
+`BookingResponse.otp_locked` (boolean) tells the admin UI.
+Changed: customer cancel `PATCH /bookings/{id}/cancel` is now also allowed from ON_THE_WAY (the assigned
+provider is notified) and from REJECTED (Q1). Admin override `PATCH /admin/bookings/{id}/status` may now
+cancel (`CANCELLED_BY_ADMIN`) a REJECTED booking. All other transitions are unchanged.
+Changed: `POST /bookings` — `preferred_datetime` without a time zone is read as IST (Asia/Kolkata); a time
+more than 5 minutes in the past returns **422** `VALIDATION_ERROR`. Stored in UTC.
+Changed: `PATCH /provider/bookings/{id}/mark-cash-paid` (and the admin one) — a second call on an already paid
+booking returns **422** `BOOKING_INVALID_STATUS` and changes nothing (before, it rewrote the amount and added
+another history entry).
+Changed: public `GET /providers` and `GET /providers/{id}` return `phone: null`. Admin and the provider
+themselves still see it, and the assigned customer's booking response still includes the provider's phone.
+Changed (no schema change): `locality` filter and skill-request names are matched as literal text (a `.*` no
+longer matches everything); the admin dashboard `open_bookings` now counts ON_THE_WAY; reassigning a booking
+sends the previous provider a `BOOKING_REASSIGNED_AWAY` notification.
+Clients affected: mobile (release button, 423 handling, cancel in ON_THE_WAY/REJECTED, phone now only on a
+booking), web (admin: reset-otp and otp_locked badge; provider: release; do not read provider phone on the
+public list).

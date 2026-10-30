@@ -545,6 +545,21 @@
         "title": "BookingItem",
         "type": "object"
       },
+      "BookingReleaseRequest": {
+        "properties": {
+          "note": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "BookingReleaseRequest",
+        "type": "object"
+      },
       "BookingResponse": {
         "properties": {
           "address": {
@@ -728,6 +743,11 @@
               }
             ],
             "title": "Otp"
+          },
+          "otp_locked": {
+            "default": false,
+            "title": "Otp Locked",
+            "type": "boolean"
           },
           "payment_mode": {
             "$ref": "#/components/schemas/PaymentMode"
@@ -2793,6 +2813,54 @@
           }
         ],
         "summary": "Admin Mark Cash Paid",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/api/v1/admin/bookings/{booking_id}/reset-otp": {
+      "patch": {
+        "description": "Unlock a start code that was locked after too many wrong tries; issues a new code.",
+        "operationId": "admin_reset_start_otp_api_v1_admin_bookings__booking_id__reset_otp_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "booking_id",
+            "required": true,
+            "schema": {
+              "title": "Booking Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Admin Reset Start Otp",
         "tags": [
           "bookings"
         ]
@@ -5025,6 +5093,64 @@
           }
         ],
         "summary": "Reject Booking",
+        "tags": [
+          "bookings"
+        ]
+      }
+    },
+    "/api/v1/provider/bookings/{booking_id}/release": {
+      "patch": {
+        "description": "Give the job back to the admin queue (ACCEPTED or ON_THE_WAY only). A reason is required.",
+        "operationId": "release_booking_api_v1_provider_bookings__booking_id__release_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "booking_id",
+            "required": true,
+            "schema": {
+              "title": "Booking Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BookingReleaseRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BookingResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "summary": "Release Booking",
         "tags": [
           "bookings"
         ]

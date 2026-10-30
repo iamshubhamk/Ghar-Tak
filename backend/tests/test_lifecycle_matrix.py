@@ -8,7 +8,7 @@ import pytest
 
 from app.core.enums import BookingStatus as S
 from tests import lifecycle_support
-from tests.lifecycle_support import World, xfail_until
+from tests.lifecycle_support import World
 
 world = lifecycle_support.world  # fixture lives in the shared support module
 
@@ -151,9 +151,7 @@ def test_provider_never_sees_the_otp_customer_does(world: World) -> None:
 # --- §1.4 customer cancel (P-4: allowed until the job starts) --------------------------------
 
 CANCELLABLE = {S.REQUESTED, S.ACCEPTED, S.ON_THE_WAY, S.REJECTED}  # REJECTED: Q1 (AR-012)
-CANCEL_CASES = [
-    pytest.param(s, marks=xfail_until("T1-09")) if s in (S.ON_THE_WAY, S.REJECTED) else s for s in S
-]
+CANCEL_CASES = list(S)
 
 
 @pytest.mark.parametrize("status", CANCEL_CASES)
@@ -188,19 +186,9 @@ ADMIN_ALLOWED = {
     (S.ON_THE_WAY, S.CANCELLED_BY_ADMIN),
     (S.IN_PROGRESS, S.CANCELLED_BY_ADMIN),
     (S.IN_PROGRESS, S.COMPLETED),
-    (S.REJECTED, S.CANCELLED_BY_ADMIN),  # Q1 (AR-012), delivered by T1-09
+    (S.REJECTED, S.CANCELLED_BY_ADMIN),  # Q1 (AR-012)
 }
-ADMIN_WAITING = {(S.REJECTED, S.CANCELLED_BY_ADMIN)}
-ADMIN_CASES = [
-    pytest.param(
-        f,
-        t,
-        id=f"{f.value}-to-{t.value}",
-        marks=[xfail_until("T1-09")] if (f, t) in ADMIN_WAITING else [],
-    )
-    for f in S
-    for t in S
-]
+ADMIN_CASES = [pytest.param(f, t, id=f"{f.value}-to-{t.value}") for f in S for t in S]
 
 
 @pytest.mark.parametrize(("current", "target"), ADMIN_CASES)
@@ -230,7 +218,7 @@ def test_admin_override_only_to_allowed_targets(world: World, current, target) -
 
 # --- §1.4 provider "release job" (P-3) -------------------------------------------------------
 
-RELEASE_CASES = [pytest.param(s, marks=xfail_until("T1-09")) for s in S]
+RELEASE_CASES = list(S)
 
 
 @pytest.mark.parametrize("status", RELEASE_CASES)
@@ -258,7 +246,6 @@ def test_provider_release_returns_job_to_admin_queue(world: World, status) -> No
         assert booking.doc()["provider_id"] == world.provider_id
 
 
-@xfail_until("T1-09")
 def test_release_requires_a_reason(world: World) -> None:
     booking = world.new_booking(status=S.ACCEPTED)
 

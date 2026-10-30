@@ -217,7 +217,7 @@ def test_customer_cannot_use_provider_actions(ctx: Ctx) -> None:
 
 
 @pytest.mark.parametrize("status", list(S))
-def test_customer_cancel_only_from_requested_or_accepted(ctx: Ctx, status) -> None:
+def test_customer_cancel_only_until_the_job_starts(ctx: Ctx, status) -> None:
     ctx.set_status(status)
 
     response = ctx.client.patch(
@@ -226,7 +226,7 @@ def test_customer_cancel_only_from_requested_or_accepted(ctx: Ctx, status) -> No
         json={},
     )
 
-    if status in (S.REQUESTED, S.ACCEPTED):
+    if status in (S.REQUESTED, S.ACCEPTED, S.ON_THE_WAY, S.REJECTED):
         assert response.status_code == 200
         assert response.json()["status"] == S.CANCELLED_BY_CUSTOMER.value
     else:
@@ -302,6 +302,7 @@ ADMIN_ALLOWED = {
     (S.ON_THE_WAY, S.CANCELLED_BY_ADMIN),
     (S.IN_PROGRESS, S.CANCELLED_BY_ADMIN),
     (S.IN_PROGRESS, S.COMPLETED),
+    (S.REJECTED, S.CANCELLED_BY_ADMIN),
 }
 ADMIN_CASES = [(f, t) for f in S for t in S]
 
@@ -360,18 +361,20 @@ def test_transition_table_matches_the_documented_rules() -> None:
     expected = {
         (Actor.CUSTOMER, S.REQUESTED): {S.CANCELLED_BY_CUSTOMER},
         (Actor.CUSTOMER, S.ACCEPTED): {S.CANCELLED_BY_CUSTOMER},
+        (Actor.CUSTOMER, S.ON_THE_WAY): {S.CANCELLED_BY_CUSTOMER},
+        (Actor.CUSTOMER, S.REJECTED): {S.CANCELLED_BY_CUSTOMER},
         (Actor.PROVIDER, S.REQUESTED): {S.ACCEPTED, S.REJECTED},
-        (Actor.PROVIDER, S.ACCEPTED): {S.ON_THE_WAY, S.IN_PROGRESS},
-        (Actor.PROVIDER, S.ON_THE_WAY): {S.IN_PROGRESS},
+        (Actor.PROVIDER, S.ACCEPTED): {S.ON_THE_WAY, S.IN_PROGRESS, S.REQUESTED},
+        (Actor.PROVIDER, S.ON_THE_WAY): {S.IN_PROGRESS, S.REQUESTED},
         (Actor.PROVIDER, S.IN_PROGRESS): {S.COMPLETED},
         (Actor.ADMIN, S.REQUESTED): {S.CANCELLED_BY_ADMIN},
         (Actor.ADMIN, S.ACCEPTED): {S.CANCELLED_BY_ADMIN},
         (Actor.ADMIN, S.ON_THE_WAY): {S.CANCELLED_BY_ADMIN},
         (Actor.ADMIN, S.IN_PROGRESS): {S.CANCELLED_BY_ADMIN, S.COMPLETED},
+        (Actor.ADMIN, S.REJECTED): {S.CANCELLED_BY_ADMIN},
     }
     assert {k: set(v) for k, v in TRANSITIONS.items()} == expected
-    final = {S.COMPLETED, S.REJECTED, S.CANCELLED_BY_CUSTOMER, S.CANCELLED_BY_PROVIDER,
-             S.CANCELLED_BY_ADMIN}
+    final = {S.COMPLETED, S.CANCELLED_BY_CUSTOMER, S.CANCELLED_BY_PROVIDER, S.CANCELLED_BY_ADMIN}
     assert not any(current in final for (_, current) in TRANSITIONS)
 
 
@@ -846,3 +849,144 @@ def test_bookings_created_before_the_change_keep_their_amounts(ctx: Ctx) -> None
     body = ctx.provider_action("complete", final_amount=450).json()
 
     assert body["final_amount"] == 450.0  # no visit charge on old bookings: the old rule applies
+
+
+# ---------- T1-09: OTP lock, release, cash-paid, small fixes ----------
+
+
+def _wrong_otp(ctx: Ctx) -> str:
+    return "0000" if ctx.otp != "0000" else "1111"
+
+
+def test_start_otp_locks_after_five_wrong_tries_and_reports_attempts_left(ctx: Ctx) -> None:
+    ctx.set_status(S.ACCEPTED)
+
+    first = ctx.provider_action("start", otp=_wrong_otp(ctx))
+    for _ in range(3):
+        ctx.provider_action("start", otp=_wrong_otp(ctx))
+    fifth = ctx.provider_action("start", otp=_wrong_otp(ctx))
+    correct_after_lock = ctx.provider_action("start")
+
+    assert first.status_code == 400
+    assert first.json()["detail"]["error"]["details"]["attempts_left"] == 4
+    assert fifth.status_code == 423
+    assert fifth.json()["detail"]["error"]["code"] == "OTP_LOCKED"
+    assert correct_after_lock.status_code == 423
+    assert ctx.booking()["status"] == S.ACCEPTED.value
+    admin_view = ctx.client.get("/api/v1/admin/bookings", headers=ctx.headers(ctx.admin_token))
+    assert next(b for b in admin_view.json() if b["id"] == ctx.booking_id)["otp_locked"] is True
+    assert run(ctx.db.notifications.find({"event_type": "BOOKING_OTP_LOCKED"}).to_list(5))
+
+
+def test_correct_otp_resets_the_failed_counter(ctx: Ctx) -> None:
+    ctx.set_status(S.ACCEPTED)
+    for _ in range(3):
+        ctx.provider_action("start", otp=_wrong_otp(ctx))
+
+    ok = ctx.provider_action("start")
+
+    assert ok.status_code == 200
+    assert ctx.booking()["otp_failed_attempts"] == 0
+
+
+def test_admin_reset_unlocks_with_a_new_code(ctx: Ctx) -> None:
+    ctx.set_status(S.ACCEPTED)
+    for _ in range(5):
+        ctx.provider_action("start", otp=_wrong_otp(ctx))
+
+    reset = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/reset-otp",
+        headers=ctx.headers(ctx.admin_token),
+    )
+    new_otp = ctx.booking()["otp"]
+    started = ctx.provider_action("start", otp=new_otp)
+
+    assert reset.status_code == 200 and reset.json()["otp_locked"] is False
+    assert started.status_code == 200
+
+
+def test_only_admin_can_reset_the_otp_and_only_while_waiting_to_start(ctx: Ctx) -> None:
+    url = f"/api/v1/admin/bookings/{ctx.booking_id}/reset-otp"
+    ctx.set_status(S.ACCEPTED)
+
+    by_provider = ctx.client.patch(url, headers=ctx.headers(ctx.provider_token))
+    by_customer = ctx.client.patch(url, headers=ctx.headers(ctx.customer_token))
+    ctx.set_status(S.IN_PROGRESS)
+    too_late = ctx.client.patch(url, headers=ctx.headers(ctx.admin_token))
+
+    assert by_provider.status_code == 403 and by_customer.status_code == 403
+    assert too_late.status_code == 422
+
+
+def test_cash_paid_twice_is_refused_and_changes_nothing(ctx: Ctx) -> None:
+    ctx.set_status(S.COMPLETED)
+    url = f"/api/v1/provider/bookings/{ctx.booking_id}/mark-cash-paid"
+    first = ctx.client.patch(
+        url, headers=ctx.headers(ctx.provider_token), json={"extra_amount": 100}
+    )
+    history = len(ctx.booking()["status_history"])
+
+    second = ctx.client.patch(
+        url, headers=ctx.headers(ctx.provider_token), json={"extra_amount": 5}
+    )
+
+    assert first.status_code == 200 and first.json()["final_amount"] == 199.0
+    assert second.status_code == 422
+    assert ctx.booking()["final_amount"] == 199.0
+    assert len(ctx.booking()["status_history"]) == history
+
+
+def test_booking_time_without_a_zone_is_read_as_ist(ctx: Ctx) -> None:
+    from datetime import timedelta as td
+
+    ist_now = datetime.now(UTC) + td(hours=5, minutes=30)
+    past_naive = (ist_now - td(hours=2)).replace(tzinfo=None).isoformat()
+    future_naive = (ist_now + td(hours=2)).replace(tzinfo=None).isoformat()
+
+    past = _new_booking(ctx, preferred_datetime=past_naive)
+    future = _new_booking(ctx, preferred_datetime=future_naive)
+
+    assert past.status_code == 422
+    assert future.status_code == 201
+
+
+def test_provider_release_needs_a_note_and_clears_the_provider(ctx: Ctx) -> None:
+    ctx.provider_action("accept")
+    url = f"/api/v1/provider/bookings/{ctx.booking_id}/release"
+
+    no_note = ctx.client.patch(url, headers=ctx.headers(ctx.provider_token), json={})
+    released = ctx.client.patch(
+        url, headers=ctx.headers(ctx.provider_token), json={"note": "Vehicle broke down"}
+    )
+
+    assert no_note.status_code == 422
+    assert released.status_code == 200
+    assert released.json()["status"] == "REQUESTED" and released.json()["provider_id"] is None
+    assert ctx.booking()["status_history"][-1]["note"] == "Vehicle broke down"
+    assert run(ctx.db.notifications.find({"event_type": "BOOKING_RELEASED"}).to_list(10))
+
+
+def test_other_provider_and_unverified_provider_cannot_release(ctx: Ctx) -> None:
+    ctx.provider_action("accept")
+    url = f"/api/v1/provider/bookings/{ctx.booking_id}/release"
+
+    other = ctx.client.patch(
+        url, headers=ctx.headers(ctx.other_provider_token), json={"note": "not mine"}
+    )
+    run(
+        ctx.db.users.update_one(
+            {"id": ctx.provider_id}, {"$set": {"provider_profile.verification_status": "DISABLED"}}
+        )
+    )
+    unverified = ctx.client.patch(
+        url, headers=ctx.headers(ctx.provider_token), json={"note": "I quit"}
+    )
+
+    assert other.status_code == 403 and unverified.status_code == 403
+    assert ctx.booking()["provider_id"] == ctx.provider_id
+
+
+def test_locality_and_skill_filters_are_literal_text(ctx: Ctx) -> None:
+    listing = ctx.client.get("/api/v1/providers", params={"locality": "Boring.*"})
+
+    assert listing.status_code == 200 and listing.json() == []
