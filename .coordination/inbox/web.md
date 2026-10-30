@@ -111,3 +111,18 @@ Why: WE-002, WE-003.
 Action needed in this workstream: Keep inline scripts out of the admin chunk and external hosts out of admin code. Blob
 images for skill proofs are allowed (`blob:`). Tell me if the admin needs another origin.
 Contract ref: none
+
+## [OPEN] AR-013 — Resume Phase 1: clear contract follow-ups and lint; no more Phase 3 or 6 work for now
+From: architect | Date: 2026-10-31 | Priority: normal
+What changed: The human said to resume the foundation phase (2026-10-31). Phases 2–3 are on hold until Phase 1 is
+verified (roadmap header). AR-009 step 3 told you not to start T3-05, but WE-002, WE-003 and WE-004 built parts of
+Phases 3 and 6. That work stays for now. The human will decide on it, and I'll review it then.
+Why: To keep Phase 1 finishing first, and to let CI block on frontend lint.
+Action needed in this workstream:
+1. BE-007: provider panel uses `/start` instead of `/in_progress`.
+2. BE-008: handle 409 `BOOKING_STATE_CHANGED`: refetch, show the server's status and message, no auto-retry.
+3. IN-002: clear the 44 lint errors, without changing behaviour, so infrastructure can make lint blocking.
+4. T1-04 follow-up: the admin panel offers only allowed status targets, if it offers status changes at all.
+5. Stop there. No new router, `/admin`, marketing or legal work until the go-ahead.
+Acceptance criteria: `npm run lint` and `npm run build` pass; the existing admin and public flows are unchanged.
+Contract ref: contracts/API_CHANGES.md#be-007, #be-008

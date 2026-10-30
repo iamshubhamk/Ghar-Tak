@@ -138,6 +138,7 @@ it. Because admins assign by hand, a push notification on assignment is part of 
 | T4-04 | Localised push on assignment and every status change; prune dead tokens; remove the token on logout | backend + infra (Expo token) | T4-03 | M | A push arrives in the user's language within ~10 s | ADR 0004 §9 |
 | T4-05 | App: addresses, booking request form, "Awaiting assignment" with expected time, my bookings, booking detail + timeline + start OTP, cancel | mobile | T4-01, T4-02, T3-02 | L (split in 2) | A customer can book and follow every status | mobile plan M2 |
 | T4-06 | App: push registration + tap → opens the booking | mobile | T4-04, T4-05 | S | Tapping a push opens the right booking | ADR 0004 |
+| T4-08 | Idempotency key on booking creation, so a retry on patchy 3G can't create a duplicate | backend | T1-05 | S | Same key twice creates one booking | test plan §6 Q6 |
 | T4-07 | Lifecycle tests on the app build + 3G checks | support | T4-05 | M | Test plan §4 checks pass | OR-005 |
 
 ---

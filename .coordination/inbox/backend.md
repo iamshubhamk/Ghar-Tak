@@ -116,7 +116,7 @@ Acceptance criteria: tests above pass; infrastructure confirms the prod env befo
 Commit with "AR-006" in the message. `/handoff` to infrastructure and architect.
 Contract ref: none
 
-## [OPEN] AR-008 — Phase 1 backend tickets (approved) + commit the human's lat/long change
+## [IN PROGRESS] AR-008 — Phase 1 backend tickets (approved) + commit the human's lat/long change
 From: architect | Date: 2026-10-29 | Priority: normal
 What changed: The human approved Phase 1 and policies P-1..P-4, with P-2 changed to a ₹99 launch offer,
 and accepted ADRs 0003–0006 (2026-10-29, architect chat). Q-W5: "Commit backend part only". Details:
@@ -181,3 +181,26 @@ Why: AR-010 / T1-16 (architect asked for tests ahead of the fixes).
 Action needed in this workstream: As you land each ticket, remove the marks and run `pytest tests/test_lifecycle_*.py`.
 Separate bug SU-011 (500 on empty email+phone, one-line fix in `main.py`) is with the Architect for dispatch.
 Contract ref: none
+
+## [OPEN] AR-012 — Resume Phase 1: finish T1-06..T1-09 + R2 adapter; SU-011; test-plan decisions
+From: architect | Date: 2026-10-31 | Priority: normal
+What changed: The human said to resume the foundation phase (2026-10-31). AR-008 stays the spec. This entry
+adds what has come up since. Suite on my run: 410 passed, 43 xfailed.
+Why: Phase 1 can't be verified until these land, and Phases 2–3 are on hold behind it.
+Action needed in this workstream, in this order (one commit + `/handoff` per ticket; remove support's
+`xfail_until` marks as each lands):
+1. **SU-011 first (one-line fix):** `validation_exception_handler` in `main.py` must return JSON-safe errors,
+   so an empty email + phone gives 422, not 500.
+2. **T1-06, T1-07, T1-08, T1-09** as in AR-008, with these decisions on support's test-plan §6 questions:
+   - Release body is `{"note": "<reason>"}` (Q7; supersedes `{reason}` in AR-008), event `BOOKING_RELEASED`.
+   - Q1: customer **and** admin may cancel a REJECTED booking. Add it to the transition table in T1-09.
+   - Q2: booking or assigning an UNAVAILABLE provider stays allowed.
+   - Q5: public `GET /providers` hides `phone` (null); add this to T1-09, document it in `API_CHANGES.md`,
+     and the assigned customer's booking response still has it.
+   - Q3 and Q4 are not Phase 1: they go with T2-06 and T2-01. Q6 (idempotency key) is new ticket T4-08.
+3. **T1-13 R2 adapter: start now, don't wait for the bucket.** This corrects AR-008 step 7, which deadlocked
+   with infrastructure (they wait on your adapter). Build it behind the storage setting, keep local as the
+   default, and test it against a mocked S3 (`moto` or stubbed `boto3`). Signed URLs for private files. No
+   real credentials needed. Infrastructure switches it on once the human has the Cloudflare account.
+Acceptance criteria: as in AR-008; no `xfail_until` marks left for T1-06..T1-09 or SU-011; suite green.
+Contract ref: contracts/API_CHANGES.md (one section per ticket)

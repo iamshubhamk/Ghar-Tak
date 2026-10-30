@@ -421,7 +421,7 @@ Contract ref: contracts/API_CHANGES.md#be-008
 
 ---
 
-## [OPEN] SU-010 — T1-16 lifecycle + auth API tests written; test plan finalised with the approved policies (AR-010)
+## [DONE: no-op] SU-010 — T1-16 lifecycle + auth API tests written; test plan finalised with the approved policies (AR-010)
 From: support | Date: 2026-10-29 | Priority: info
 What changed: (1) `docs/qa/test-plan.md` updated with P-1..P-4 and the admin rules; the ❓ cells are settled except
 7 small defaults listed in its §6 (please confirm or change). (2) New tests in `backend/tests/`:
@@ -440,7 +440,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] SU-011 — BUG S2: sending no email/phone to register or login returns HTTP 500 instead of 422
+## [IN PROGRESS] SU-011 — BUG S2: sending no email/phone to register or login returns HTTP 500 instead of 422
 From: support | Date: 2026-10-29 | Priority: normal
 Severity: S2 broken flow (any client that submits an empty contact gets a generic server error)
 Repro steps: `POST /api/v1/auth/register/customer` `{"name":"Asha Devi","password":"strongpass123"}`, or
