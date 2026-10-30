@@ -10,6 +10,7 @@ from app.core.errors import AppErrorCode, app_http_error
 from app.core.logger import setup_logger
 from app.schemas.auth import clean_optional
 from app.schemas.provider import ProviderProfileUpdateRequest
+from app.services.bookings import BookingService
 from app.services.notifications import NotificationService
 from app.services.uploads import has_file, store_upload
 
@@ -274,6 +275,9 @@ class ProviderService:
             "provider_profile.rejection_reason": rejection_reason,
         }
         await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            provider_id, "The provider's application was rejected."
+        )
 
         await NotificationService(self.db).notify_user(
             user_id=provider_id,
@@ -296,6 +300,9 @@ class ProviderService:
             "provider_profile.rejection_reason": None,
         }
         await self.db.users.update_one({"id": user["id"]}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            user["id"], "The provider sent their profile for re-verification."
+        )
         return await self._get(user["id"])
 
     async def resubmit_application(self, user: dict[str, Any], form: Any) -> dict[str, Any]:
@@ -406,6 +413,9 @@ class ProviderService:
             update_data["provider_profile.bio"] = bio_raw
 
         await self.db.users.update_one({"id": user_id}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            user_id, "The provider resubmitted their application for verification."
+        )
 
         # Notify admins
         await NotificationService(self.db).notify_role(
@@ -439,6 +449,9 @@ class ProviderService:
             "is_active": False,
         }
         await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            provider_id, "The provider was disabled by an admin."
+        )
 
         await NotificationService(self.db).notify_user(
             user_id=provider_id,

@@ -110,3 +110,20 @@ Changed: validation errors (422 `VALIDATION_ERROR`) are now always JSON-safe. A 
 phone to `POST /auth/register/customer`, `POST /auth/login` or any other `ContactMixin` model used to crash
 with HTTP 500; it now returns 422 with `details.errors` (error entries from model validators no longer
 include the raw Python exception). Clients affected: web, mobile (forms can now show the 422 message).
+
+## BE-010
+Date: 2026-10-31 | Breaking: no (additive field; new 403 on actions of non-verified providers)
+Changed: every provider booking action (`PATCH /provider/bookings/{id}/accept|reject|on_the_way|start|in_progress|complete|mark-cash-paid`)
+returns **403** `PROVIDER_NOT_VERIFIED` when the provider's `verification_status` is not `VERIFIED`
+(PENDING_VERIFICATION, REJECTED, DISABLED). Admins can still mark cash paid.
+Changed: when a provider stops being VERIFIED (`PATCH /admin/providers/{id}/reject`, `/disable`, provider
+`POST /provider/me/resubmit`, re-verification request) their open bookings are handled automatically:
+- REQUESTED, ACCEPTED and ON_THE_WAY bookings return to unassigned `REQUESTED` (`provider_id` null), with a
+  `status_history` entry and notifications `BOOKING_RELEASED` to the customer and to all admins.
+- IN_PROGRESS bookings stay with the provider and get `needs_admin_attention: true`; admins receive a
+  `BOOKING_NEEDS_ATTENTION` notification.
+- COMPLETED/cancelled bookings are untouched.
+Added: `BookingResponse.needs_admin_attention` (boolean, default false) — show it in the admin queue.
+Clients affected: web (admin queue: show the flag; provider panel: handle 403 PROVIDER_NOT_VERIFIED by
+showing the profile status), mobile (same; customer sees the booking go back to "REQUESTED" and gets the
+BOOKING_RELEASED notification).

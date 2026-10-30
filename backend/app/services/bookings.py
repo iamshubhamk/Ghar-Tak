@@ -26,6 +26,13 @@ from app.services.notifications import NotificationService
 
 logger = setup_logger("ghartak.bookings")
 
+# Jobs that go back to the admin queue when their provider stops being VERIFIED (T1-06).
+RELEASABLE_STATUSES = (
+    BookingStatus.REQUESTED,
+    BookingStatus.ACCEPTED,
+    BookingStatus.ON_THE_WAY,
+)
+
 
 class BookingService:
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
@@ -332,6 +339,7 @@ class BookingService:
         final_amount: Decimal | None = None,
         otp: str | None = None,
     ) -> dict[str, Any]:
+        self._ensure_provider_verified(provider_user)
         booking = await self._get(booking_id)
         if (
             not provider_user.get("provider_profile")
@@ -380,6 +388,8 @@ class BookingService:
         )
         if not is_admin and not is_assigned_provider:
             raise app_http_error(403, AppErrorCode.FORBIDDEN, "Booking is not assigned to you.")
+        if not is_admin:
+            self._ensure_provider_verified(actor)
 
         if booking["status"] != BookingStatus.COMPLETED.value:
             raise app_http_error(
@@ -459,6 +469,7 @@ class BookingService:
             "payment_status": booking.get("payment_status"),
             "final_amount": booking.get("final_amount"),
             "total_amount": booking.get("total_amount") or booking.get("final_amount"),
+            "needs_admin_attention": bool(booking.get("needs_admin_attention", False)),
             "otp": booking.get("otp") if can_view_otp else None,
             "created_at": booking.get("created_at"),
             "updated_at": booking.get("updated_at"),
@@ -490,6 +501,102 @@ class BookingService:
             f"Booking {booking['id']} status changed from {previous_status.value} "
             f"to {next_status.value} by user {actor_user_id}"
         )
+
+    @staticmethod
+    def _ensure_provider_verified(provider_user: dict[str, Any]) -> None:
+        """T1-06 / P-1: only a VERIFIED provider may act on bookings."""
+        profile = provider_user.get("provider_profile") or {}
+        if profile.get("verification_status") != VerificationStatus.VERIFIED.value:
+            raise app_http_error(
+                403,
+                AppErrorCode.PROVIDER_NOT_VERIFIED,
+                "Your provider profile is not verified, so you cannot act on bookings.",
+            )
+
+    async def release_open_bookings(
+        self, provider_id: str, reason: str, actor_user_id: str = "system"
+    ) -> dict[str, int]:
+        """A provider stopped being VERIFIED (reject / disable / resubmit): send their jobs back.
+
+        REQUESTED, ACCEPTED and ON_THE_WAY bookings become unassigned REQUESTED again, with a
+        history entry and notifications to the customer and the admins. IN_PROGRESS bookings stay
+        with the provider and are flagged `needs_admin_attention` for an admin to resolve.
+        """
+        notifications = NotificationService(self.db)
+        released = flagged = 0
+
+        open_bookings = await self.db.bookings.find(
+            {
+                "provider_id": provider_id,
+                "status": {"$in": [s.value for s in RELEASABLE_STATUSES]},
+            }
+        ).to_list(None)
+        for booking in open_bookings:
+            previous = BookingStatus(booking["status"])
+            result = await self.db.bookings.update_one(
+                {"id": booking["id"], "status": previous.value, "provider_id": provider_id},
+                {
+                    "$set": {
+                        "provider_id": None,
+                        "status": BookingStatus.REQUESTED.value,
+                        "updated_at": datetime.now(UTC),
+                    }
+                },
+            )
+            if result.modified_count != 1:
+                continue  # someone else just changed it; their change wins
+            released += 1
+            await self._record_history(
+                booking, previous, BookingStatus.REQUESTED, actor_user_id, reason
+            )
+            category = (await self.db.categories.find_one({"id": booking["category_id"]})) or {}
+            await notifications.notify_user(
+                user_id=booking["customer_id"],
+                title="We are finding you a new provider",
+                message=(
+                    f"Your {category.get('name', 'service')} booking is back in the queue "
+                    "because the assigned provider is no longer available."
+                ),
+                event_type="BOOKING_RELEASED",
+                related_entity_type="booking",
+                related_entity_id=booking["id"],
+            )
+            await notifications.notify_role(
+                role=UserRole.ADMIN,
+                title="Booking needs a new provider",
+                message=f"Booking #{booking['id'][:8]} is unassigned again: {reason}",
+                event_type="BOOKING_RELEASED",
+                related_entity_type="booking",
+                related_entity_id=booking["id"],
+            )
+
+        in_progress = await self.db.bookings.find(
+            {"provider_id": provider_id, "status": BookingStatus.IN_PROGRESS.value}
+        ).to_list(None)
+        for booking in in_progress:
+            await self.db.bookings.update_one(
+                {"id": booking["id"]},
+                {"$set": {"needs_admin_attention": True, "updated_at": datetime.now(UTC)}},
+            )
+            flagged += 1
+            await notifications.notify_role(
+                role=UserRole.ADMIN,
+                title="In-progress booking needs attention",
+                message=(
+                    f"Booking #{booking['id'][:8]} is in progress but its provider is "
+                    f"no longer verified: {reason}"
+                ),
+                event_type="BOOKING_NEEDS_ATTENTION",
+                related_entity_type="booking",
+                related_entity_id=booking["id"],
+            )
+
+        if released or flagged:
+            logger.info(
+                f"Provider {provider_id}: {released} booking(s) returned to the queue, "
+                f"{flagged} in-progress booking(s) flagged ({reason})."
+            )
+        return {"released": released, "flagged": flagged}
 
     @staticmethod
     def _state_changed_error(booking_id: str):

@@ -23,7 +23,6 @@ IST = timezone(timedelta(hours=5, minutes=30))
 
 @pytest.mark.parametrize("verification", ["PENDING_VERIFICATION", "REJECTED", "DISABLED"])
 @pytest.mark.parametrize("action", ["accept", "on_the_way", "start", "complete"])
-@xfail_until("T1-06")
 def test_non_verified_provider_cannot_act(world: World, verification, action) -> None:
     booking = world.new_booking(status=S.ACCEPTED)
     world.set_verification(world.provider_id, verification)
@@ -41,7 +40,6 @@ def test_non_verified_provider_cannot_act(world: World, verification, action) ->
 
 @pytest.mark.parametrize("admin_action", ["reject", "disable"])
 @pytest.mark.parametrize("status", [S.REQUESTED, S.ACCEPTED, S.ON_THE_WAY])
-@xfail_until("T1-06")
 def test_admin_removing_a_provider_sends_open_jobs_back_to_the_queue(
     world: World, admin_action, status
 ) -> None:
@@ -62,7 +60,6 @@ def test_admin_removing_a_provider_sends_open_jobs_back_to_the_queue(
     assert booking.notifications(role="ADMIN", event_type="BOOKING_RELEASED"), "admin must be told"
 
 
-@xfail_until("T1-06")
 def test_resubmitting_provider_sends_open_jobs_back_to_the_queue(world: World) -> None:
     booking = world.new_booking(status=S.ACCEPTED)
 
@@ -317,3 +314,51 @@ def test_reassigning_notifies_the_previous_provider(world: World) -> None:
     assert booking.doc()["provider_id"] == world.other_provider_id
     # one notification from the first assignment, one more saying the job was taken away
     assert len(booking.notifications(user_id=world.provider_id)) >= 2
+
+
+# --- Q5 (T1-09): public provider phone is hidden --------------------------------------------
+
+
+@xfail_until("T1-09")
+def test_public_provider_phone_is_hidden(world: World) -> None:
+    run(world.db.users.update_one({"id": world.provider_id}, {"$set": {"phone": "9876500099"}}))
+
+    listing = world.call("GET", "/providers").json()
+    detail = world.call("GET", f"/providers/{world.provider_id}").json()
+
+    assert all(p["phone"] is None for p in listing)
+    assert detail["phone"] is None
+
+
+def test_admin_and_owner_still_see_the_provider_phone(world: World) -> None:
+    run(world.db.users.update_one({"id": world.provider_id}, {"$set": {"phone": "9876500099"}}))
+
+    as_admin = world.call("GET", "/admin/providers", world.admin).json()
+    as_owner = world.call("GET", "/provider/me", world.provider).json()
+
+    assert {p["id"]: p["phone"] for p in as_admin}[world.provider_id] == "9876500099"
+    assert as_owner["phone"] == "9876500099"
+
+
+def test_booking_with_an_unavailable_provider_is_still_allowed(world: World) -> None:
+    """Q2 (AR-012): availability is advisory."""
+    world.call(
+        "PATCH",
+        "/provider/me/availability",
+        world.provider,
+        json={"availability_status": "UNAVAILABLE"},
+    )
+
+    response = world.call(
+        "POST",
+        "/bookings",
+        world.customer,
+        json={
+            "category_id": world.category_id,
+            "provider_id": world.provider_id,
+            "locality": "Boring Road",
+            "preferred_datetime": (datetime.now(UTC) + timedelta(days=1)).isoformat(),
+        },
+    )
+
+    assert response.status_code == 201

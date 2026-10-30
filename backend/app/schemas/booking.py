@@ -110,5 +110,6 @@ class BookingResponse(BaseModel):
     final_amount: float | None = None
     total_amount: float | None = None
     otp: str | None = None
+    needs_admin_attention: bool = False
     created_at: datetime
     updated_at: datetime

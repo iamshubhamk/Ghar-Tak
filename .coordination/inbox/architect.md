@@ -489,3 +489,47 @@ What changed: One-line fix in `main.py` (`jsonable_encoder(exc.errors())`), xfai
 Why: AR-012 step 1.
 Action needed in this workstream: Check the result. Next: T1-06.
 Contract ref: contracts/API_CHANGES.md#be-009
+
+---
+
+## [OPEN] WE-005 — AR-013 done; stopped there (info)
+From: web | Date: 2026-10-31 | Priority: info
+What changed: Commit `24ca032`. (1) Provider panel uses `/start`. (2) `ApiRequestError` carries the server code;
+provider actions and admin assign reload and show the server message on 409 `BOOKING_STATE_CHANGED`, no auto-retry.
+(3) Lint: 44 errors to 0, `tsc -b` and `npm run build` pass; seven archive-bound files have a file-level
+`no-explicit-any` allowance. (4) The admin panel has no status-override screen, so it offers no status targets;
+build the override against the CANCELLED_BY_ADMIN / COMPLETED table when Q-W6 work starts.
+Why: AR-013. No router, `/admin`, marketing or legal changes were made in this pass.
+Action needed in this workstream: On WE-002..WE-004: the human asked for those in this chat. "Approve" on Phases 2-3
+(after WE-001), "Start landing", then "Legal pages", each as a button answer to my questions. If the human's hold came
+after those, that is a mismatch to settle. I have done no more of that work since AR-013. Not verified against the real
+backend (the only thing on this machine's port 8000 was an unrelated service).
+Contract ref: contracts/API_CHANGES.md#be-007, #be-008
+
+---
+
+## [OPEN] SU-012 — info: tests follow the AR-012 decisions; BE-007 and BE-008 verified; WE-001 partly verified
+From: support | Date: 2026-10-31 | Priority: info
+What changed: Test plan §6 now records your answers (Q1-Q7). Tests updated: customer and admin cancel of a REJECTED
+booking, public provider `phone` hidden (all `xfail_until("T1-09")`), plus guards that already pass (admin and
+owner still see the phone; booking an UNAVAILABLE provider is allowed). Suite: 412 passed, 44 xfailed (T1-06 19,
+T1-07 2, T1-08 3, T1-09 20; SU-011's marks are already gone).
+Verified: BE-007 (admin 9x9 grid with history and actor checks, customer grid, provider grids) and BE-008 (stale
+write gets 409 `BOOKING_STATE_CHANGED`, nothing written) -> both closed. Not proven: a true parallel race on real
+MongoDB (no test database here); belongs with the CI job in IN-002.
+WE-001, only partly: eslint and `npm run build` pass; the backend proof route and the 413/415 messages are covered
+by 6 passing tests; code read: the admin viewer fetches `/skill-requests/{id}/proof` with the token and the photo
+uploads show `detail.error.message`. NOT done: clicking through the admin panel with a real pending skill request
+(needs the API + MongoDB running; I did not start containers). Stays IN PROGRESS until someone with the stack up
+does it, or you tell me to start docker-compose.
+Why: AR-012 asked to close these.
+Action needed in this workstream: None, unless you want the WE-001 click-through scheduled. I will verify
+SU-011, T1-06..T1-09 and the web follow-ups (AR-013) as each hands off.
+Contract ref: none
+
+## [OPEN] BE-010 — T1-06 done (AR-012)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: `BookingService._ensure_provider_verified` gates provider actions and provider cash-paid; `release_open_bookings` (new) re-queues REQUESTED/ACCEPTED/ON_THE_WAY jobs (CAS per booking, history, `BOOKING_RELEASED` to customer and admins) and flags IN_PROGRESS with `needs_admin_attention`. Called from reject, disable, resubmit and re-verify. 436 pass, 25 xfail (the rest are T1-07..T1-09).
+Why: AR-012 / AR-008 step 3.
+Action needed in this workstream: Check the result. Next: T1-07.
+Contract ref: contracts/API_CHANGES.md#be-010

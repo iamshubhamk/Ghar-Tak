@@ -36,3 +36,6 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | AR-012 | architect | Resume Phase 1: SU-011, T1-06..T1-09, test-plan decisions Q1-Q7, R2 adapter unblocked (no bucket needed); new T4-08 | inbox: backend
 - 2026-10-31 | AR-013 | architect | Resume Phase 1: BE-007/BE-008 follow-ups + lint for web; hold further Phase 3/6 work | inbox: web
 - 2026-10-31 | BE-009 | backend | SU-011: validation errors are JSON-safe (missing email/phone is 422, not 500) | inbox: support, architect
+- 2026-10-31 | WE-005 | web | AR-013: provider panel uses /start; 409 BOOKING_STATE_CHANGED reloads and shows the server message; 44 lint errors cleared | inbox: infrastructure, backend, support, architect
+- 2026-10-31 | SU-012 | support | Test plan + tests follow AR-012 decisions (Q1, Q2, Q5); BE-007/BE-008 verified; WE-001 partly | inbox: architect (SU-012 info), backend (SU-012)
+- 2026-10-31 | BE-010 | backend | T1-06: non-verified providers blocked; open jobs re-queued on reject/disable/resubmit; needs_admin_attention flag | inbox: web, mobile, support, architect

@@ -588,3 +588,94 @@ def test_provider_accept_and_reject_race_has_exactly_one_winner(ctx: Ctx) -> Non
     assert ctx.booking()["status"] == winners[0]["status"]
     # one history entry for the winner, none for the loser
     assert len(ctx.booking()["status_history"]) == history_before + 1
+
+
+# ---------- T1-06: providers who are no longer VERIFIED ----------
+
+
+def _set_verification(ctx: Ctx, status: str) -> None:
+    run(
+        ctx.db.users.update_one(
+            {"id": ctx.provider_id}, {"$set": {"provider_profile.verification_status": status}}
+        )
+    )
+
+
+def test_unverified_provider_cannot_mark_cash_paid(ctx: Ctx) -> None:
+    ctx.set_status(S.COMPLETED)
+    _set_verification(ctx, "PENDING_VERIFICATION")
+
+    response = ctx.client.patch(
+        f"/api/v1/provider/bookings/{ctx.booking_id}/mark-cash-paid",
+        headers=ctx.headers(ctx.provider_token),
+        json={},
+    )
+
+    assert response.status_code == 403
+    assert response.json()["detail"]["error"]["code"] == "PROVIDER_NOT_VERIFIED"
+    assert ctx.booking()["payment_status"] != "PAID_CASH"
+
+
+def test_admin_can_still_mark_cash_paid_when_provider_is_unverified(ctx: Ctx) -> None:
+    ctx.set_status(S.COMPLETED)
+    _set_verification(ctx, "DISABLED")
+
+    response = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/mark-cash-paid",
+        headers=ctx.headers(ctx.admin_token),
+        json={},
+    )
+
+    assert response.status_code == 200
+
+
+def test_rejecting_a_provider_flags_their_in_progress_job_for_the_admin(ctx: Ctx) -> None:
+    ctx.set_status(S.IN_PROGRESS)
+
+    ctx.client.patch(
+        f"/api/v1/admin/providers/{ctx.provider_id}/reject",
+        headers=ctx.headers(ctx.admin_token),
+        json={},
+    )
+
+    admin_view = ctx.client.get(
+        "/api/v1/admin/bookings", headers=ctx.headers(ctx.admin_token)
+    ).json()
+    mine = next(b for b in admin_view if b["id"] == ctx.booking_id)
+    assert mine["needs_admin_attention"] is True
+    assert mine["status"] == "IN_PROGRESS" and mine["provider_id"] == ctx.provider_id
+    query = {"event_type": "BOOKING_NEEDS_ATTENTION"}
+    assert run(ctx.db.notifications.find(query).to_list(10))
+
+
+def test_released_booking_can_be_assigned_to_another_provider(ctx: Ctx) -> None:
+    other_id = run(ctx.db.users.find_one({"email": "states-other@example.com"}))["id"]
+    ctx.provider_action("accept")
+
+    ctx.client.patch(
+        f"/api/v1/admin/providers/{ctx.provider_id}/disable",
+        headers=ctx.headers(ctx.admin_token),
+        json={},
+    )
+    reassigned = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/assign",
+        headers=ctx.headers(ctx.admin_token),
+        json={"provider_id": other_id},
+    )
+
+    assert reassigned.status_code == 200
+    assert reassigned.json()["provider_id"] == other_id
+    assert reassigned.json()["status"] == "REQUESTED"
+
+
+def test_only_open_jobs_of_that_provider_move(ctx: Ctx) -> None:
+    ctx.set_status(S.COMPLETED)
+
+    ctx.client.patch(
+        f"/api/v1/admin/providers/{ctx.provider_id}/reject",
+        headers=ctx.headers(ctx.admin_token),
+        json={},
+    )
+
+    assert ctx.booking()["status"] == "COMPLETED"
+    assert ctx.booking()["provider_id"] == ctx.provider_id

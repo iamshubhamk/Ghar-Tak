@@ -643,6 +643,11 @@
             ],
             "title": "Longitude"
           },
+          "needs_admin_attention": {
+            "default": false,
+            "title": "Needs Admin Attention",
+            "type": "boolean"
+          },
           "otp": {
             "anyOf": [
               {
