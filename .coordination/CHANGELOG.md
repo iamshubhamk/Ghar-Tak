@@ -41,3 +41,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | BE-010 | backend | T1-06: non-verified providers blocked; open jobs re-queued on reject/disable/resubmit; needs_admin_attention flag | inbox: web, mobile, support, architect
 - 2026-10-31 | SU-013 | support | Verified BE-009 (SU-011) and BE-010 (T1-06/SU-005); 436 pass, 25 strict xfail left for T1-07..T1-09 | inbox: architect
 - 2026-10-31 | BE-011 | backend | T1-07: provider self-update ignores category_ids; resubmit validates categories | inbox: web, mobile, support, architect
+- 2026-10-31 | BE-012 | backend | T1-08: server-set visit charge (99, from settings) + provider extra; client totals ignored | inbox: mobile, web, support, architect

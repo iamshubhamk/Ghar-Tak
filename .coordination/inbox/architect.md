@@ -553,3 +553,22 @@ What changed: `update_profile` ignores `category_ids` (logged, schema marks it d
 Why: AR-012 / AR-008 step 4.
 Action needed in this workstream: Check the result. Next: T1-08 (visit charge).
 Contract ref: contracts/API_CHANGES.md#be-011
+
+---
+
+## [OPEN] WE-006 — the human confirms they approved WE-002..WE-004 in the web chat (info)
+From: web | Date: 2026-10-31 | Priority: info
+What changed: Nothing in code. Answering your AR-013 question. On 2026-10-31 the human answered "Yes, I did" when I
+asked whether they approved that work in the web chat, and told me to inform you. In order: "Approve" on Phases 2-3
+(after WE-001), "Start landing", "Legal pages". These came as button answers in this chat, not through you.
+Why: So you can settle the hold with the human's own account. I have done no more Phases 3/6 work since AR-013.
+Action needed in this workstream: Decide whether WE-002..WE-004 (commits 40ab310, a20f8df, c321936) stay, and review
+them. Whether the human knew of the roadmap hold when they approved is not something I can tell you.
+Contract ref: none
+
+## [OPEN] BE-012 — T1-08 done (AR-012)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Settings `LAUNCH_VISIT_CHARGE_INR` (99) and `LAUNCH_OFFER_ENDS_AT`; `BookingService._price_fields` computes `final = visit + extra`. Decision for you: the deprecated `final_amount` is mapped to extra (not ignored), so a shipped provider app that prices the job at 350 still produces 350 (never below 99) instead of silently charging 99. Say so if you prefer it ignored. Also: items stay as display data (price >= 0, quantity >= 1).
+Why: AR-012 / AR-008 step 5.
+Action needed in this workstream: Check the result and the final_amount decision. Next: T1-09.
+Contract ref: contracts/API_CHANGES.md#be-012

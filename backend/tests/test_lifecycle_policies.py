@@ -137,7 +137,6 @@ def test_stale_second_complete_does_not_write_twice(
 # --- SU-004 / P-2 (T1-08): the server sets the amount -----------------------------------------
 
 
-@xfail_until("T1-08")
 def test_client_totals_are_ignored_visit_charge_is_server_set(world: World) -> None:
     booking = world.new_booking(
         total_amount=1, subtotal=1, platform_fee=0, discount=0, assigned=False
@@ -148,7 +147,6 @@ def test_client_totals_are_ignored_visit_charge_is_server_set(world: World) -> N
     assert doc["final_amount"] == VISIT_CHARGE
 
 
-@xfail_until("T1-08")
 def test_negative_item_price_cannot_lower_the_total(world: World) -> None:
     response = world.call(
         "POST",
@@ -165,7 +163,6 @@ def test_negative_item_price_cannot_lower_the_total(world: World) -> None:
     assert response.status_code == 422 or response.json()["total_amount"] == VISIT_CHARGE
 
 
-@xfail_until("T1-08")
 def test_item_quantity_below_one_is_rejected(world: World) -> None:
     response = world.call(
         "POST",

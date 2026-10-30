@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import lru_cache
 from pathlib import Path
 
@@ -30,6 +31,10 @@ class Settings(BaseSettings):
     local_upload_dir: Path = Path("uploads")
     upload_max_photo_bytes: int = 5 * 1024 * 1024
     upload_max_document_bytes: int = 10 * 1024 * 1024
+
+    # Launch offer (T1-08): every booking costs this visit charge; the provider may add an extra.
+    launch_visit_charge_inr: float = Field(default=99.0, ge=0)
+    launch_offer_ends_at: datetime | None = None
 
     notification_backend: str = "in_app"
     payment_backend: str = "cash"

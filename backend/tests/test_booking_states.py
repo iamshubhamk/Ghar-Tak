@@ -338,7 +338,7 @@ def test_blocked_admin_override_does_not_write_final_amount(ctx: Ctx) -> None:
     )
 
     assert response.status_code == 422
-    assert ctx.booking().get("final_amount") in (None, 0)
+    assert ctx.booking()["final_amount"] == 99.0  # the visit charge; the refused 9999 was not saved
 
 
 def test_admin_cannot_reopen_a_finished_booking(ctx: Ctx) -> None:
@@ -727,3 +727,122 @@ def test_resubmit_rejects_unknown_or_inactive_categories(ctx: Ctx) -> None:
     assert inactive.status_code == 422
     assert inactive.json()["detail"]["error"]["details"]["unknown_categories"] == ["Electrician"]
     assert _category_names(ctx) == before
+
+
+# ---------- T1-08: the server sets the price (visit charge + provider extra) ----------
+
+
+def test_every_booking_gets_the_launch_visit_charge(ctx: Ctx) -> None:
+    created = _new_booking(ctx, total_amount=1, subtotal=1, platform_fee=500, discount=500)
+
+    body = created.json()
+    assert created.status_code == 201
+    assert body["visit_charge"] == 99.0
+    assert body["total_amount"] == 99.0 and body["final_amount"] == 99.0
+    assert body["extra_amount"] == 0.0
+
+
+def test_visit_charge_and_offer_end_come_from_settings(ctx: Ctx, monkeypatch) -> None:
+    from app.core.config import get_settings
+
+    ends = datetime(2026, 12, 31, 18, 30, tzinfo=UTC)
+    monkeypatch.setattr(get_settings(), "launch_visit_charge_inr", 149.0)
+    monkeypatch.setattr(get_settings(), "launch_offer_ends_at", ends)
+
+    body = _new_booking(ctx).json()
+
+    assert body["visit_charge"] == 149.0 and body["final_amount"] == 149.0
+    assert body["offer_ends_at"].startswith("2026-12-31T18:30")
+
+
+def test_item_prices_do_not_change_the_total(ctx: Ctx) -> None:
+    items = [{"id": "x", "name": "Tap repair", "price": 5000, "quantity": 3}]
+
+    body = _new_booking(ctx, items=items).json()
+
+    assert body["total_amount"] == 99.0
+    assert body["items"][0]["name"] == "Tap repair"
+
+
+def test_provider_extra_is_added_to_the_visit_charge(ctx: Ctx) -> None:
+    ctx.set_status(S.IN_PROGRESS)
+
+    response = ctx.provider_action("complete", extra_amount=250, extra_note="New washer")
+
+    body = response.json()
+    assert response.status_code == 200
+    assert body["extra_amount"] == 250.0 and body["extra_note"] == "New washer"
+    assert body["visit_charge"] == 99.0
+    assert body["final_amount"] == 349.0 and body["total_amount"] == 349.0
+
+
+def test_completing_without_an_extra_keeps_the_visit_charge(ctx: Ctx) -> None:
+    ctx.set_status(S.IN_PROGRESS)
+
+    body = ctx.provider_action("complete").json()
+
+    assert body["final_amount"] == 99.0 and body["extra_amount"] == 0.0
+
+
+def test_negative_extra_is_rejected(ctx: Ctx) -> None:
+    ctx.set_status(S.IN_PROGRESS)
+
+    response = ctx.provider_action("complete", extra_amount=-50)
+
+    assert response.status_code == 422
+    assert ctx.booking()["status"] == S.IN_PROGRESS.value
+
+
+@pytest.mark.parametrize(("legacy_total", "expected"), [(350, 350.0), (99, 99.0), (50, 99.0)])
+def test_old_apps_sending_final_amount_still_work_but_never_go_below_the_visit_charge(
+    ctx: Ctx, legacy_total, expected
+) -> None:
+    ctx.set_status(S.IN_PROGRESS)
+
+    body = ctx.provider_action("complete", final_amount=legacy_total).json()
+
+    assert body["final_amount"] == expected
+    assert body["extra_amount"] == expected - 99.0
+
+
+def test_admin_can_complete_with_an_extra(ctx: Ctx) -> None:
+    ctx.set_status(S.IN_PROGRESS)
+
+    response = ctx.client.patch(
+        f"/api/v1/admin/bookings/{ctx.booking_id}/status",
+        headers=ctx.headers(ctx.admin_token),
+        json={"status": "COMPLETED", "extra_amount": 100},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["final_amount"] == 199.0
+
+
+def test_cash_paid_can_record_the_extra(ctx: Ctx) -> None:
+    ctx.set_status(S.COMPLETED)
+
+    response = ctx.client.patch(
+        f"/api/v1/provider/bookings/{ctx.booking_id}/mark-cash-paid",
+        headers=ctx.headers(ctx.provider_token),
+        json={"extra_amount": 60, "extra_note": "Parts"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["final_amount"] == 159.0
+    assert response.json()["payment_status"] == "PAID_CASH"
+
+
+def test_bookings_created_before_the_change_keep_their_amounts(ctx: Ctx) -> None:
+    run(
+        ctx.db.bookings.update_one(
+            {"id": ctx.booking_id},
+            {
+                "$unset": {"visit_charge": "", "extra_amount": ""},
+                "$set": {"status": "IN_PROGRESS", "final_amount": 200.0},
+            },
+        )
+    )
+
+    body = ctx.provider_action("complete", final_amount=450).json()
+
+    assert body["final_amount"] == 450.0  # no visit charge on old bookings: the old rule applies

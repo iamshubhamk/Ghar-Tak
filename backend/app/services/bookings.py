@@ -6,6 +6,7 @@ from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
+from app.core.config import get_settings
 from app.core.enums import (
     BookingStatus,
     PaymentMode,
@@ -85,15 +86,9 @@ class BookingService:
         )
 
         item_dicts = [item.model_dump() for item in payload.items] if payload.items else []
-        calculated_total = (
-            payload.total_amount
-            if payload.total_amount is not None
-            else (
-                sum(it["price"] * it.get("quantity", 1) for it in item_dicts)
-                if item_dicts
-                else None
-            )
-        )
+        # T1-08: the server sets the price. Anything the client sent as totals is ignored.
+        launch = get_settings()
+        visit_charge = round(float(launch.launch_visit_charge_inr), 2)
 
         issue_desc = payload.issue_description
         if not issue_desc and item_dicts:
@@ -118,15 +113,19 @@ class BookingService:
             "preferred_datetime": payload.preferred_datetime,
             "issue_description": issue_desc,
             "items": item_dicts,
-            "subtotal": payload.subtotal,
-            "platform_fee": payload.platform_fee,
-            "discount": payload.discount,
-            "total_amount": calculated_total,
+            "subtotal": visit_charge,
+            "platform_fee": 0.0,
+            "discount": 0.0,
+            "visit_charge": visit_charge,
+            "extra_amount": 0.0,
+            "extra_note": None,
+            "offer_ends_at": launch.launch_offer_ends_at,
+            "total_amount": visit_charge,
             "otp": otp,
             "status": BookingStatus.REQUESTED.value,
             "payment_mode": PaymentMode.CASH_ON_SERVICE.value,
             "payment_status": PaymentStatus.CASH_PENDING.value,
-            "final_amount": calculated_total,
+            "final_amount": visit_charge,
             "created_at": now,
             "updated_at": now,
             "status_history": [],
@@ -315,6 +314,8 @@ class BookingService:
         status: BookingStatus,
         note: str | None = None,
         final_amount: Decimal | None = None,
+        extra_amount: Decimal | None = None,
+        extra_note: str | None = None,
     ) -> dict[str, Any]:
         if admin.get("role") != UserRole.ADMIN.value:
             raise app_http_error(403, AppErrorCode.FORBIDDEN, "Only admins can update bookings.")
@@ -322,8 +323,8 @@ class BookingService:
         booking = await self._get(booking_id)
         ensure_transition(Actor.ADMIN, BookingStatus(booking["status"]), status)
         extra_fields = {}
-        if status == BookingStatus.COMPLETED and final_amount is not None:
-            extra_fields["final_amount"] = float(final_amount)
+        if status == BookingStatus.COMPLETED:
+            extra_fields = self._price_fields(booking, final_amount, extra_amount, extra_note)
 
         await self._transition(
             booking, status, admin["id"], note or "Status updated by admin.", extra_fields
@@ -338,6 +339,8 @@ class BookingService:
         note: str | None = None,
         final_amount: Decimal | None = None,
         otp: str | None = None,
+        extra_amount: Decimal | None = None,
+        extra_note: str | None = None,
     ) -> dict[str, Any]:
         self._ensure_provider_verified(provider_user)
         booking = await self._get(booking_id)
@@ -366,8 +369,8 @@ class BookingService:
                 )
 
         extra_fields = {}
-        if next_status == BookingStatus.COMPLETED and final_amount is not None:
-            extra_fields["final_amount"] = float(final_amount)
+        if next_status == BookingStatus.COMPLETED:
+            extra_fields = self._price_fields(booking, final_amount, extra_amount, extra_note)
 
         await self._transition(booking, next_status, provider_user["id"], note, extra_fields)
         return await self._get(booking["id"])
@@ -378,6 +381,8 @@ class BookingService:
         booking_id: str,
         final_amount: Decimal | None = None,
         note: str | None = None,
+        extra_amount: Decimal | None = None,
+        extra_note: str | None = None,
     ) -> dict[str, Any]:
         booking = await self._get(booking_id)
         is_admin = actor.get("role") == UserRole.ADMIN.value
@@ -402,8 +407,7 @@ class BookingService:
             "payment_status": PaymentStatus.PAID_CASH.value,
             "updated_at": datetime.now(UTC),
         }
-        if final_amount is not None:
-            update_data["final_amount"] = float(final_amount)
+        update_data.update(self._price_fields(booking, final_amount, extra_amount, extra_note))
 
         await self.db.bookings.update_one({"id": booking_id}, {"$set": update_data})
 
@@ -469,6 +473,10 @@ class BookingService:
             "payment_status": booking.get("payment_status"),
             "final_amount": booking.get("final_amount"),
             "total_amount": booking.get("total_amount") or booking.get("final_amount"),
+            "visit_charge": booking.get("visit_charge"),
+            "extra_amount": booking.get("extra_amount"),
+            "extra_note": booking.get("extra_note"),
+            "offer_ends_at": booking.get("offer_ends_at"),
             "needs_admin_attention": bool(booking.get("needs_admin_attention", False)),
             "otp": booking.get("otp") if can_view_otp else None,
             "created_at": booking.get("created_at"),
@@ -501,6 +509,29 @@ class BookingService:
             f"Booking {booking['id']} status changed from {previous_status.value} "
             f"to {next_status.value} by user {actor_user_id}"
         )
+
+    @staticmethod
+    def _price_fields(
+        booking: dict[str, Any],
+        final_amount: Decimal | None,
+        extra_amount: Decimal | None,
+        extra_note: str | None,
+    ) -> dict[str, Any]:
+        """T1-08: final amount = visit charge + the provider's extra (never below the visit charge).
+
+        A shipped app that still sends `final_amount` is read as visit charge + (final - visit).
+        """
+        visit_charge = float(booking.get("visit_charge") or 0.0)
+        if extra_amount is None and final_amount is not None:
+            extra_amount = max(Decimal(str(final_amount)) - Decimal(str(visit_charge)), Decimal(0))
+        fields: dict[str, Any] = {}
+        if extra_amount is not None:
+            extra = round(float(extra_amount), 2)
+            total = round(visit_charge + extra, 2)
+            fields.update(extra_amount=extra, final_amount=total, total_amount=total)
+        if extra_note is not None:
+            fields["extra_note"] = extra_note
+        return fields
 
     @staticmethod
     def _ensure_provider_verified(provider_user: dict[str, Any]) -> None:

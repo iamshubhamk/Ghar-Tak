@@ -139,3 +139,22 @@ insensitive, stored with the official spelling). An unknown or inactive name ret
 `VALIDATION_ERROR` with `details.unknown_categories` and nothing is saved.
 Clients affected: web (stop sending `category_ids` in the profile editor; send only names from the active
 category list on resubmit), mobile (same).
+
+## BE-012
+Date: 2026-10-31 | Breaking: no (old fields kept and documented as ignored/mapped, Rule 7)
+Changed: prices are set by the server (policy P-2, launch offer). Every new booking has `visit_charge`
+(setting `LAUNCH_VISIT_CHARGE_INR`, default 99), optional `offer_ends_at` (setting `LAUNCH_OFFER_ENDS_AT`),
+`extra_amount` 0, and `total_amount = final_amount = visit_charge`.
+Deprecated (ignored): `POST /bookings` fields `subtotal`, `platform_fee`, `discount`, `total_amount` are still
+accepted but ignored; item `price` is shown to the provider but never used. Removal not before 2027-03-01.
+Changed: `BookingItem.price` must be >= 0 and `quantity` >= 1, otherwise 422.
+Added: `extra_amount` (>= 0, max 100000) and `extra_note` (max 300 chars) on
+`PATCH /provider/bookings/{id}/complete`, `PATCH /admin/bookings/{id}/status` (when completing) and
+`PATCH /provider|admin/bookings/{id}/mark-cash-paid`. Result: `final_amount = total_amount = visit_charge +
+extra_amount`. Negative extra gives 422.
+Deprecated: `final_amount` on the same requests. Still accepted and read as visit charge + (final_amount -
+visit_charge), never below the visit charge. Prefer `extra_amount`.
+Added to `BookingResponse`: `visit_charge`, `extra_amount`, `extra_note`, `offer_ends_at`. Bookings created
+before this change have `visit_charge` null; their amounts are unchanged and `final_amount` still works as before.
+Clients affected: mobile and web — customer UI shows "Visit charge Rs 99" (and the offer end date), never
+computes a total; provider UI sends `extra_amount` + `extra_note` at completion instead of `final_amount`.

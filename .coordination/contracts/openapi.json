@@ -3,6 +3,34 @@
     "schemas": {
       "AdminBookingStatusUpdateRequest": {
         "properties": {
+          "extra_amount": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Amount"
+          },
+          "extra_note": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Note"
+          },
           "final_amount": {
             "anyOf": [
               {
@@ -16,6 +44,7 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
             "title": "Final Amount"
           },
           "note": {
@@ -331,6 +360,7 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
             "title": "Discount"
           },
           "house_number": {
@@ -430,6 +460,7 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
             "title": "Platform Fee"
           },
           "preferred_datetime": {
@@ -458,6 +489,7 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
             "title": "Subtotal"
           },
           "total_amount": {
@@ -470,6 +502,7 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
             "title": "Total Amount"
           }
         },
@@ -482,6 +515,7 @@
         "type": "object"
       },
       "BookingItem": {
+        "description": "What the customer picked in the cart. Shown to the provider; never used to price the job.",
         "properties": {
           "id": {
             "title": "Id",
@@ -492,19 +526,21 @@
             "type": "string"
           },
           "price": {
+            "default": 0,
+            "minimum": 0.0,
             "title": "Price",
             "type": "number"
           },
           "quantity": {
             "default": 1,
+            "minimum": 1.0,
             "title": "Quantity",
             "type": "integer"
           }
         },
         "required": [
           "id",
-          "name",
-          "price"
+          "name"
         ],
         "title": "BookingItem",
         "type": "object"
@@ -568,6 +604,28 @@
               }
             ],
             "title": "Customer Phone"
+          },
+          "extra_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Amount"
+          },
+          "extra_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Note"
           },
           "final_amount": {
             "anyOf": [
@@ -648,6 +706,18 @@
             "title": "Needs Admin Attention",
             "type": "boolean"
           },
+          "offer_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offer Ends At"
+          },
           "otp": {
             "anyOf": [
               {
@@ -721,6 +791,17 @@
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "visit_charge": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visit Charge"
           }
         },
         "required": [
@@ -780,6 +861,34 @@
       },
       "BookingStatusUpdateRequest": {
         "properties": {
+          "extra_amount": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Amount"
+          },
+          "extra_note": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Note"
+          },
           "final_amount": {
             "anyOf": [
               {
@@ -793,6 +902,7 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
             "title": "Final Amount"
           },
           "note": {
@@ -825,6 +935,34 @@
       },
       "CashPaymentRequest": {
         "properties": {
+          "extra_amount": {
+            "anyOf": [
+              {
+                "maximum": 100000.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Amount"
+          },
+          "extra_note": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extra Note"
+          },
           "final_amount": {
             "anyOf": [
               {
@@ -838,6 +976,7 @@
                 "type": "null"
               }
             ],
+            "deprecated": true,
             "title": "Final Amount"
           },
           "note": {

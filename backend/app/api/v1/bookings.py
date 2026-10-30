@@ -82,6 +82,8 @@ async def admin_mark_cash_paid(
         booking_id,
         payload.final_amount if payload else None,
         payload.note if payload else None,
+        extra_amount=payload.extra_amount if payload else None,
+        extra_note=payload.extra_note if payload else None,
     )
     return BookingService.serialize(booking, actor=current_user)
 
@@ -99,6 +101,8 @@ async def admin_update_booking_status(
         payload.status,
         payload.note,
         payload.final_amount,
+        extra_amount=payload.extra_amount,
+        extra_note=payload.extra_note,
     )
     return BookingService.serialize(booking, actor=current_user)
 
@@ -227,6 +231,8 @@ async def complete_booking(
         "complete",
         payload.note if payload else None,
         payload.final_amount if payload else None,
+        extra_amount=payload.extra_amount if payload else None,
+        extra_note=payload.extra_note if payload else None,
     )
     return BookingService.serialize(booking, actor=current_user)
 
@@ -243,5 +249,7 @@ async def provider_mark_cash_paid(
         booking_id,
         payload.final_amount if payload else None,
         payload.note if payload else None,
+        extra_amount=payload.extra_amount if payload else None,
+        extra_note=payload.extra_note if payload else None,
     )
     return BookingService.serialize(booking, actor=current_user)
