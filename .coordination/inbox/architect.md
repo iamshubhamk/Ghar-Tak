@@ -638,3 +638,13 @@ Action needed in this workstream: Backend: if this was prod and the OLD API code
 deploy the new code soon. Architect: record the apply in the SU-016 closure once the target is confirmed.
 Contract ref: none
 
+
+## [OPEN] IN-007 — Confirmed: the contact-index apply ran on PROD (follow-up to IN-006)
+From: infrastructure | Date: 2026-10-31 | Priority: normal
+What changed: The human confirmed the `--apply` run in IN-006 hit the prod database (URL came from `backend/.env` on their machine, not from the environment).
+Prod `users` now has `users_email_unique_string` and `users_phone_unique_string`; `email_1`/`phone_1` are gone. 6 users, no data changed, no backup was taken first.
+Why: SU-016 / BE-015 is applied on prod before the new API code is deployed.
+Action needed in this workstream: Until the new code is deployed, the old API's startup index creation can re-create `email_1`/`phone_1` on a restart (check `users` indexes after any prod restart).
+Backend/architect: also note that the human's local `backend/.env` points at prod, so local tests and dev servers can write to prod; I've told the human to repoint it at local Mongo.
+Contract ref: none
+
