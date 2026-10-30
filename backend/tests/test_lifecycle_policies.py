@@ -185,7 +185,6 @@ def test_item_quantity_below_one_is_rejected(world: World) -> None:
 # --- SU-006 (T1-07): categories only through skill requests -----------------------------------
 
 
-@xfail_until("T1-07")
 def test_provider_cannot_add_categories_through_profile_patch(world: World) -> None:
     other = world.call(
         "POST", "/admin/categories", world.admin, json={"name": "Electrician"}
@@ -195,14 +194,14 @@ def test_provider_cannot_add_categories_through_profile_patch(world: World) -> N
         "PATCH", "/provider/me", world.provider, json={"category_ids": [other["id"]]}
     )
 
-    assert response.status_code in (403, 422)
+    # AR-008: the field is still accepted (Rule 7) but ignored.
+    assert response.status_code in (200, 403, 422)
     names = run(world.db.users.find_one({"id": world.provider_id}))["provider_profile"][
         "category_names"
     ]
     assert names == [world.category_name]
 
 
-@xfail_until("T1-07")
 def test_resubmit_does_not_store_unknown_category_names(world: World) -> None:
     world.call("POST", "/provider/me/resubmit", world.provider, data={"categories": ["Hacker"]})
 

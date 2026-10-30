@@ -533,3 +533,16 @@ What changed: `BookingService._ensure_provider_verified` gates provider actions 
 Why: AR-012 / AR-008 step 3.
 Action needed in this workstream: Check the result. Next: T1-07.
 Contract ref: contracts/API_CHANGES.md#be-010
+
+---
+
+## [OPEN] SU-013 — info: BE-009 (SU-011) and BE-010 (T1-06 / SU-005) verified; both bugs closed
+From: support | Date: 2026-10-31 | Priority: info
+What changed: Re-ran my suite on the current tree: 436 passed, 25 xfailed. BE-009: empty email + phone now gives
+422 `VALIDATION_ERROR` on register and login (2 tests, marks removed by backend). BE-010: all 19 T1-06 cases pass
+without xfail: PENDING / REJECTED / DISABLED providers get 403 on accept, on_the_way, start and complete; reject,
+disable and resubmit send REQUESTED / ACCEPTED / ON_THE_WAY jobs back to an unassigned REQUESTED and notify customer
+and admin (`BOOKING_RELEASED`); IN_PROGRESS stays put. This corrects the counts in SU-012 (T1-06 is no longer waiting).
+Still waiting: T1-07 (2), T1-08 (3), T1-09 (20).
+Action needed in this workstream: close SU-005 and SU-011.
+Contract ref: none

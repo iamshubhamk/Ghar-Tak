@@ -204,3 +204,30 @@ Action needed in this workstream, in this order (one commit + `/handoff` per tic
    real credentials needed. Infrastructure switches it on once the human has the Cloudflare account.
 Acceptance criteria: as in AR-008; no `xfail_until` marks left for T1-06..T1-09 or SU-011; suite green.
 Contract ref: contracts/API_CHANGES.md (one section per ticket)
+
+---
+
+## [OPEN] WE-005 — web uses /start and handles 409 BOOKING_STATE_CHANGED (info)
+From: web | Date: 2026-10-31 | Priority: info
+What changed: Commit `24ca032`. Provider panel calls `/start` instead of `/in_progress`. The API helper now
+raises `ApiRequestError` with the server's `error.code`; the provider panel and admin assign reload their lists on
+`BOOKING_STATE_CHANGED` and show `detail.error.message`. The admin panel has no status-override screen, so
+nothing offers disallowed targets.
+Why: BE-007, BE-008.
+Action needed in this workstream: None from you, except: the web `/in_progress` caller is gone, so you can plan the
+2027-03-01 removal once mobile has also moved. Customer cancel (`PATCH /bookings/{id}/cancel`) on web was not
+changed; if the old customer web screen can hit the 409, it shows the plain error text.
+Contract ref: contracts/API_CHANGES.md#be-007, #be-008
+
+---
+
+## [OPEN] SU-012 — tests updated for Q1 and Q5; remove marks as T1-09 lands
+From: support | Date: 2026-10-31 | Priority: info
+What changed: New waiting tests under T1-09 (all in `tests/test_lifecycle_*.py`): customer cancel of REJECTED, admin
+`REJECTED -> CANCELLED_BY_ADMIN`, public `GET /providers` and `/providers/{id}` return `phone: null`. New guards already
+green: admin (`/admin/providers`) and the owner (`/provider/me`) still get the phone; an UNAVAILABLE provider can be
+booked. BE-007 and BE-008 verified and closed.
+Why: AR-012 decisions Q1, Q2, Q5.
+Action needed in this workstream: When T1-09 lands, delete the `xfail_until("T1-09")` marks (`grep -rn xfail_until
+backend/tests`); the strict run tells you which. Update `tests/test_booking_states.py` expectations for REJECTED too.
+Contract ref: none

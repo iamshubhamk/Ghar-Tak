@@ -3,8 +3,7 @@
 > Owner: **support** workstream. Change: `SU-001` (for `OR-005`). Last updated: 2026-10-29 (policies finalised, AR-010).
 > Source of truth for expected behaviour: `docs/phase-3-fsd.md` §5 (booking state machine), extended by
 > later phase-7 docs (ON_THE_WAY, start OTP, admin assignment) and the policies the human approved on
-> 2026-10-29 (AR-010, `docs/plans/roadmap-tickets.md` P-1…P-4). Cells still marked **❓** have a default
-> shown and are listed in §6 for the Architect to confirm.
+> 2026-10-29 (AR-010, `docs/plans/roadmap-tickets.md` P-1…P-4). The questions raised here were answered on 2026-10-31 (§6).
 >
 > **Policies in force**
 > - **P-1** a provider who is rejected / disabled / resubmitted (no longer VERIFIED) cannot act on any booking
@@ -98,7 +97,7 @@ Customer = owning customer, Provider = assigned verified provider, Admin = any a
 | ON_THE_WAY | ✅ → CANCELLED_BY_CUSTOMER, provider notified (P-4) | ⛔ 422 | ⛔ 422 | ⛔ 422 | ✅ → IN_PROGRESS | ⛔ 422 | ✅ → unassigned REQUESTED, reason required, admin notified | ⛔ 422 | ⛔ 422 | ⛔ 422 |
 | IN_PROGRESS | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ✅ → COMPLETED (provider enters extra ≥ 0, P-2) | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 |
 | COMPLETED | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ✅ payment → PAID_CASH (status stays) · second call ⛔ 422 expected, ✅ today 🐞 SU-009 → T1-09 | ✅ once; 2nd ⛔ 409/422 |
-| REJECTED | ⛔ 422 ❓ default | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ✅ → REQUESTED (new provider) | ⛔ 422 | ⛔ 422 |
+| REJECTED | ✅ → CANCELLED_BY_CUSTOMER (Q1) 🐞 today ⛔ → T1-09 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ✅ → REQUESTED (new provider) | ⛔ 422 | ⛔ 422 |
 | CANCELLED_BY_CUSTOMER | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 |
 | CANCELLED_BY_PROVIDER (legacy) | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 |
 | CANCELLED_BY_ADMIN | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 | ⛔ 422 |
@@ -121,6 +120,7 @@ expected allow only in these cells:
 | ACCEPTED | ⛔ | ✅ |
 | ON_THE_WAY | ⛔ | ✅ |
 | IN_PROGRESS | ✅ | ✅ |
+| REJECTED | ⛔ | ✅ (Q1; today ⛔ → T1-09) |
 
 All other pairs, including same-status and anything out of a terminal status, ⛔ 422.
 
@@ -148,7 +148,7 @@ All other pairs, including same-status and anything out of a terminal status, �
 | Inactive / unknown category | ⛔ 404 `CATEGORY_INACTIVE` |
 | Provider PENDING / REJECTED / DISABLED / not public | ⛔ 404 `PROVIDER_NOT_VERIFIED` |
 | Provider does not serve the category | ⛔ 422 |
-| Provider UNAVAILABLE | ✅ allowed ❓ default (assignment is the admin's call; availability is advisory) |
+| Provider UNAVAILABLE | ✅ allowed (Q2: availability is advisory) |
 | Client sends `total_amount` / `subtotal` / `platform_fee` / `discount` / item prices | ignored: stored total = ₹99 visit charge from settings (P-2); negative item price or quantity < 1 ⛔ 422 · today trusted 🐞 **SU-004 → T1-08** |
 | Complete with extra amount < 0 | ⛔ 422; extra ≥ 0 → `final_amount` = ₹99 + extra |
 | `locality` < 2 chars, `issue_description` > 1200 | ⛔ 422 |
@@ -187,7 +187,7 @@ Run with `asyncio.gather` on two clients against a real MongoDB (not mongomock).
 | Neither email nor phone | ⛔ 422 |
 | Password < 8 chars | ⛔ 422 |
 | Duplicate email (case-insensitive) or phone | ⛔ 409 `DUPLICATE_ACCOUNT` |
-| Same phone written as `+91XXXXXXXXXX` vs `XXXXXXXXXX` | ⛔ 409 expected ❓ default · today different accounts (no normalisation) |
+| Same phone written as `+91XXXXXXXXXX` vs `XXXXXXXXXX` | ⛔ 409 expected (Phase 2, T2-06) · today different accounts (no normalisation) |
 | Provider JSON registration | ✅ VERIFICATION `PENDING`, `is_public=false`, UNAVAILABLE, admins notified |
 | Provider multipart without Aadhaar | ⛔ 400 |
 | Provider multipart Aadhaar `.exe` / `.html` | ⛔ 400 |
@@ -215,7 +215,7 @@ Run with `asyncio.gather` on two clients against a real MongoDB (not mongomock).
 | Reset requires proof of control of the email/phone (OTP or emailed token) | expected · **today email + phone alone reset any account and return a token** 🐞 **SU-002 (S1)** |
 | `/password-reset/verify` with unknown email/phone | should not reveal whether an account exists · today 404 vs 200 (enumeration) |
 | New password length | must match registration (≥ 8) · today ≥ 6 |
-| Old tokens after reset | revoked ❓ default (ADR 0003 refresh-token design; today valid until expiry) |
+| Old tokens after reset | revoked (Phase 2, T2-01 / ADR 0003; today valid until expiry) |
 | Disabled account | ⛔ 403 |
 
 ---
@@ -245,7 +245,7 @@ Each action: provider notified; non-admin caller ⛔ 403; unknown id ⛔ 404.
 | Case | Expected |
 |---|---|
 | `GET /providers` / `GET /providers/{id}` | only VERIFIED + `is_public` + `is_active`; others 404 |
-| Public provider response | no bank details, no Aadhaar URL; `phone` is public today ❓ default: hide until a booking is assigned (feeds SU-002 social engineering) |
+| Public provider response | no bank details, no Aadhaar URL; `phone` hidden (null) on the public list and detail (Q5); admin and the provider themselves still see it · today public 🐞 → T1-09 |
 | `GET /providers/{id}/adhaar` & `/bank-proof` | admin ✅; owner ✅; other provider ⛔ 403; customer ⛔ 403; anonymous ⛔ 401 |
 | Files in `uploads/private` reachable through `/uploads/...` | ⛔ 404 always |
 | Profile photo / customer photo upload with `.html` / `.svg` filename and `image/png` content-type | ⛔ 400 expected · today stored and served from `/uploads` 🐞 **SU-008** |
@@ -272,7 +272,7 @@ Run on a ₹8–10k Android (2–3 GB RAM) or Chrome DevTools "Low-end mobile" +
 | Check | Pass criterion |
 |---|---|
 | Book a service end-to-end on Slow 3G | completes; every button shows a pending state; no double booking on double tap |
-| Kill network after tapping "Book" | clear error in the current language; retry does not create a duplicate booking (needs an idempotency key — backend ❓ not yet ticketed) |
+| Kill network after tapping "Book" | clear error in the current language; retry does not create a duplicate booking (needs an idempotency key — ticket T4-08) |
 | Provider accept / start with OTP on patchy network | UI shows the status the server returned (Rule 8), never an optimistic one |
 | Language switch to Hindi | every string translated, no clipped text at 360 px, numerals and dates readable |
 | Cold start time (mobile) | < 5 s on the reference device |
@@ -291,17 +291,17 @@ Run on a ₹8–10k Android (2–3 GB RAM) or Chrome DevTools "Low-end mobile" +
 
 ---
 
-## 6. Open questions for the Architect (defaults used in the tests)
+## 6. Decisions on the open questions (AR-012, 2026-10-31)
 
-| # | Question | Default in this plan |
+| # | Question | Decision |
 |---|---|---|
-| Q1 | Customer cancel of a REJECTED booking (waiting for re-assign) | ⛔ 422 — customer must wait for admin (or ask admin to cancel); admin cancel from REJECTED also ⛔ until decided |
-| Q2 | Booking a provider whose availability is UNAVAILABLE | ✅ allowed |
-| Q3 | Phone number normalisation (`+91` / `0` prefix) at registration | normalise to 10 digits, duplicates 409 |
-| Q4 | Existing JWTs after a password reset | revoked (via ADR 0003 sessions) |
-| Q5 | Public provider `phone` | hidden until assigned |
-| Q6 | Booking idempotency key for retries on patchy networks | not ticketed — needed before the app ships (Phase 4) |
-| Q7 | Endpoint name and body for P-3 "release job" | assumed `PATCH /provider/bookings/{id}/release` with `{"note": "<reason>"}`; tests will follow whatever backend ships |
+| Q1 | Cancel of a REJECTED booking | customer **and** admin may cancel it (T1-09) |
+| Q2 | Booking an UNAVAILABLE provider | allowed |
+| Q3 | Phone normalisation at registration | Phase 2 (T2-06); no test until then |
+| Q4 | JWTs after a password reset | Phase 2 (T2-01); no test until then |
+| Q5 | Public provider `phone` | hidden (T1-09) |
+| Q6 | Booking idempotency key | new ticket T4-08 |
+| Q7 | "Release job" | `PATCH /provider/bookings/{id}/release` body `{"note": ...}`, event `BOOKING_RELEASED` |
 
 ---
 
@@ -314,10 +314,8 @@ shared setup in `tests/lifecycle_support.py`. Cases that describe undelivered be
 
 | Ticket | Cases waiting (xfail) |
 |---|---|
-| T1-06 | non-VERIFIED provider gets 403 (12); reject / disable / resubmit sends open jobs back to the queue (7) |
 | T1-07 | profile PATCH cannot add categories; resubmit drops unknown names (2) |
 | T1-08 | server-set ₹99 total; negative price; quantity < 1 (3) |
-| T1-09 | customer cancel on ON_THE_WAY (1); provider release (10); OTP lock; IST past time; cash-paid idempotent; regex escape; ON_THE_WAY open count; reassign notifies old provider (6) |
-| SU-011 | missing email/phone returns 422 instead of 500 (2) |
-| delivered | T1-04 admin grid (81) and T1-05 stale-write (2) run as normal tests |
+| T1-09 | customer cancel on ON_THE_WAY and REJECTED (2); admin cancel of REJECTED (1); public phone hidden (1); provider release (10); OTP lock; IST past time; cash-paid idempotent; regex escape; ON_THE_WAY open count; reassign notifies old provider (6) |
+| delivered | T1-04 admin grid, T1-05 stale-write (2), T1-06 non-VERIFIED providers and re-queue (19), SU-011 (2) run as normal tests |
 Not automated yet: reviews, notifications, provider documents, skill requests, §4 manual device checks.

@@ -94,7 +94,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] WE-001 — verify admin skill-proof viewer and upload error messages
+## [IN PROGRESS] WE-001 — verify admin skill-proof viewer and upload error messages
 From: web | Date: 2026-10-29 | Priority: normal
 What changed: In the admin panel, "View Proof Document" now fetches `/skill-requests/{id}/proof` with the
 token and opens it as a blob (built from the request id, so old requests work too). Customer photo upload
@@ -107,7 +107,7 @@ customer photo and provider documents: the page should show the server message, 
 Not covered: provider-side profile photo upload in `ProviderBookingsPanel` was not changed.
 Contract ref: contracts/API_CHANGES.md#ar-005
 
-## [IN PROGRESS] BE-007 — verify the booking transition matrix (SU-003; test plan §1)
+## [DONE: SU-012] BE-007 — verify the booking transition matrix (SU-003; test plan §1)
 From: backend | Date: 2026-10-29 | Priority: normal
 What changed: One transition table for customer, provider and admin. Admin override is limited to
 CANCELLED_BY_ADMIN (from REQUESTED/ACCEPTED/ON_THE_WAY/IN_PROGRESS) and COMPLETED (from IN_PROGRESS);
@@ -157,7 +157,7 @@ card because no Play URL or WhatsApp number is set yet. Not built yet: `/privacy
 `/delete-account` (Play needs them).
 Contract ref: none
 
-## [IN PROGRESS] BE-008 — SU-007 fixed: verify the race rows
+## [DONE: SU-012] BE-008 — SU-007 fixed: verify the race rows
 From: backend | Date: 2026-10-29 | Priority: normal
 What changed: Compare-and-set on every transition and on assign (409 `BOOKING_STATE_CHANGED`, nothing
 written for the loser). Tests in `tests/test_booking_states.py` (stale read then DB changed; two concurrent
@@ -167,3 +167,44 @@ Action needed in this workstream: Update the concurrency rows in the test plan a
 real MongoDB, if you can, run the accept-vs-reject race with `TEST_MONGODB_URL` set; the in-memory mock
 cannot prove true parallel behaviour.
 Contract ref: contracts/API_CHANGES.md#be-008
+
+---
+
+## [OPEN] WE-004 — check the draft legal pages
+From: web | Date: 2026-10-29 | Priority: normal
+What changed: Commit `c321936`. `/privacy`, `/terms` and `/delete-account` exist, linked from the site footer.
+They are English-only drafts with a visible banner; unknown facts are in [square brackets].
+Why: T6-03; Google Play needs a privacy policy and an account-deletion page.
+Action needed in this workstream: Read the privacy text against what the backend really collects and stores,
+and tell the architect about any mismatch (e.g. retention, who can read documents). The "what happens when you
+delete" wording follows the T7-01 plan and must be re-checked when the deletion endpoint ships.
+Contract ref: none
+
+## [DONE: SU-013] BE-009 — SU-011 fixed: missing email/phone is 422, not 500
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `validation_exception_handler` in `main.py` encodes errors with `jsonable_encoder`. The xfail mark is removed from `test_missing_email_and_phone_is_a_422_not_a_500`.
+Why: SU-011.
+Action needed in this workstream: Close SU-011 after your own run; the suite is green.
+Contract ref: contracts/API_CHANGES.md#be-009
+
+---
+
+## [OPEN] WE-005 — verify provider /start and the 409 refresh against the real backend
+From: web | Date: 2026-10-31 | Priority: normal
+What changed: Commit `24ca032`. Provider "Start job" now calls `/start`. On 409 `BOOKING_STATE_CHANGED` (provider
+actions and admin assign) the list reloads and the server's message is shown. 44 lint errors were cleaned up
+without intended behaviour changes: unused imports and state, one unused delete-payment-method function in
+`CustomerDashboard`, and `any` allowances in the old customer/provider screens.
+Why: BE-007, BE-008, IN-002.
+Action needed in this workstream: Start a job with a correct and a wrong OTP as a provider; make the same booking
+change from two sessions (admin assign vs provider accept) and check the second one reloads with the new status
+and the message. Quick regression pass over the old customer and provider screens, since many files were touched.
+I only built, linted and type-checked; I did not run these flows against the real backend.
+Contract ref: contracts/API_CHANGES.md#be-008
+
+## [DONE: SU-013] BE-010 — T1-06 delivered: xfail marks removed from the SU-005 tests
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: Unverified providers are blocked and open jobs are re-queued (reject, disable, resubmit, re-verify). I removed the `xfail_until("T1-06")` marks in `tests/test_lifecycle_policies.py`. That commit includes your uncommitted additions in the same file (the Q5 tests etc., all still xfail-marked for T1-09) because I could not stage only my hunks; please re-check them.
+Why: SU-005 / T1-06.
+Action needed in this workstream: Verify rows of the test plan for P-1; close SU-005.
+Contract ref: contracts/API_CHANGES.md#be-010

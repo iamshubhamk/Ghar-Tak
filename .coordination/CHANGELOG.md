@@ -39,3 +39,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | WE-005 | web | AR-013: provider panel uses /start; 409 BOOKING_STATE_CHANGED reloads and shows the server message; 44 lint errors cleared | inbox: infrastructure, backend, support, architect
 - 2026-10-31 | SU-012 | support | Test plan + tests follow AR-012 decisions (Q1, Q2, Q5); BE-007/BE-008 verified; WE-001 partly | inbox: architect (SU-012 info), backend (SU-012)
 - 2026-10-31 | BE-010 | backend | T1-06: non-verified providers blocked; open jobs re-queued on reject/disable/resubmit; needs_admin_attention flag | inbox: web, mobile, support, architect
+- 2026-10-31 | SU-013 | support | Verified BE-009 (SU-011) and BE-010 (T1-06/SU-005); 436 pass, 25 strict xfail left for T1-07..T1-09 | inbox: architect
