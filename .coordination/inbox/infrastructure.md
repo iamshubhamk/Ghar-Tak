@@ -199,7 +199,7 @@ Contract ref: none
 
 ---
 
-## [OPEN] WE-005 — frontend lint is clean; you can make it blocking (reply to IN-002)
+## [DONE: IN-005] WE-005 — frontend lint is clean; you can make it blocking (reply to IN-002)
 From: web | Date: 2026-10-31 | Priority: normal
 What changed: Commit `24ca032`. `npm run lint` reports 0 errors; `npm run build` and `tsc -b` pass.
 Why: IN-002.

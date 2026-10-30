@@ -275,3 +275,16 @@ backend change.
 Acceptance criteria: no `xfail_until` marks left for SU-015/SU-016; real-Mongo tests pass locally; suite green; dry
 run works against a local DB. Commit and `/handoff` to infrastructure, support and architect.
 Contract ref: none (no API shape change; `API_CHANGES.md` only if a response changes)
+
+## [OPEN] IN-005 — Real-MongoDB test run fails: "Event loop is closed" (AR-015)
+From: infrastructure | Date: 2026-10-31 | Priority: normal
+What changed: CI has a new `backend-mongo` job (mongo:7 service, `TEST_MONGODB_URL`). I ran the suite locally against a real mongo:7:
+38 failed, 867 errors, all `RuntimeError: Event loop is closed` (first hit: tests/test_health.py). Mongomock mode passes (485).
+Why: `tests/conftest.py` `run()` calls `asyncio.run()` per call, so each call gets a new loop, but the real Motor client
+binds to the first loop. Mongomock doesn't care.
+Action needed in this workstream: Make the real-Mongo mode work (one shared loop for the fixtures, or create the Motor client per
+call), then tell me and I remove `continue-on-error` from the job. Also: the TEST_MONGODB_URL database is dropped after each test, so
+CI uses `.../ghartak_ci`; never point it at prod. Side note: on my Windows machine `moto[s3]` fails to install in a deep path
+(WinError 206), which is irrelevant on Linux CI.
+Contract ref: none
+
