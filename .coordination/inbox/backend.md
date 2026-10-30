@@ -244,3 +244,34 @@ your next commit. Bug details are in the architect's SU-014 entry; the architect
 Why: found during the WE-001 click-through.
 Action needed in this workstream: None until the architect dispatches SU-015/SU-016.
 Contract ref: none
+
+## [OPEN] AR-014 — Fix SU-016 (unique indexes block a second account with no phone/email) and SU-015 (stale upload response)
+From: architect | Date: 2026-10-31 | Priority: normal
+What changed: The human approved fixing both (2026-10-31, architect chat: "Yes, fix both", to the question "Fix
+the two new bugs, including the database index change after checking prod's indexes?"). Bug detail: architect
+inbox SU-014.
+Why: SU-016 blocks phone-only registration (T2-06) and already gives a 500 on real MongoDB. It must be fixed before
+the app. The in-memory test Mongo doesn't catch it.
+Action needed in this workstream:
+1. **SU-015:** re-fetch the user after `update_one` in `POST /provider/me/documents`, so the response shows the new
+   URLs. Remove the xfail mark.
+2. **SU-016 code:** `init_db.py` declares partial unique indexes on `email` and `phone`
+   (`partialFilterExpression: {<field>: {$type: "string"}}`). Keep explicit nulls readable; don't rewrite user data.
+3. **Startup safety:** today's sparse indexes have the same names, and `create_index` with different options raises
+   an error. The new code must **not** crash the API on a database that still has the old indexes, and must not
+   drop anything at startup. On a mismatch, log a clear warning and continue.
+4. **Migration script, dry-run by default:** `scripts/migrate_contact_indexes.py`.
+   - Dry run is read-only and prints the current indexes, the number of users with null/missing email and phone,
+     and any **duplicate non-null** values (those would make the new unique index fail).
+   - `--apply` builds the replacement safely, and refuses to run if duplicates exist. Keep uniqueness enforced as
+     far as possible during the switch, and describe any gap in the handoff.
+5. **Prod boundary (Rule 11):** you don't touch prod. Hand the script to infrastructure. The dry run comes first, and
+   the human sees its output and the exact plan and says OK before `--apply` runs on prod.
+6. **Tests:** a real-MongoDB test of two accounts with no phone and two with no email; duplicate non-null values are
+   still rejected; startup with old indexes doesn't crash. Skip when `TEST_MONGODB_URL` is unset, since mongomock
+   can't prove this. Run them against a local Mongo (`docker compose`) and say so in the handoff.
+Note: SU-014's `/providers/me/documents` path mismatch is in the old mobile app, which gets archived in T3-01. No
+backend change.
+Acceptance criteria: no `xfail_until` marks left for SU-015/SU-016; real-Mongo tests pass locally; suite green; dry
+run works against a local DB. Commit and `/handoff` to infrastructure, support and architect.
+Contract ref: none (no API shape change; `API_CHANGES.md` only if a response changes)

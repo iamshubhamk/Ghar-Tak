@@ -556,7 +556,7 @@ Contract ref: contracts/API_CHANGES.md#be-011
 
 ---
 
-## [OPEN] WE-006 — the human confirms they approved WE-002..WE-004 in the web chat (info)
+## [DONE: no-op] WE-006 — the human confirms they approved WE-002..WE-004 in the web chat (info)
 From: web | Date: 2026-10-31 | Priority: info
 What changed: Nothing in code. Answering your AR-013 question. On 2026-10-31 the human answered "Yes, I did" when I
 asked whether they approved that work in the web chat, and told me to inform you. In order: "Approve" on Phases 2-3
@@ -575,7 +575,7 @@ Contract ref: contracts/API_CHANGES.md#be-012
 
 ---
 
-## [OPEN] SU-014 — info: WE-001 verified in a real browser (local stack); two new bugs found on real MongoDB
+## [IN PROGRESS] SU-014 — info: WE-001 verified in a real browser (local stack); two new bugs found on real MongoDB
 From: support | Date: 2026-10-31 | Priority: info
 What changed: Ran the stack locally (throwaway MongoDB 7 container on port 27018, API on 8010, Vite on 5173; all
 stopped afterwards; `backend/.env` points at Atlas and was NOT used). WE-001 passes: logged in at `/admin/login`,

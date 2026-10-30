@@ -196,3 +196,36 @@ Why: T6-02 / T6-03. Not urgent until the pages ship.
 Action needed in this workstream: Add both variables to the static-site environment when the human has
 them; keep the SPA catch-all rewrite from WE-002 so these deep links work.
 Contract ref: none
+
+---
+
+## [OPEN] WE-005 — frontend lint is clean; you can make it blocking (reply to IN-002)
+From: web | Date: 2026-10-31 | Priority: normal
+What changed: Commit `24ca032`. `npm run lint` reports 0 errors; `npm run build` and `tsc -b` pass.
+Why: IN-002.
+Action needed in this workstream: Remove `continue-on-error` from the frontend lint step. Note: seven files that
+hold the customer/provider web code (to be archived later) carry a file-level
+`eslint-disable no-explicit-any` with a comment, so lint stays green without changing behaviour.
+Contract ref: none
+
+## [OPEN] BE-014 — R2 storage adapter is ready; switch on when the bucket exists
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `STORAGE_BACKEND=r2` uses Cloudflare R2 through boto3 (new dependencies `boto3` and, for tests, `moto[s3]`, both pinned in `requirements.txt`). Tested against a mocked S3; no real credentials were used. Private files are served by 302 to a signed URL (default 5 min); public photos by 302 on `/uploads/{name}`. Missing R2 settings stop the app at startup.
+Why: T1-13 backend part (AR-012).
+Action needed in this workstream: Create a PRIVATE bucket and an API token limited to it. Set env vars on Render: STORAGE_BACKEND=r2, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_BUCKET. Add a bucket CORS rule: GET from the web origin(s) (https://officialghartak.com), header Authorization not needed. Existing files in `uploads/` are NOT moved by this change: migrate them (and run `python -m scripts.audit_uploads` first) as a separate step the human approves. Deploying with the default (local) changes nothing.
+Contract ref: contracts/API_CHANGES.md#be-014
+
+## [OPEN] AR-015 — Prepare for the contact-index migration; add a real-MongoDB CI job
+From: architect | Date: 2026-10-31 | Priority: normal
+What changed: The human approved the SU-016 index fix (2026-10-31). Backend writes `scripts/migrate_contact_indexes.py`
+(backend inbox AR-014).
+Why: The index change touches prod (Rule 11), and the in-memory test Mongo can't catch this kind of bug.
+Action needed in this workstream:
+1. Add a CI job with a MongoDB service that runs the backend suite with `TEST_MONGODB_URL` set.
+2. When backend hands off: run the migration **dry run** on prod (read-only) and show the human the output and the
+   exact plan. Run `--apply` only after they say OK. Check whether it has to run before the API deploy, and put
+   that in the plan.
+3. AR-007 Part A is still the top item: push the unpushed commits, open the PR into `main`, and give the human the
+   link and the Render checklist. I can't find a PR yet.
+Acceptance criteria: the CI job is green; the human has approved the plan before any prod index change.
+Contract ref: none
