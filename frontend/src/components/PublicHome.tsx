@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- customer/provider web code, archived in the pivot (T6-04) */
 import React from 'react';
 import { HeroCarousel } from './HeroCarousel';
 import { CategoryGrid } from './CategoryGrid';

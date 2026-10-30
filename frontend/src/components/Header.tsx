@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- customer/provider web code, archived in the pivot (T6-04) */
 import React, { useState } from 'react';
 import { MapPin, Search, ShoppingBag, User, Bell, ChevronDown, AlertCircle, ShieldCheck, UserCheck } from 'lucide-react';
 import { LocationModal } from './LocationModal';
@@ -25,8 +26,6 @@ export const Header: React.FC<HeaderProps> = ({
   cartTotal,
   onOpenCart,
   onSearch,
-  activeRole,
-  onRoleChange,
   userSession,
   userRole,
   onOpenAuth,

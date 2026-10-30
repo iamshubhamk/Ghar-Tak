@@ -15,6 +15,13 @@ export type ApiError = {
   };
 };
 
+// Carries the server's error code so callers can react to it (e.g. BOOKING_STATE_CHANGED).
+export class ApiRequestError extends Error {
+  constructor(message: string, public code?: string) {
+    super(message);
+  }
+}
+
 export async function apiRequest<T>(
   path: string,
   options: RequestInit = {}
@@ -40,7 +47,7 @@ export async function apiRequest<T>(
       (response.status === 409
         ? "An account already exists with this email or phone."
         : "Something went wrong. Please try again.");
-    throw new Error(message);
+    throw new ApiRequestError(message, body.detail?.error?.code ?? body.error?.code);
   }
 
   return response.json() as Promise<T>;

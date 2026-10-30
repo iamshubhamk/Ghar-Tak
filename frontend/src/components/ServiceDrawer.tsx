@@ -1,10 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- customer/provider web code, archived in the pivot (T6-04) */
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   X,
   Plus,
   Minus,
-  Calendar,
   MapPin,
   CreditCard,
   CheckCircle2,
@@ -46,7 +46,6 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
   onClose,
   cartItems,
   onUpdateQuantity,
-  onClearCart,
   currentLocation,
   onConfirmBooking,
   isSubmitting = false,
@@ -56,7 +55,7 @@ export const ServiceDrawer: React.FC<ServiceDrawerProps> = ({
     d.setHours(d.getHours() + 2);
     return d.toISOString();
   });
-  const [selectedSlot, setSelectedSlot] = useState(TIME_SLOTS[0]);
+  const [selectedSlot] = useState(TIME_SLOTS[0]);
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'online'>('cod');
   const [addressInput, setAddressInput] = useState('');
   const [houseNumber, setHouseNumber] = useState('');

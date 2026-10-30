@@ -1,18 +1,14 @@
 import React, { FormEvent, useEffect, useState } from "react";
 import {
-  Users,
   ShieldCheck,
   FolderPlus,
   CalendarClock,
   BarChart3,
   CheckCircle2,
   XCircle,
-  Plus,
   UserCheck,
-  Building,
   Building2,
   RefreshCw,
-  Search,
   FileText,
   Sparkles,
   Copy,
@@ -23,7 +19,7 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-import { apiRequest } from "../lib/api";
+import { ApiRequestError, apiRequest } from "../lib/api";
 import { apiBaseUrl } from "../lib/config";
 import { AdminDashboardSummary } from "../types/admin";
 import { Booking, BookingStatus, Review } from "../types/booking";
@@ -52,7 +48,7 @@ export function MarketplaceAdminPanel() {
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [, setReviews] = useState<Review[]>([]);
   const [skillRequests, setSkillRequests] = useState<SkillRequest[]>([]);
   const [selectedProviderByBooking, setSelectedProviderByBooking] = useState<Record<string, string>>({});
   const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | "ALL">("ALL");
@@ -256,6 +252,7 @@ export function MarketplaceAdminPanel() {
       await loadAdminData();
       setStatus(`Provider ${updated.provider_name || "partner"} successfully assigned to booking #${bookingId.slice(0, 8)}.`);
     } catch (error) {
+      if (error instanceof ApiRequestError && error.code === "BOOKING_STATE_CHANGED") await loadAdminData();
       setStatus(error instanceof Error ? error.message : "Could not assign provider.");
     }
   };
@@ -843,7 +840,7 @@ export function MarketplaceAdminPanel() {
 
                 <select
                   value={bookingStatusFilter}
-                  onChange={(e) => setBookingStatusFilter(e.target.value as any)}
+                  onChange={(e) => setBookingStatusFilter(e.target.value as BookingStatus | "ALL")}
                   className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy"
                 >
                   <option value="ALL">All Statuses</option>

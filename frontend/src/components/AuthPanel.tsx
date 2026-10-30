@@ -1,19 +1,16 @@
 import { FormEvent, useEffect, useState } from "react";
 import {
   LogIn,
-  ShieldCheck,
   UserCheck,
   UserPlus,
   Sparkles,
   Briefcase,
-  Upload,
   FileText,
   Building2,
   CheckCircle2,
   ChevronRight,
   ChevronLeft,
   Wrench,
-  AlertCircle,
   Camera,
   ArrowLeft,
   Eye,
@@ -54,8 +51,6 @@ const PATNA_LOCALITIES = [
 export function AuthPanel({
   onAuthenticated,
   initialMode = "login",
-  heading,
-  subheading,
 }: AuthPanelProps) {
   const [activeTab, setActiveTab] = useState<PrimaryTab>(
     initialMode === "login" ? "login" : "signup"

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- customer/provider web code, archived in the pivot (T6-04) */
 import React, { FormEvent, useEffect, useState } from "react";
 import {
   User,
@@ -11,14 +12,12 @@ import {
   CalendarClock,
   Sparkles,
   CheckCircle2,
-  ShieldCheck,
-  ArrowRight,
   UserRound,
 } from "lucide-react";
 
 import { apiRequest } from "../lib/api";
 import { apiBaseUrl, backendBaseUrl } from "../lib/config";
-import { Booking, Review } from "../types/booking";
+import { Booking } from "../types/booking";
 import { Category } from "../types/marketplace";
 import { BookingTracker } from "./BookingTracker";
 import { DateTimePicker } from "./DateTimePicker";
@@ -41,6 +40,7 @@ interface PaymentMethodItem {
   is_default: boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName?: string }) {
   const [activeTab, setActiveTab] = useState<TabKey>("orders");
 
@@ -283,15 +283,6 @@ export function CustomerDashboard({ pendingCategoryName }: { pendingCategoryName
 
     setIsPaymentModalOpen(false);
     setNewPaymentValue("");
-  };
-
-  const handleDeletePaymentMethod = async (id: string) => {
-    try {
-      await apiRequest(`/customer/me/payment-methods/${id}`, { method: "DELETE" });
-    } catch (err) {
-      // Fallback
-    }
-    setPaymentMethods((prev) => prev.filter((pm) => pm.id !== id));
   };
 
   const activeBookings = bookings.filter(
