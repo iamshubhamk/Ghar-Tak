@@ -2,7 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.core.enums import AvailabilityStatus, VerificationStatus
+from app.core.enums import AvailabilityStatus, SkillRequestStatus, VerificationStatus
 from app.schemas.auth import clean_optional
 
 
@@ -105,7 +105,7 @@ class SkillRequestResponse(BaseModel):
     category_name: str
     proof_url: str
     notes: str | None = None
-    status: str
+    status: SkillRequestStatus
     rejection_reason: str | None = None
     created_at: datetime
     updated_at: datetime

@@ -16,6 +16,7 @@ from app.schemas.customer import (
     SavedAddressResponse,
     WalletResponse,
 )
+from app.schemas.errors import MessageResponse
 from app.services.uploads import store_upload
 
 router = APIRouter(tags=["customers"])
@@ -134,7 +135,7 @@ async def update_address(
     return updated_address
 
 
-@router.delete("/customer/me/addresses/{address_id}")
+@router.delete("/customer/me/addresses/{address_id}", response_model=MessageResponse)
 async def delete_address(
     address_id: str,
     current_user: dict[str, Any] = Depends(require_roles(UserRole.CUSTOMER)),
@@ -237,7 +238,7 @@ async def add_payment_method(
     return new_method
 
 
-@router.delete("/customer/me/payment-methods/{pm_id}")
+@router.delete("/customer/me/payment-methods/{pm_id}", response_model=MessageResponse)
 async def delete_payment_method(
     pm_id: str,
     current_user: dict[str, Any] = Depends(require_roles(UserRole.CUSTOMER)),

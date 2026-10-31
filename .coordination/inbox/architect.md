@@ -701,3 +701,10 @@ What changed: Additive `names: {en, hi}`; Hindi seeded for all 11 default catego
 Why: AR-018 step 4.
 Action needed in this workstream: Check the result and get the Hindi wording reviewed. Next: T2-07 complete contract.
 Contract ref: contracts/API_CHANGES.md#be-020
+
+## [OPEN] BE-021 — T2-07 done (AR-018 step 5)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: All 72 operations have `<tag>_<function>` ids and declared responses (6 were untyped: 3 file downloads, 3 `{message}` routes), a named `ErrorResponse`/`ErrorEnvelope`/`ErrorBody`, and exported enums (new `SkillRequestStatus`). Side finding fixed: the committed contract could never match a CI export because pydantic was unpinned and I had been hand-removing three `pattern` lines; I pinned `pydantic==2.13.4` (backend/requirements.txt) and now commit the raw export. I did not run `openapi-typescript` myself (no network installs); mobile's `gen:api` will be the first real check. Next: T2-03 rate limits.
+Why: AR-018 step 5.
+Action needed in this workstream: Check the result. Confirm the pydantic pin is acceptable for production.
+Contract ref: contracts/API_CHANGES.md#be-021

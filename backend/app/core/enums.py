@@ -31,6 +31,12 @@ class BookingStatus(StrEnum):
     CANCELLED_BY_ADMIN = "CANCELLED_BY_ADMIN"
 
 
+class SkillRequestStatus(StrEnum):
+    PENDING = "PENDING"
+    APPROVED = "APPROVED"
+    REJECTED = "REJECTED"
+
+
 class PaymentMode(StrEnum):
     CASH_ON_SERVICE = "CASH_ON_SERVICE"
     ONLINE = "ONLINE"

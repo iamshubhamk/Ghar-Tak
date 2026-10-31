@@ -1,16 +1,18 @@
+from typing import Any
+
 from fastapi import APIRouter, Depends
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from typing import Any
 
 from app.api.deps import get_current_user
 from app.db.session import get_db
+from app.schemas.errors import MessageResponse
 from app.schemas.notification import NotificationResponse, PushTokenRequest
 from app.services.notifications import NotificationService
 
 router = APIRouter(prefix="/notifications", tags=["notifications"])
 
 
-@router.post("/push-token")
+@router.post("/push-token", response_model=MessageResponse)
 async def register_push_token(
     payload: PushTokenRequest,
     current_user: dict[str, Any] = Depends(get_current_user),

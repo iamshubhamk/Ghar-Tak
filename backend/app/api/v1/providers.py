@@ -22,6 +22,17 @@ logger = setup_logger("ghartak.api.providers")
 
 router = APIRouter(tags=["providers"])
 
+FILE_DOWNLOAD_RESPONSES: dict[int | str, dict] = {
+    200: {
+        "description": "The file (image or PDF) when files are stored on the server.",
+        "content": {"application/octet-stream": {"schema": {"type": "string", "format": "binary"}}},
+    },
+    302: {
+        "description": "Files in cloud storage: redirect to a short-lived signed URL (Location).",
+        "headers": {"Location": {"schema": {"type": "string"}}},
+    },
+}
+
 
 @router.get("/provider/me", response_model=ProviderPublicResponse)
 async def get_provider_me(
@@ -73,7 +84,7 @@ async def resubmit_provider_application(
     return ProviderService.serialize(provider, is_owner=True)
 
 
-@router.get("/providers/{provider_id}/adhaar")
+@router.get("/providers/{provider_id}/adhaar", responses=FILE_DOWNLOAD_RESPONSES)
 async def get_provider_adhaar(
     provider_id: str,
     current_user: dict[str, Any] = Depends(require_roles(UserRole.ADMIN, UserRole.PROVIDER)),
@@ -108,7 +119,7 @@ async def get_provider_adhaar(
     )
 
 
-@router.get("/providers/{provider_id}/bank-proof")
+@router.get("/providers/{provider_id}/bank-proof", responses=FILE_DOWNLOAD_RESPONSES)
 async def get_provider_bank_proof(
     provider_id: str,
     current_user: dict[str, Any] = Depends(require_roles(UserRole.ADMIN, UserRole.PROVIDER)),
@@ -162,12 +173,7 @@ async def create_skill_request(
 
 @router.get(
     "/skill-requests/{request_id}/proof",
-    responses={
-        200: {"description": "The proof file. Admin or the owning provider only."},
-        401: {"description": "Login required."},
-        403: {"description": "Not the owner and not an admin."},
-        404: {"description": "Request or file not found."},
-    },
+    responses=FILE_DOWNLOAD_RESPONSES,
 )
 async def get_skill_request_proof(
     request_id: str,

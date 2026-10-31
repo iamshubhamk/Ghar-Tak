@@ -21,6 +21,7 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
+from app.schemas.errors import ErrorResponse
 from app.services.auth import AuthService
 from app.services.sessions import SessionService
 
@@ -77,8 +78,11 @@ async def login(
     "/refresh",
     response_model=TokenResponse,
     responses={
-        401: {"description": "AUTH_REFRESH_INVALID, AUTH_REFRESH_EXPIRED or AUTH_REFRESH_REUSED."},
-        403: {"description": "The account is disabled (ACCOUNT_DISABLED)."},
+        401: {
+            "model": ErrorResponse,
+            "description": "AUTH_REFRESH_INVALID, AUTH_REFRESH_EXPIRED or AUTH_REFRESH_REUSED.",
+        },
+        403: {"model": ErrorResponse, "description": "The account is disabled (ACCOUNT_DISABLED)."},
     },
 )
 async def refresh(
@@ -103,7 +107,10 @@ async def me(current_user: dict[str, Any] = Depends(get_current_user)) -> dict[s
 
 
 RESET_DISABLED_RESPONSE: dict[int | str, dict[str, Any]] = {
-    403: {"description": "Self-service password reset is disabled (code PASSWORD_RESET_DISABLED)."}
+    403: {
+        "model": ErrorResponse,
+        "description": "Self-service password reset is disabled (code PASSWORD_RESET_DISABLED).",
+    }
 }
 
 

@@ -108,7 +108,7 @@ async def validation_exception_handler(
     )
 
 
-@app.get("/")
+@app.get("/", operation_id="service_root")
 def root() -> dict[str, str]:
     return {
         "service": "GharTak API",

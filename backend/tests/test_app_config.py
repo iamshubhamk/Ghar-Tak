@@ -94,7 +94,7 @@ def test_it_is_in_the_contract_with_a_stable_operation_id() -> None:
 
     operation = app.openapi()["paths"]["/api/v1/app/config"]["get"]
 
-    assert operation["operationId"] == "get_app_config"
+    assert operation["operationId"] == "app_get_config"
     assert operation["responses"]["200"]["content"]["application/json"]["schema"]["$ref"].endswith(
         "AppConfigResponse"
     )

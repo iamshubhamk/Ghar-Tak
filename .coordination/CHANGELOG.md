@@ -61,3 +61,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-11-01 | BE-018 | backend | T2-06: phone-first registration (10-digit normalisation, format-tolerant duplicate check and login, no data rewritten); fix 500 on invalid JSON provider registration | inbox: mobile, web, support, architect
 - 2026-11-01 | BE-019 | backend | T2-04: public GET /app/config (versions, support, visit charge, assignment promise, flags) from settings | inbox: mobile, infrastructure, architect
 - 2026-11-01 | BE-020 | backend | T2-05: categories carry names {en, hi}; Hindi seeded (adds only the new field to existing rows); admin name_hi | inbox: mobile, architect
+- 2026-11-01 | BE-021 | backend | T2-07: complete contract (stable operationIds, named error schema, enums, typed file downloads), drift test, pydantic pinned | inbox: mobile, web, infrastructure, support, architect

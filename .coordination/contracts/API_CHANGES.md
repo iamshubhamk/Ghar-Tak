@@ -306,3 +306,34 @@ Not changed: `name`, `slug`, `price_label` (note: the default `price_label` text
 predate the launch visit charge of 99 and should not be shown in the app), provider category lists (they still
 hold English names), booking `category_name` (English).
 Clients affected: mobile (home screen and service list in Hindi), web admin (optional Hindi name field).
+
+## BE-021
+Date: 2026-11-01 | Breaking: no for running clients; one note for anyone who already generated code from operationId
+T2-07 / ADR 0006 §3: the contract is now complete enough to generate typed clients.
+Changed: every operation has a stable `operationId` of the form `<tag>_<function>` (examples: `auth_login`,
+`auth_refresh`, `auth_logout`, `auth_register_customer`, `bookings_create_booking`, `categories_list_categories`,
+`app_get_config`). The old ids were generated from the URL (for example `login_api_v1_auth_login_post`) and
+changed whenever a path changed. All 72 operations are unique. NOTE: if you already generated code that uses the
+old ids, regenerate; `app_get_config` was briefly `get_app_config`. Renaming an id from now on is a breaking
+change and is covered by a test.
+Added: named error schemas `ErrorResponse` ({detail: ErrorEnvelope | string}), `ErrorEnvelope` ({error}) and
+`ErrorBody` ({code, message, details}). Every `/api/v1` operation documents 400, 401, 403, 404, 409 and 422
+with `ErrorResponse`. (The body shape itself did not change; some older routes still send `detail` as a plain
+string, which is why `detail` is `ErrorEnvelope | string`. T2-08 adds the single flat shape.)
+Added: `MessageResponse` ({message}) for `DELETE /customer/me/addresses/{id}`, `DELETE /customer/me/payment-methods/{id}`
+and `POST /notifications/push-token`, which already answered that way but did not declare it.
+Added: the three private file downloads (`GET /providers/{id}/adhaar`, `/bank-proof`,
+`GET /skill-requests/{id}/proof`) now document their real answers: 200 binary file, or 302 with a `Location`
+header when files are in cloud storage.
+Changed: `SkillRequestResponse.status` is now the enum `SkillRequestStatus` (PENDING | APPROVED | REJECTED)
+instead of a plain string. The values are the same.
+Enums exported as OpenAPI enums: BookingStatus, UserRole, VerificationStatus, PaymentStatus, PaymentMode,
+AvailabilityStatus, ReviewStatus, SkillRequestStatus.
+Also: `GET /` (service banner) has operationId `service_root`.
+Tooling note: the exported file now includes the three regex `pattern` lines pydantic adds for Decimal fields
+(they were stripped by hand before, which would have failed the CI drift check). `pydantic==2.13.4` is now pinned
+in `backend/requirements.txt` so the export is identical on every machine and in CI.
+Guard: `backend/tests/test_contract.py` fails when a route has no declared response, an operation id repeats or
+embeds the URL, the error schema is missing, or `openapi.json` is stale (same check as the CI drift gate).
+Clients affected: mobile and web (generate types from `.coordination/contracts/openapi.json`; use the named error
+schema and enums).

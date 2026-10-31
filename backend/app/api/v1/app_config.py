@@ -6,8 +6,8 @@ from app.schemas.app_config import AppConfigResponse, AssignmentPromise
 router = APIRouter(prefix="/app", tags=["app"])
 
 
-@router.get("/config", response_model=AppConfigResponse, operation_id="get_app_config")
-async def get_app_config(response: Response) -> AppConfigResponse:
+@router.get("/config", response_model=AppConfigResponse)
+async def get_config(response: Response) -> AppConfigResponse:
     """Public values for the mobile app: force-update versions, support contact, visit charge,
     assignment promise and feature flags. Everything comes from settings (environment variables)."""
     settings = get_settings()
