@@ -48,3 +48,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | AR-014 | architect | Human approved SU-015 + SU-016 fixes incl. contact-index change (prod apply only after dry run + human OK) | inbox: backend
 - 2026-10-31 | AR-015 | architect | Real-MongoDB CI job; prod dry run of index migration; AR-007 Part A reminder | inbox: infrastructure
 - 2026-10-31 | BE-015 | backend | AR-014: SU-015 documents response fix; SU-016 partial unique contact indexes (startup-safe) + scripts/migrate_contact_indexes.py (dry-run default, not applied) | inbox: infrastructure, support, architect
+- 2026-11-01 | AR-016 | architect | Human direction: continue mobile, hold web; app design mockup published for review | inbox: web (info)

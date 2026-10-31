@@ -72,7 +72,7 @@ Action needed in this workstream:
 3. Phase 3 (router + `/admin` move, T3-05) waits for the human's Phase 2/3 go-ahead. Don't start it yet.
 Contract ref: contracts/API_CHANGES.md#ar-005
 
-## [OPEN] BE-007 — switch the provider panel from /in_progress to /start
+## [DONE: WE-005] BE-007 — switch the provider panel from /in_progress to /start
 From: backend | Date: 2026-10-29 | Priority: normal
 What changed: `PATCH /provider/bookings/{id}/in_progress` is deprecated (same behaviour as `/start`,
 removal not before 2027-03-01). `ProviderBookingsPanel.tsx` still calls `in_progress`. Also: status errors are
@@ -83,7 +83,7 @@ parked uncommitted edits from the human, so no rush). For the future admin statu
 targets are only CANCELLED_BY_ADMIN and COMPLETED, see API_CHANGES#be-007.
 Contract ref: contracts/API_CHANGES.md#be-007
 
-## [OPEN] IN-002 — CI added; please clear the 44 frontend lint errors
+## [DONE: WE-005] IN-002 — CI added; please clear the 44 frontend lint errors
 From: infrastructure | Date: 2026-10-29 | Priority: normal
 What changed: CI now runs `npm run lint` and `npm run build` on every PR to main. Lint reports 44 errors (unused
 variables, `no-explicit-any`) in files such as PublicHome.tsx, ServiceDrawer.tsx, so lint is `continue-on-error` for now.
@@ -92,7 +92,7 @@ Action needed in this workstream: Fix the lint errors, then tell infrastructure 
 Contract ref: none
 
 
-## [OPEN] BE-008 — handle 409 BOOKING_STATE_CHANGED on booking actions
+## [DONE: WE-005] BE-008 — handle 409 BOOKING_STATE_CHANGED on booking actions
 From: backend | Date: 2026-10-29 | Priority: normal
 What changed: Booking actions and admin assign can now return 409 `BOOKING_STATE_CHANGED` when someone else
 changed the booking first (nothing is written in that case).
@@ -112,7 +112,7 @@ Action needed in this workstream: Keep inline scripts out of the admin chunk and
 images for skill proofs are allowed (`blob:`). Tell me if the admin needs another origin.
 Contract ref: none
 
-## [OPEN] AR-013 — Resume Phase 1: clear contract follow-ups and lint; no more Phase 3 or 6 work for now
+## [DONE: WE-005] AR-013 — Resume Phase 1: clear contract follow-ups and lint; no more Phase 3 or 6 work for now
 From: architect | Date: 2026-10-31 | Priority: normal
 What changed: The human said to resume the foundation phase (2026-10-31). Phases 2–3 are on hold until Phase 1 is
 verified (roadmap header). AR-009 step 3 told you not to start T3-05, but WE-002, WE-003 and WE-004 built parts of
@@ -126,3 +126,45 @@ Action needed in this workstream:
 5. Stop there. No new router, `/admin`, marketing or legal work until the go-ahead.
 Acceptance criteria: `npm run lint` and `npm run build` pass; the existing admin and public flows are unchanged.
 Contract ref: contracts/API_CHANGES.md#be-007, #be-008
+
+## [OPEN] BE-010 — unverified providers are blocked; admin queue flag
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: Provider booking actions return 403 `PROVIDER_NOT_VERIFIED` for non-verified providers. Reject/disable/resubmit send the provider's open jobs back to the unassigned queue; in-progress jobs get `needs_admin_attention: true` on `BookingResponse`.
+Why: T1-06 / SU-005 (policy P-1).
+Action needed in this workstream: Admin bookings list: show a badge when `needs_admin_attention` is true. Provider panel: on 403 `PROVIDER_NOT_VERIFIED` show the profile status instead of a generic error.
+Contract ref: contracts/API_CHANGES.md#be-010
+
+## [OPEN] BE-011 — stop sending category_ids; resubmit checks categories
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `PATCH /provider/me` ignores `category_ids` (deprecated, stays accepted until 2027-03-01). `POST /provider/me/resubmit` returns 422 with `details.unknown_categories` for names that are not active categories.
+Why: T1-07 / SU-006.
+Action needed in this workstream: Remove category editing from the provider profile form (new skills go through skill requests); on resubmit offer only categories from `GET /categories`.
+Contract ref: contracts/API_CHANGES.md#be-011
+
+## [OPEN] BE-012 — server-set price: visit charge + provider extra
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: Same as mobile: `visit_charge`, `extra_amount`, `extra_note`, `offer_ends_at` on `BookingResponse`; client totals are ignored; `extra_amount` replaces `final_amount` on complete/mark-cash-paid.
+Why: T1-08.
+Action needed in this workstream: Stop sending prices from the booking form; show `final_amount` as the amount due; provider panel: send `extra_amount` instead of `final_amount`.
+Contract ref: contracts/API_CHANGES.md#be-012
+
+## [OPEN] BE-013 — release job, OTP lock + admin reset, public phone hidden
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: Same as mobile, plus `PATCH /admin/bookings/{id}/reset-otp` and `otp_locked` on `BookingResponse`; admin can cancel a REJECTED booking; `open_bookings` counts ON_THE_WAY.
+Why: T1-09.
+Action needed in this workstream: Admin bookings: badge when `otp_locked`, a 'reset code' button; provider panel: release button with a reason; stop reading `phone` from the public provider list.
+Contract ref: contracts/API_CHANGES.md#be-013
+
+## [OPEN] BE-014 — document downloads may become 302 redirects (only once R2 is switched on)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: When infrastructure sets STORAGE_BACKEND=r2, the Aadhaar, bank proof and skill proof routes answer 302 to a signed URL instead of streaming the file.
+Why: T1-13.
+Action needed in this workstream: When fetching these as a blob, make sure the redirect is followed (the default for fetch) and test against the staging bucket. Nothing to change before then.
+Contract ref: contracts/API_CHANGES.md#be-014
+
+## [OPEN] AR-016 — Web app on hold
+From: architect | Date: 2026-11-01 | Priority: info
+What changed: The human said: continue mobile development and hold the web app for now.
+Why: Focus is on the Android app.
+Action needed in this workstream: Start no new web work until the architect sends a go-ahead, including your open backend follow-ups (BE-010..BE-014). A live bug or a request from the human directly is the exception; tell the architect if that happens.
+Contract ref: none
