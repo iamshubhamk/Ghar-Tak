@@ -1,19 +1,19 @@
 import json
-import os
-from datetime import UTC, datetime
-from pathlib import Path
-from typing import Any
+import re
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.config import get_settings
 from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
 from app.core.errors import AppErrorCode, app_http_error
 from app.core.logger import setup_logger
 from app.schemas.auth import clean_optional
 from app.schemas.provider import ProviderProfileUpdateRequest
+from app.services.bookings import BookingService
 from app.services.notifications import NotificationService
+from app.services.uploads import has_file, store_upload
 
 logger = setup_logger("ghartak.providers")
 
@@ -25,7 +25,7 @@ class ProviderService:
         self,
         provider_user: dict[str, Any],
         category_name: str,
-        proof_url: str,
+        proof_filename: str,
         notes: str | None = None,
     ) -> dict[str, Any]:
         provider = await self.get_provider_profile_for_user(provider_user)
@@ -39,7 +39,7 @@ class ProviderService:
 
         existing_pending = await self.db.skill_requests.find_one({
             "provider_id": provider["id"],
-            "category_name": {"$regex": f"^{category_name.strip()}$", "$options": "i"},
+            "category_name": {"$regex": f"^{re.escape(category_name.strip())}$", "$options": "i"},
             "status": "PENDING",
         })
         if existing_pending:
@@ -50,12 +50,14 @@ class ProviderService:
             )
 
         now = datetime.now(UTC)
+        request_id = str(uuid.uuid4())
         request_doc = {
-            "id": str(uuid.uuid4()),
+            "id": request_id,
             "provider_id": provider["id"],
             "provider_name": provider["name"],
             "category_name": category_name,
-            "proof_url": proof_url,
+            "proof_filename": proof_filename,
+            "proof_url": f"/api/v1/skill-requests/{request_id}/proof",
             "notes": notes,
             "status": "PENDING",
             "rejection_reason": None,
@@ -167,12 +169,10 @@ class ProviderService:
             update_data["provider_profile.price_note"] = payload.price_note
             
         if payload.category_ids is not None:
-            if payload.category_ids:
-                categories = await self.db.categories.find({"id": {"$in": payload.category_ids}, "is_active": True}).to_list(length=None)
-                update_data["provider_profile.category_names"] = [c["name"] for c in categories]
-            else:
-                update_data["provider_profile.category_names"] = []
-                
+            # T1-07 (SU-006): categories change only through an admin-approved skill request.
+            # The field is still accepted for one release so shipped clients keep working.
+            logger.info(f"Ignoring category_ids in the profile update of provider {user['id']}.")
+
         if payload.localities is not None:
             update_data["provider_profile.locality_names"] = payload.localities
 
@@ -225,7 +225,10 @@ class ProviderService:
                 return []
                 
         if locality:
-            query["provider_profile.locality_names"] = {"$regex": f"^{locality.strip()}$", "$options": "i"}
+            query["provider_profile.locality_names"] = {
+                "$regex": f"^{re.escape(locality.strip())}$",
+                "$options": "i",
+            }
 
         cursor = self.db.users.find(query).sort("created_at", -1)
         return await cursor.to_list(length=None)
@@ -274,6 +277,9 @@ class ProviderService:
             "provider_profile.rejection_reason": rejection_reason,
         }
         await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            provider_id, "The provider's application was rejected."
+        )
 
         await NotificationService(self.db).notify_user(
             user_id=provider_id,
@@ -296,12 +302,14 @@ class ProviderService:
             "provider_profile.rejection_reason": None,
         }
         await self.db.users.update_one({"id": user["id"]}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            user["id"], "The provider sent their profile for re-verification."
+        )
         return await self._get(user["id"])
 
     async def resubmit_application(self, user: dict[str, Any], form: Any) -> dict[str, Any]:
         user = await self.get_provider_profile_for_user(user)
         user_id = user["id"]
-        settings = get_settings()
 
         update_data: dict[str, Any] = {
             "provider_profile.verification_status": VerificationStatus.PENDING_VERIFICATION.value,
@@ -312,25 +320,10 @@ class ProviderService:
 
         # Handle Aadhaar card file if uploaded
         adhaar_card = form.get("adhaar_card")
-        if adhaar_card and getattr(adhaar_card, "filename", None):
-            allowed = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
-            if getattr(adhaar_card, "content_type", "") not in allowed:
-                raise app_http_error(
-                    400,
-                    AppErrorCode.VALIDATION_ERROR,
-                    "Aadhaar card must be a PDF or image (JPG/PNG).",
-                )
-            private_dir = Path(settings.local_upload_dir) / "private"
-            os.makedirs(private_dir, exist_ok=True)
-            adhaar_filename_orig = getattr(adhaar_card, "filename", "") or ""
-            ext = os.path.splitext(adhaar_filename_orig)[1].lower() or ".jpg"
-            saved_name = f"adhaar_{user_id}_{uuid.uuid4().hex[:8]}{ext}"
-            saved_path = private_dir / saved_name
-            content = await adhaar_card.read()
-            with open(saved_path, "wb") as f:
-                f.write(content)
+        if has_file(adhaar_card):
+            stored = await store_upload(adhaar_card, "document", "private", prefix="adhaar_")
             update_data["provider_profile.adhaar_card_url"] = f"/api/v1/providers/{user_id}/adhaar"
-            update_data["provider_profile.adhaar_card_filename"] = saved_name
+            update_data["provider_profile.adhaar_card_filename"] = stored.filename
 
         # Parse bank details
         bank_holder = clean_optional(form.get("bank_account_holder"))
@@ -374,7 +367,9 @@ class ProviderService:
                 except Exception:
                     cat_list = [x.strip() for x in raw_cats.split(",") if x.strip()]
             if cat_list:
-                update_data["provider_profile.category_names"] = cat_list
+                update_data["provider_profile.category_names"] = await self._validate_category_names(
+                    cat_list
+                )
 
         # Parse localities
         raw_locs = form.getlist("localities") if hasattr(form, "getlist") else form.get("localities")
@@ -422,6 +417,9 @@ class ProviderService:
             update_data["provider_profile.bio"] = bio_raw
 
         await self.db.users.update_one({"id": user_id}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            user_id, "The provider resubmitted their application for verification."
+        )
 
         # Notify admins
         await NotificationService(self.db).notify_role(
@@ -455,6 +453,9 @@ class ProviderService:
             "is_active": False,
         }
         await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        await BookingService(self.db).release_open_bookings(
+            provider_id, "The provider was disabled by an admin."
+        )
 
         await NotificationService(self.db).notify_user(
             user_id=provider_id,
@@ -466,6 +467,27 @@ class ProviderService:
         )
         logger.info(f"Provider {provider_id} disabled by admin.")
         return await self._get(provider_id)
+
+    async def _validate_category_names(self, names: list[str]) -> list[str]:
+        """T1-07: keep only names of active categories (canonical spelling); unknown ones are a 422."""
+        active = await self.db.categories.find({"is_active": True}).to_list(None)
+        canonical = {c["name"].strip().lower(): c["name"] for c in active}
+        valid: list[str] = []
+        unknown: list[str] = []
+        for name in names:
+            match = canonical.get(name.strip().lower())
+            if match is None:
+                unknown.append(name)
+            elif match not in valid:
+                valid.append(match)
+        if unknown:
+            raise app_http_error(
+                422,
+                AppErrorCode.VALIDATION_ERROR,
+                "Some categories are not available: " + ", ".join(unknown) + ".",
+                {"unknown_categories": unknown},
+            )
+        return valid
 
     async def _get(self, provider_id: str) -> dict[str, Any]:
         user = await self.db.users.find_one({"id": provider_id, "role": UserRole.PROVIDER.value})
@@ -487,7 +509,7 @@ class ProviderService:
             "id": user["id"],
             "user_id": user["id"],
             "name": user["name"],
-            "phone": user.get("phone"),
+            "phone": user.get("phone") if can_view_sensitive else None,
             "bio": profile.get("bio"),
             "experience_years": profile.get("experience_years", 0),
             "verification_status": ver_status,

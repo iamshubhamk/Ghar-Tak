@@ -1,18 +1,14 @@
 import React, { FormEvent, useEffect, useState } from "react";
 import {
-  Users,
   ShieldCheck,
   FolderPlus,
   CalendarClock,
   BarChart3,
   CheckCircle2,
   XCircle,
-  Plus,
   UserCheck,
-  Building,
   Building2,
   RefreshCw,
-  Search,
   FileText,
   Sparkles,
   Copy,
@@ -23,8 +19,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 
-import { apiRequest } from "../lib/api";
-import { backendBaseUrl } from "../lib/config";
+import { ApiRequestError, apiRequest } from "../lib/api";
+import { apiBaseUrl } from "../lib/config";
 import { AdminDashboardSummary } from "../types/admin";
 import { Booking, BookingStatus, Review } from "../types/booking";
 import { Category, ProviderProfile, SkillRequest } from "../types/marketplace";
@@ -52,7 +48,7 @@ export function MarketplaceAdminPanel() {
   const [providers, setProviders] = useState<ProviderProfile[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [summary, setSummary] = useState<AdminDashboardSummary | null>(null);
-  const [reviews, setReviews] = useState<Review[]>([]);
+  const [, setReviews] = useState<Review[]>([]);
   const [skillRequests, setSkillRequests] = useState<SkillRequest[]>([]);
   const [selectedProviderByBooking, setSelectedProviderByBooking] = useState<Record<string, string>>({});
   const [bookingStatusFilter, setBookingStatusFilter] = useState<BookingStatus | "ALL">("ALL");
@@ -211,43 +207,25 @@ export function MarketplaceAdminPanel() {
     }
   };
 
-  const viewAdhaarDoc = async (providerId: string) => {
+  // Private docs need the Authorization header, so fetch as a blob and open that.
+  const openPrivateDoc = async (path: string, label: string) => {
     try {
-      const token = localStorage.getItem("ghartak_token");
-      const res = await fetch(`${backendBaseUrl}/api/v1/providers/${providerId}/adhaar`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+      const res = await fetch(`${apiBaseUrl}${path}`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("ghartak_token")}` },
       });
       if (!res.ok) {
-        throw new Error("Unable to view Aadhaar document. Not authorized or document not found.");
+        throw new Error(`Unable to view ${label}. Not authorized or document not found.`);
       }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
+      window.open(window.URL.createObjectURL(await res.blob()), "_blank");
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Error opening Aadhaar document");
+      alert(err instanceof Error ? err.message : `Error opening ${label}`);
     }
   };
 
-  const viewBankProofDoc = async (providerId: string) => {
-    try {
-      const token = localStorage.getItem("ghartak_token");
-      const res = await fetch(`${backendBaseUrl}/api/v1/providers/${providerId}/bank-proof`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (!res.ok) {
-        throw new Error("Unable to view Bank proof document. Not authorized or document not found.");
-      }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      window.open(url, "_blank");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "Error opening Bank proof document");
-    }
-  };
+  const viewAdhaarDoc = (providerId: string) => openPrivateDoc(`/providers/${providerId}/adhaar`, "Aadhaar document");
+  const viewBankProofDoc = (providerId: string) => openPrivateDoc(`/providers/${providerId}/bank-proof`, "Bank proof document");
+  // Built from the id, not proof_url: old requests still carry a dead /uploads/ link.
+  const viewSkillProof = (requestId: string) => openPrivateDoc(`/skill-requests/${requestId}/proof`, "proof document");
 
   const copyText = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
@@ -274,6 +252,7 @@ export function MarketplaceAdminPanel() {
       await loadAdminData();
       setStatus(`Provider ${updated.provider_name || "partner"} successfully assigned to booking #${bookingId.slice(0, 8)}.`);
     } catch (error) {
+      if (error instanceof ApiRequestError && error.code === "BOOKING_STATE_CHANGED") await loadAdminData();
       setStatus(error instanceof Error ? error.message : "Could not assign provider.");
     }
   };
@@ -508,15 +487,14 @@ export function MarketplaceAdminPanel() {
 
                         <div className="flex flex-wrap items-center gap-2 shrink-0">
                           {sr.proof_url && (
-                            <a
-                              href={`${backendBaseUrl}${sr.proof_url}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
+                            <button
+                              type="button"
+                              onClick={() => viewSkillProof(sr.id)}
                               className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy shadow-sm transition-all"
                             >
                               <FileText className="w-4 h-4 text-brand-orange" />
                               <span>View Proof Document</span>
-                            </a>
+                            </button>
                           )}
                           <button
                             onClick={() => approveSkillRequest(sr.id)}
@@ -862,7 +840,7 @@ export function MarketplaceAdminPanel() {
 
                 <select
                   value={bookingStatusFilter}
-                  onChange={(e) => setBookingStatusFilter(e.target.value as any)}
+                  onChange={(e) => setBookingStatusFilter(e.target.value as BookingStatus | "ALL")}
                   className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-extrabold text-brand-navy"
                 >
                   <option value="ALL">All Statuses</option>

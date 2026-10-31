@@ -1,13 +1,10 @@
 import os
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import FileResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.api.deps import require_roles
-from app.core.config import get_settings
 from app.core.enums import UserRole, VerificationStatus
 from app.core.logger import setup_logger
 from app.db.session import get_db
@@ -19,6 +16,7 @@ from app.schemas.provider import (
     SkillRequestResponse,
 )
 from app.services.providers import ProviderService
+from app.services.uploads import has_file, private_file_response, store_upload
 
 logger = setup_logger("ghartak.api.providers")
 
@@ -41,40 +39,24 @@ async def upload_provider_documents(
     current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    settings = get_settings()
     update_data = {}
 
-    if profile_photo:
-        if not profile_photo.content_type.startswith("image/"):
-            raise HTTPException(400, "Profile photo must be an image (JPG/PNG).")
-        public_dir = os.path.join(settings.local_upload_dir, "public")
-        os.makedirs(public_dir, exist_ok=True)
-        ext = os.path.splitext(profile_photo.filename or "file")[1]
-        filename = f"{uuid.uuid4()}{ext}"
-        filepath = os.path.join(public_dir, filename)
-        with open(filepath, "wb") as f:
-            f.write(await profile_photo.read())
-        update_data["provider_profile.profile_photo_url"] = f"/uploads/{filename}"
+    if has_file(profile_photo):
+        stored = await store_upload(profile_photo, "photo", "public")
+        update_data["provider_profile.profile_photo_url"] = f"/uploads/{stored.filename}"
 
-    if adhaar_card:
-        allowed = ["application/pdf", "image/jpeg", "image/png", "image/jpg"]
-        if adhaar_card.content_type not in allowed:
-            raise HTTPException(400, "Aadhaar card must be a PDF or image (JPG/PNG).")
-        private_dir = os.path.join(settings.local_upload_dir, "private")
-        os.makedirs(private_dir, exist_ok=True)
-        ext = os.path.splitext(adhaar_card.filename or "file")[1]
-        filename = f"{uuid.uuid4()}{ext}"
-        filepath = os.path.join(private_dir, filename)
-        with open(filepath, "wb") as f:
-            f.write(await adhaar_card.read())
+    if has_file(adhaar_card):
+        stored = await store_upload(adhaar_card, "document", "private")
         update_data["provider_profile.adhaar_card_url"] = (
             f"/api/v1/providers/{current_user['id']}/adhaar"
         )
-        update_data["provider_profile.adhaar_card_filename"] = filename
+        update_data["provider_profile.adhaar_card_filename"] = stored.filename
 
     if update_data:
         await db.users.update_one({"id": current_user["id"]}, {"$set": update_data})
         logger.info(f"Provider {current_user['id']} uploaded new documents.")
+        # SU-015: `current_user` was read before the update; answer with the stored user.
+        current_user = await db.users.find_one({"id": current_user["id"]}) or current_user
 
     provider = await ProviderService(db).get_provider_profile_for_user(current_user)
     return ProviderService.serialize(provider, is_owner=True)
@@ -119,20 +101,10 @@ async def get_provider_adhaar(
     if not filename:
         raise HTTPException(404, "Aadhaar document not found.")
 
-    settings = get_settings()
-    private_path = os.path.join(settings.local_upload_dir, "private", filename)
-    if not os.path.exists(private_path):
-        private_path = os.path.join(settings.local_upload_dir, filename)
-
-    if not os.path.exists(private_path):
-        raise HTTPException(404, "Aadhaar document file not found.")
-
-    ext = os.path.splitext(filename)[1].lower()
-    media_type = "application/pdf" if ext == ".pdf" else (f"image/{ext.replace('.', '')}" if ext in [".jpg", ".jpeg", ".png"] else "application/octet-stream")
-    return FileResponse(
-        private_path,
-        media_type=media_type,
-        filename=f"Aadhaar_{provider.get('name', 'Provider').replace(' ', '_')}{ext}",
+    return private_file_response(
+        filename,
+        f"Aadhaar_{provider.get('name', 'Provider').replace(' ', '_')}",
+        "Aadhaar document file not found.",
     )
 
 
@@ -164,20 +136,10 @@ async def get_provider_bank_proof(
     if not filename:
         raise HTTPException(404, "Bank proof document not found.")
 
-    settings = get_settings()
-    private_path = os.path.join(settings.local_upload_dir, "private", filename)
-    if not os.path.exists(private_path):
-        private_path = os.path.join(settings.local_upload_dir, filename)
-
-    if not os.path.exists(private_path):
-        raise HTTPException(404, "Bank proof document file not found.")
-
-    ext = os.path.splitext(filename)[1].lower()
-    media_type = "application/pdf" if ext == ".pdf" else (f"image/{ext.replace('.', '')}" if ext in [".jpg", ".jpeg", ".png"] else "application/octet-stream")
-    return FileResponse(
-        private_path,
-        media_type=media_type,
-        filename=f"BankProof_{provider.get('name', 'Provider').replace(' ', '_')}{ext}",
+    return private_file_response(
+        filename,
+        f"BankProof_{provider.get('name', 'Provider').replace(' ', '_')}",
+        "Bank proof document file not found.",
     )
 
 
@@ -189,20 +151,47 @@ async def create_skill_request(
     current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    settings = get_settings()
-    os.makedirs(settings.local_upload_dir, exist_ok=True)
-    ext = os.path.splitext(proof_file.filename or "")[1] or ".png"
-    filename = f"skill_proof_{uuid.uuid4()}{ext}"
-    filepath = os.path.join(settings.local_upload_dir, filename)
-    with open(filepath, "wb") as f:
-        f.write(await proof_file.read())
-
-    proof_url = f"/uploads/{filename}"
+    stored = await store_upload(proof_file, "document", "private", prefix="skill_proof_")
     return await ProviderService(db).submit_skill_request(
         provider_user=current_user,
         category_name=category_name,
-        proof_url=proof_url,
+        proof_filename=stored.filename,
         notes=notes,
+    )
+
+
+@router.get(
+    "/skill-requests/{request_id}/proof",
+    responses={
+        200: {"description": "The proof file. Admin or the owning provider only."},
+        401: {"description": "Login required."},
+        403: {"description": "Not the owner and not an admin."},
+        404: {"description": "Request or file not found."},
+    },
+)
+async def get_skill_request_proof(
+    request_id: str,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.ADMIN, UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    skill_request = await db.skill_requests.find_one({"id": request_id})
+    if not skill_request:
+        raise HTTPException(404, "Skill request not found.")
+
+    is_admin = current_user.get("role") == UserRole.ADMIN.value
+    is_owner = skill_request.get("provider_id") == current_user.get("id")
+    if not is_admin and not is_owner:
+        raise HTTPException(403, "Access to this document is forbidden.")
+
+    filename = skill_request.get("proof_filename") or os.path.basename(
+        skill_request.get("proof_url", "")
+    )
+    if not filename:
+        raise HTTPException(404, "Skill proof not found.")
+    return private_file_response(
+        filename,
+        f"SkillProof_{skill_request.get('category_name', 'Skill').replace(' ', '_')}",
+        "Skill proof file not found.",
     )
 
 

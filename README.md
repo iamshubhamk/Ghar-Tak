@@ -10,10 +10,8 @@ Current phase: Phase 7 Development Execution, Foundation implementation.
 
 To quickly test the platform's core workflows, you can use the following roles:
 
-### 1. Test as an Admin
-- **Email:** `admin@ghartak.local`
-- **Password:** `ChangeMe@123`
-- *What you can do:* View the dashboard statistics, search for users, and approve/reject/disable pending Provider accounts.
+### 1. Admin
+- Admin access is by invitation; contact the maintainer.
 
 ### 2. Test as a Customer
 - Simply click "Register" on the live app and create a new Customer account using any email.
@@ -97,7 +95,7 @@ Seed the first admin account:
 ```powershell
 cd backend
 $env:ADMIN_EMAIL="admin@ghartak.local"
-$env:ADMIN_PASSWORD="ChangeMe@123"
+$env:ADMIN_PASSWORD="<your-local-password>"
 python -m scripts.seed_admin
 ```
 

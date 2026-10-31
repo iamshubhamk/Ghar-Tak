@@ -1,26 +1,27 @@
 from datetime import UTC, datetime, timedelta
 
-from sqlalchemy.orm import Session
-
 from app.core.security import create_access_token
 from app.services.auth import AuthService
+from tests.conftest import run
 
 
 def auth_header(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
 
 
-def create_admin_token(db_session: Session) -> str:
-    admin = AuthService(db_session).create_admin_user(
-        name="Admin",
-        email="booking-admin@example.com",
-        password="strongpass123",
+def create_admin_token(db) -> str:
+    admin = run(
+        AuthService(db).create_admin_user(
+            name="Admin",
+            email="booking-admin@example.com",
+            password="strongpass123",
+        )
     )
-    return create_access_token(subject=admin.id, role=admin.role)
+    return create_access_token(subject=admin["id"], role=admin["role"])
 
 
-def setup_verified_provider(client, db_session: Session) -> tuple[str, str, str, str]:
-    admin_token = create_admin_token(db_session)
+def setup_verified_provider(client, db) -> tuple[str, str, str, str]:
+    admin_token = create_admin_token(db)
     category_response = client.post(
         "/api/v1/admin/categories",
         headers=auth_header(admin_token),
@@ -39,7 +40,7 @@ def setup_verified_provider(client, db_session: Session) -> tuple[str, str, str,
         },
     )
     provider_body = provider_response.json()
-    provider_id = provider_body["user"]["provider_profile"]["id"]
+    provider_id = provider_body["user"]["id"]
     provider_token = provider_body["access_token"]
 
     client.patch(
@@ -52,11 +53,11 @@ def setup_verified_provider(client, db_session: Session) -> tuple[str, str, str,
 
 def test_customer_can_create_booking_without_provider_and_admin_can_assign(
     client,
-    db_session,
+    db,
 ) -> None:
     category_id, provider_id, provider_token, admin_token = setup_verified_provider(
         client,
-        db_session,
+        db,
     )
     customer_response = client.post(
         "/api/v1/auth/register/customer",
@@ -106,10 +107,10 @@ def test_customer_can_create_booking_without_provider_and_admin_can_assign(
     assert provider_after_assignment.json()[0]["id"] == booking_id
 
 
-def test_provider_can_move_booking_through_core_lifecycle(client, db_session) -> None:
+def test_provider_can_move_booking_through_core_lifecycle(client, db) -> None:
     category_id, provider_id, provider_token, admin_token = setup_verified_provider(
         client,
-        db_session,
+        db,
     )
     customer_response = client.post(
         "/api/v1/auth/register/customer",
@@ -146,7 +147,7 @@ def test_provider_can_move_booking_through_core_lifecycle(client, db_session) ->
     start_response = client.patch(
         f"/api/v1/provider/bookings/{booking_id}/start",
         headers=auth_header(provider_token),
-        json={},
+        json={"otp": booking_response.json()["otp"]},
     )
     complete_response = client.patch(
         f"/api/v1/provider/bookings/{booking_id}/complete",
@@ -170,10 +171,10 @@ def test_provider_can_move_booking_through_core_lifecycle(client, db_session) ->
     assert paid_response.json()["payment_status"] == "PAID_CASH"
 
 
-def test_customer_can_review_completed_booking_once(client, db_session) -> None:
+def test_customer_can_review_completed_booking_once(client, db) -> None:
     category_id, provider_id, provider_token, admin_token = setup_verified_provider(
         client,
-        db_session,
+        db,
     )
     customer_response = client.post(
         "/api/v1/auth/register/customer",
@@ -210,7 +211,7 @@ def test_customer_can_review_completed_booking_once(client, db_session) -> None:
     client.patch(
         f"/api/v1/provider/bookings/{booking_id}/start",
         headers=auth_header(provider_token),
-        json={},
+        json={"otp": booking_response.json()["otp"]},
     )
     client.patch(
         f"/api/v1/provider/bookings/{booking_id}/complete",
@@ -242,11 +243,11 @@ def test_customer_can_review_completed_booking_once(client, db_session) -> None:
 
 def test_admin_summary_customers_notifications_and_booking_status_update(
     client,
-    db_session,
+    db,
 ) -> None:
     category_id, _provider_id, _provider_token, admin_token = setup_verified_provider(
         client,
-        db_session,
+        db,
     )
     customer_response = client.post(
         "/api/v1/auth/register/customer",
@@ -309,10 +310,10 @@ def test_admin_summary_customers_notifications_and_booking_status_update(
     )
 
 
-def test_admin_can_hide_review_and_rating_recalculates(client, db_session) -> None:
+def test_admin_can_hide_review_and_rating_recalculates(client, db) -> None:
     category_id, provider_id, provider_token, admin_token = setup_verified_provider(
         client,
-        db_session,
+        db,
     )
     customer_response = client.post(
         "/api/v1/auth/register/customer",
@@ -348,7 +349,7 @@ def test_admin_can_hide_review_and_rating_recalculates(client, db_session) -> No
     client.patch(
         f"/api/v1/provider/bookings/{booking_id}/start",
         headers=auth_header(provider_token),
-        json={},
+        json={"otp": booking_response.json()["otp"]},
     )
     client.patch(
         f"/api/v1/provider/bookings/{booking_id}/complete",

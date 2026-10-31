@@ -10,6 +10,7 @@ from app.schemas.booking import (
     AdminBookingStatusUpdateRequest,
     BookingAssignProviderRequest,
     BookingCreateRequest,
+    BookingReleaseRequest,
     BookingResponse,
     BookingStatusUpdateRequest,
     CashPaymentRequest,
@@ -82,6 +83,8 @@ async def admin_mark_cash_paid(
         booking_id,
         payload.final_amount if payload else None,
         payload.note if payload else None,
+        extra_amount=payload.extra_amount if payload else None,
+        extra_note=payload.extra_note if payload else None,
     )
     return BookingService.serialize(booking, actor=current_user)
 
@@ -99,6 +102,8 @@ async def admin_update_booking_status(
         payload.status,
         payload.note,
         payload.final_amount,
+        extra_amount=payload.extra_amount,
+        extra_note=payload.extra_note,
     )
     return BookingService.serialize(booking, actor=current_user)
 
@@ -192,7 +197,12 @@ async def start_booking(
     return BookingService.serialize(booking, actor=current_user)
 
 
-@router.patch("/provider/bookings/{booking_id}/in_progress", response_model=BookingResponse)
+@router.patch(
+    "/provider/bookings/{booking_id}/in_progress",
+    response_model=BookingResponse,
+    deprecated=True,
+    summary="Start Booking In Progress (deprecated alias of /start)",
+)
 async def start_booking_in_progress(
     booking_id: str,
     payload: BookingStatusUpdateRequest | None = None,
@@ -209,6 +219,29 @@ async def start_booking_in_progress(
     return BookingService.serialize(booking, actor=current_user)
 
 
+@router.patch("/provider/bookings/{booking_id}/release", response_model=BookingResponse)
+async def release_booking(
+    booking_id: str,
+    payload: BookingReleaseRequest,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.PROVIDER)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Give the job back to the admin queue (ACCEPTED or ON_THE_WAY only). A reason is required."""
+    booking = await BookingService(db).provider_release(current_user, booking_id, payload.note)
+    return BookingService.serialize(booking, actor=current_user)
+
+
+@router.patch("/admin/bookings/{booking_id}/reset-otp", response_model=BookingResponse)
+async def admin_reset_start_otp(
+    booking_id: str,
+    current_user: dict[str, Any] = Depends(require_roles(UserRole.ADMIN)),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Unlock a start code that was locked after too many wrong tries; issues a new code."""
+    booking = await BookingService(db).reset_start_otp(current_user, booking_id)
+    return BookingService.serialize(booking, actor=current_user)
+
+
 @router.patch("/provider/bookings/{booking_id}/complete", response_model=BookingResponse)
 async def complete_booking(
     booking_id: str,
@@ -222,6 +255,8 @@ async def complete_booking(
         "complete",
         payload.note if payload else None,
         payload.final_amount if payload else None,
+        extra_amount=payload.extra_amount if payload else None,
+        extra_note=payload.extra_note if payload else None,
     )
     return BookingService.serialize(booking, actor=current_user)
 
@@ -238,5 +273,7 @@ async def provider_mark_cash_paid(
         booking_id,
         payload.final_amount if payload else None,
         payload.note if payload else None,
+        extra_amount=payload.extra_amount if payload else None,
+        extra_note=payload.extra_note if payload else None,
     )
     return BookingService.serialize(booking, actor=current_user)

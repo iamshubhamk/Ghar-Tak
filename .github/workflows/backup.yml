@@ -1,0 +1,38 @@
+name: MongoDB backup
+
+# Daily mongodump of the production database to a private Cloudflare R2 bucket (T1-14).
+# Needs repository secrets: MONGODB_URL, R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY,
+# R2_BACKUP_BUCKET. Old backups expire through a lifecycle rule on the bucket (see docs/release/storage-and-backups.md).
+on:
+  schedule:
+    - cron: "30 21 * * *" # 03:00 IST
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      MONGODB_URL: ${{ secrets.MONGODB_URL }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+      R2_ENDPOINT: https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com
+      R2_BUCKET: ${{ secrets.R2_BACKUP_BUCKET }}
+    steps:
+      - name: Dump
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+          echo "FILE=ghartak-$STAMP.archive.gz" >> "$GITHUB_ENV"
+          docker run --rm -e MONGODB_URL mongo:7 \
+            sh -c 'mongodump --uri="$MONGODB_URL" --archive --gzip' > dump.archive.gz
+          test "$(stat -c %s dump.archive.gz)" -gt 1024
+      - name: Upload to R2
+        run: |
+          set -euo pipefail
+          aws s3 cp dump.archive.gz "s3://$R2_BUCKET/daily/$FILE" --endpoint-url "$R2_ENDPOINT"
+          aws s3 ls "s3://$R2_BUCKET/daily/$FILE" --endpoint-url "$R2_ENDPOINT"

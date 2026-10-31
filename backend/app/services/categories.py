@@ -1,12 +1,14 @@
 import re
 import uuid
-from motor.motor_asyncio import AsyncIOMotorDatabase
-from typing import Any
 from datetime import UTC, datetime
+from typing import Any
+
+from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.core.default_categories import DEFAULT_SERVICE_CATEGORIES
 from app.core.errors import AppErrorCode, app_http_error
 from app.schemas.category import CategoryCreateRequest, CategoryStatusRequest, CategoryUpdateRequest
+
 
 class CategoryService:
     def __init__(self, db: AsyncIOMotorDatabase) -> None:
@@ -56,6 +58,7 @@ class CategoryService:
         slug = self._normalize_slug(payload.slug or payload.name)
         await self._ensure_unique_slug(slug)
 
+        now = datetime.now(UTC)
         category_doc = {
             "id": str(uuid.uuid4()),
             "name": payload.name,
@@ -64,6 +67,8 @@ class CategoryService:
             "icon": payload.icon,
             "display_order": payload.display_order,
             "is_active": True,
+            "created_at": now,
+            "updated_at": now,
         }
         await self.db.categories.insert_one(category_doc)
         return category_doc

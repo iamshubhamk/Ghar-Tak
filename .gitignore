@@ -23,10 +23,13 @@ frontend/.env
 # Local data
 uploads/
 backend/uploads/
-postgres-data/
+mongo-data/
 
 # OS/editor
 .DS_Store
 Thumbs.db
 .idea/
 .vscode/
+
+# Graphify code maps (local, regenerable)
+graphify-out/

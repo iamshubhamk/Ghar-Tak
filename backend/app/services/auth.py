@@ -1,13 +1,10 @@
-from datetime import UTC, datetime
 import json
-import os
-from pathlib import Path
-from typing import Any
 import uuid
+from datetime import UTC, datetime
+from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.config import get_settings
 from app.core.enums import AvailabilityStatus, UserRole, VerificationStatus
 from app.core.errors import AppErrorCode, app_http_error
 from app.core.logger import setup_logger
@@ -23,6 +20,7 @@ from app.schemas.auth import (
     clean_optional,
 )
 from app.services.notifications import NotificationService
+from app.services.uploads import has_file, store_upload, validate_upload
 
 logger = setup_logger("ghartak.auth")
 
@@ -118,7 +116,6 @@ class AuthService:
         return self._token_for_user(user_doc)
 
     async def register_provider_form(self, form: Any) -> TokenResponse:
-        settings = get_settings()
 
         name = clean_optional(form.get("name"))
         email = clean_optional(form.get("email"))
@@ -230,67 +227,37 @@ class AuthService:
         await self._ensure_unique_contact(email=req_model.email, phone=req_model.phone)
 
         user_id = str(uuid.uuid4())
-        private_dir = Path(settings.local_upload_dir) / "private"
-        public_dir = Path(settings.local_upload_dir) / "public"
-        os.makedirs(private_dir, exist_ok=True)
-        os.makedirs(public_dir, exist_ok=True)
 
-        # 1. Aadhaar Card File Saving
-        adhaar_filename_orig = getattr(adhaar_card, "filename", "") or ""
-        ext = os.path.splitext(adhaar_filename_orig)[1].lower()
-        if ext not in [".pdf", ".jpg", ".jpeg", ".png"]:
-            raise app_http_error(
-                400,
-                AppErrorCode.VALIDATION_ERROR,
-                "Aadhaar card must be a PDF or image (JPG/PNG).",
-            )
-        adhaar_saved_name = f"adhaar_{user_id}{ext}"
-        adhaar_path = private_dir / adhaar_saved_name
-        content = await adhaar_card.read()
-        with open(adhaar_path, "wb") as f:
-            f.write(content)
-        adhaar_card_url = f"/api/v1/providers/{user_id}/adhaar"
-        adhaar_card_filename = adhaar_saved_name
-
-        # 2. Bank Proof File Saving (optional)
+        # Validate every file before writing any of them, so a bad one leaves nothing behind.
         bank_proof = form.get("bank_proof")
+        profile_photo = form.get("profile_photo")
+        await validate_upload(adhaar_card, "document")
+        await adhaar_card.seek(0)
+        if has_file(bank_proof):
+            await validate_upload(bank_proof, "document")
+            await bank_proof.seek(0)
+        if has_file(profile_photo):
+            await validate_upload(profile_photo, "photo")
+            await profile_photo.seek(0)
+
+        # 1. Aadhaar card (private)
+        stored = await store_upload(adhaar_card, "document", "private", prefix="adhaar_")
+        adhaar_card_url = f"/api/v1/providers/{user_id}/adhaar"
+        adhaar_card_filename = stored.filename
+
+        # 2. Bank proof (private, optional)
         bank_proof_url = None
         bank_proof_filename = None
-        if bank_proof and getattr(bank_proof, "filename", None):
-            bp_orig = getattr(bank_proof, "filename", "") or ""
-            bp_ext = os.path.splitext(bp_orig)[1].lower()
-            if bp_ext not in [".pdf", ".jpg", ".jpeg", ".png"]:
-                raise app_http_error(
-                    400,
-                    AppErrorCode.VALIDATION_ERROR,
-                    "Bank proof must be a PDF or image (JPG/PNG).",
-                )
-            bp_saved_name = f"bank_proof_{user_id}{bp_ext}"
-            bp_path = private_dir / bp_saved_name
-            bp_content = await bank_proof.read()
-            with open(bp_path, "wb") as f:
-                f.write(bp_content)
+        if has_file(bank_proof):
+            stored = await store_upload(bank_proof, "document", "private", prefix="bank_proof_")
             bank_proof_url = f"/api/v1/providers/{user_id}/bank-proof"
-            bank_proof_filename = bp_saved_name
+            bank_proof_filename = stored.filename
 
-        # 3. Profile Photo Saving (optional)
-        profile_photo = form.get("profile_photo")
+        # 3. Profile photo (public, optional)
         profile_photo_url = None
-        if profile_photo and getattr(profile_photo, "filename", None):
-            photo_orig = getattr(profile_photo, "filename", "") or ""
-            photo_ext = os.path.splitext(photo_orig)[1].lower()
-            if photo_ext not in [".jpg", ".jpeg", ".png", ".webp"]:
-                raise app_http_error(
-                    400,
-                    AppErrorCode.VALIDATION_ERROR,
-                    "Profile photo must be an image (JPG/PNG/WEBP).",
-                )
-            photo_saved_name = f"profile_{user_id}{photo_ext}"
-            photo_path = public_dir / photo_saved_name
-            photo_content = await profile_photo.read()
-            with open(photo_path, "wb") as f:
-                f.write(photo_content)
-            profile_photo_url = f"/uploads/{photo_saved_name}"
+        if has_file(profile_photo):
+            stored = await store_upload(profile_photo, "photo", "public")
+            profile_photo_url = f"/uploads/{stored.filename}"
 
         # Resolve category names
         if req_model.category_ids:

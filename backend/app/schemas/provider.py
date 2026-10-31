@@ -10,7 +10,15 @@ class ProviderProfileUpdateRequest(BaseModel):
     bio: str | None = Field(default=None, max_length=1000)
     experience_years: int | None = Field(default=None, ge=0, le=60)
     price_note: str | None = Field(default=None, max_length=255)
-    category_ids: list[str] | None = Field(default=None, max_length=12)
+    category_ids: list[str] | None = Field(
+        default=None,
+        max_length=12,
+        deprecated=True,
+        description=(
+            "Deprecated and ignored (T1-07). Skills change only through an admin-approved "
+            "skill request. Accepted until the next release so older apps keep working."
+        ),
+    )
     localities: list[str] | None = Field(default=None, max_length=20)
 
     @field_validator("bio", "price_note", mode="before")

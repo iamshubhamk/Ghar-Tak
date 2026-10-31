@@ -1,0 +1,2 @@
+# Shell scripts must keep LF endings or sh fails on  (core.autocrlf is on for this repo).
+*.sh text eol=lf

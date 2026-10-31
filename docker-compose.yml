@@ -1,21 +1,20 @@
+# Local development database (MongoDB). Run the API from backend/ with uvicorn as usual:
+#   docker compose up -d
+#   cd backend && uvicorn app.main:app --reload
 services:
-  postgres:
-    image: postgres:16-alpine
-    container_name: ghartak-postgres
+  mongo:
+    image: mongo:7
+    container_name: ghartak-mongo
     restart: unless-stopped
-    environment:
-      POSTGRES_DB: ghartak
-      POSTGRES_USER: ghartak
-      POSTGRES_PASSWORD: ghartak
     ports:
-      - "5432:5432"
+      - "27017:27017"
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      - mongo-data:/data/db
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ghartak -d ghartak"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 10s
       timeout: 5s
       retries: 5
 
 volumes:
-  postgres-data:
+  mongo-data:

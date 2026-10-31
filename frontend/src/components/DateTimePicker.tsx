@@ -19,7 +19,7 @@ const AVAILABLE_TIME_SLOTS = [
   { label: '07:00 PM - 08:00 PM', startHour: 19 },
 ];
 
-export const DateTimePicker: React.FC<DateTimePickerProps> = ({ onChange, initialDate }) => {
+export const DateTimePicker: React.FC<DateTimePickerProps> = ({ onChange }) => {
   const todayDateStr = new Date().toISOString().split('T')[0];
   const tomorrowDateStr = new Date(Date.now() + 86400000).toISOString().split('T')[0];
   const dayAfterStr = new Date(Date.now() + 172800000).toISOString().split('T')[0];

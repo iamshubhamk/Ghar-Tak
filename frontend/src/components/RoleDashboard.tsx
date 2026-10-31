@@ -1,7 +1,7 @@
 import { LogOut } from "lucide-react";
 import { User } from "../types/auth";
 import { CustomerDashboard } from "./CustomerDashboard";
-import { MarketplaceAdminPanel } from "./MarketplaceAdminPanel";
+import { MarketplaceAdminPanel } from "../admin/MarketplaceAdminPanel";
 import { ProviderBookingsPanel } from "./ProviderBookingsPanel";
 
 type RoleDashboardProps = {

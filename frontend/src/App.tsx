@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- customer/provider web code, archived in the pivot (T6-04) */
 import { useEffect, useState } from "react";
 import ghartakLogo from "./assets/ghartak-logo.jpg";
 import { AuthPanel } from "./components/AuthPanel";
@@ -23,7 +24,7 @@ interface CartItem {
 }
 
 function App() {
-  const [health, setHealth] = useState<HealthState>("checking");
+  const [, setHealth] = useState<HealthState>("checking");
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [view, setView] = useState<AppView>("home");
   const [showSplash, setShowSplash] = useState(true);
@@ -34,7 +35,7 @@ function App() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [, setSearchQuery] = useState("");
 
   const [pendingCategoryName, setPendingCategoryName] = useState<string | undefined>(() => {
     return sessionStorage.getItem(bookingIntentStorageKey) ?? undefined;

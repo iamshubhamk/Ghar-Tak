@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- customer/provider web code, archived in the pivot (T6-04) */
 import React, { FormEvent, useEffect, useState } from "react";
 import {
   Briefcase,
@@ -5,23 +6,19 @@ import {
   Clock,
   ShieldCheck,
   Banknote,
-  CalendarClock,
   UserCheck,
-  PlayCircle,
   Building,
   Plus,
   FileText,
-  Upload,
   Sparkles,
   AlertTriangle,
   XCircle,
   RefreshCw,
   Building2,
-  Wrench,
   Check,
 } from "lucide-react";
 
-import { apiRequest } from "../lib/api";
+import { ApiRequestError, apiRequest } from "../lib/api";
 import { apiBaseUrl, backendBaseUrl } from "../lib/config";
 import { Booking } from "../types/booking";
 import { Category, ProviderProfile, SkillRequest } from "../types/marketplace";
@@ -235,12 +232,12 @@ export function ProviderBookingsPanel() {
 
   const updateBookingStatus = async (
     bookingId: string,
-    action: "accept" | "reject" | "on_the_way" | "in_progress" | "complete"
+    action: "accept" | "reject" | "on_the_way" | "start" | "complete"
   ) => {
     setStatus("");
     try {
       const payload: Record<string, any> = {};
-      if (action === "in_progress") {
+      if (action === "start") {
         payload.otp = otpInput[bookingId] || "";
       }
 
@@ -251,6 +248,8 @@ export function ProviderBookingsPanel() {
       await loadData();
       setStatus(`Job updated successfully (${action.toUpperCase().replace("_", " ")}).`);
     } catch (error) {
+      // Someone else changed the job first: show what the server has now (no retry).
+      if (error instanceof ApiRequestError && error.code === "BOOKING_STATE_CHANGED") await loadData();
       setStatus(error instanceof Error ? error.message : `Could not update job.`);
     }
   };
@@ -682,7 +681,7 @@ export function ProviderBookingsPanel() {
                               className="p-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-brand-ink w-44"
                             />
                             <button
-                              onClick={() => updateBookingStatus(b.id, "in_progress")}
+                              onClick={() => updateBookingStatus(b.id, "start")}
                               className="px-3.5 py-2 bg-brand-orange text-white rounded-xl text-xs font-extrabold"
                             >
                               Verify & Start
@@ -707,7 +706,7 @@ export function ProviderBookingsPanel() {
                               className="p-2 bg-white border border-amber-300 rounded-xl text-xs font-bold text-brand-ink w-40"
                             />
                             <button
-                              onClick={() => updateBookingStatus(b.id, "in_progress")}
+                              onClick={() => updateBookingStatus(b.id, "start")}
                               className="px-4 py-2 bg-brand-orange hover:bg-brand-orange-hover text-white rounded-xl text-xs font-extrabold shadow-sm"
                             >
                               Verify OTP & Start Job

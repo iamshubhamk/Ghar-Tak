@@ -1,0 +1,64 @@
+# Render Blueprint for GharTak (T1-12). Free tier, Singapore.
+# NOTE: free web services sleep after ~15 min idle, so the first request after a pause is slow.
+# Revisit the paid tier before the Play Store launch.
+# Secrets (sync: false) are set in the Render dashboard, never in git.
+# Service names must match the existing services, or Render will create new ones.
+services:
+  - type: web
+    name: ghartak-api
+    runtime: python
+    region: singapore
+    plan: free
+    branch: main
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.10
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: PASSWORD_RESET_SELF_SERVICE_ENABLED
+        value: "false"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false
+      - key: MONGODB_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+
+  - type: web
+    name: ghar-tak-frontend
+    runtime: static
+    region: singapore
+    branch: main
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+      # Optional marketing-page variables (WE-003); set once the Play listing / WhatsApp number exist.
+      - key: VITE_PLAY_STORE_URL
+        sync: false
+      - key: VITE_WHATSAPP_NUMBER
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      # WE-002: the admin token lives in localStorage, so keep the admin pages out of search results
+      # and allow only same-origin scripts. style-src keeps 'unsafe-inline' for React style attributes.
+      # Add the API origin to connect-src if it is not on *.onrender.com.
+      - path: /admin*
+        name: X-Robots-Tag
+        value: noindex, nofollow
+      - path: /admin*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://*.onrender.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
