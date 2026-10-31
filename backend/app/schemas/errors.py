@@ -22,9 +22,15 @@ class ErrorEnvelope(BaseModel):
 
 
 class ErrorResponse(BaseModel):
-    """What every 4xx answer carries (some older routes still send `detail` as a plain string)."""
+    """What every error answer carries. Read `error`. `detail` is the old shape, kept for one
+    release (T2-08) and then removed; it is either the old envelope or a plain string."""
 
-    detail: ErrorEnvelope | str
+    error: ErrorBody
+    detail: ErrorEnvelope | str | None = Field(
+        default=None,
+        deprecated=True,
+        description="Deprecated alias of `error` (old shape). Will be removed.",
+    )
 
 
 class MessageResponse(BaseModel):

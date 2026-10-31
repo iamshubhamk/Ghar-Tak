@@ -1546,7 +1546,7 @@
         "type": "object"
       },
       "ErrorResponse": {
-        "description": "What every 4xx answer carries (some older routes still send `detail` as a plain string).",
+        "description": "What every error answer carries. Read `error`. `detail` is the old shape, kept for one\nrelease (T2-08) and then removed; it is either the old envelope or a plain string.",
         "properties": {
           "detail": {
             "anyOf": [
@@ -1555,13 +1555,21 @@
               },
               {
                 "type": "string"
+              },
+              {
+                "type": "null"
               }
             ],
+            "deprecated": true,
+            "description": "Deprecated alias of `error` (old shape). Will be removed.",
             "title": "Detail"
+          },
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
           }
         },
         "required": [
-          "detail"
+          "error"
         ],
         "title": "ErrorResponse",
         "type": "object"

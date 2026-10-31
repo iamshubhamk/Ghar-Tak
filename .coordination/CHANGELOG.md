@@ -64,3 +64,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-11-01 | BE-021 | backend | T2-07: complete contract (stable operationIds, named error schema, enums, typed file downloads), drift test, pydantic pinned | inbox: mobile, web, infrastructure, support, architect
 - 2026-11-01 | BE-022 | backend | T2-03: rate limits on login (per IP + per account/IP), refresh and reset; 429 RATE_LIMITED + Retry-After; error handler keeps headers | inbox: mobile, web, infrastructure, support, architect
 - 2026-11-01 | BE-023 | backend | T2-02: password reset by emailed code (request/confirm), old email+phone endpoints closed for good, SMTP adapter, still OFF in production | inbox: mobile, web, infrastructure, support, architect
+- 2026-11-01 | BE-024 | backend | T2-08: one error shape {error:{code,message,details}} on every error, old `detail` kept one release; debug pages only when ENVIRONMENT=local | inbox: mobile, web, infrastructure, support, architect

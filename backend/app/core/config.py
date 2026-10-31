@@ -164,6 +164,11 @@ class Settings(BaseSettings):
         return self
 
     @property
+    def debug_enabled(self) -> bool:
+        """Debug pages (full tracebacks) only ever run locally, whatever DEBUG says (T2-08)."""
+        return self.debug and self.environment.strip().lower() == "local"
+
+    @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
 

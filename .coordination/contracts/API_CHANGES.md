@@ -388,3 +388,28 @@ SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM, SMTP_STARTTLS (true), RESET_CODE_MINUTE
 Database: new collection `password_resets` (one row per user, only a keyed hash of the code), unique index on
 `user_id` and a TTL index on `expires_at`. Nothing existing is changed.
 Clients affected: mobile and web ("Forgot password" screens: email -> code + new password).
+
+## BE-024
+Date: 2026-11-01 | Breaking: no (additive; the old body is unchanged, ADR 0006 §6 / Rule 7)
+Changed: EVERY error answer from the API (4xx and 5xx, including unknown URLs, wrong methods, validation, rate
+limits, uploads and unexpected crashes) now has this body:
+    {"error": {"code": "...", "message": "...", "details": {...}}, "detail": <the old body, unchanged>}
+- Read `error`. `code` is a stable machine value (examples: BOOKING_INVALID_STATUS, AUTH_REQUIRED, VALIDATION_ERROR,
+  RATE_LIMITED), `message` is a sentence safe to show, `details` is an object (may be empty; for example
+  `errors` on 422, `retry_after_seconds` on 429, `attempts_left` on a wrong start code).
+- `detail` is the OLD body exactly as before: `{"error": {...}}` for most errors, or a plain string for some older
+  routes. It is kept for ONE RELEASE so existing clients (the web) keep working while they move to `error`. It is
+  marked deprecated in the contract and will be removed in a later release (announced here first).
+- Errors that only had a text message now also get a `code` from the HTTP status: 400 BAD_REQUEST, 401 AUTH_REQUIRED,
+  403 FORBIDDEN, 404 NOT_FOUND, 405 METHOD_NOT_ALLOWED, 409 CONFLICT, 413 UPLOAD_TOO_LARGE, 415
+  UPLOAD_TYPE_NOT_ALLOWED, 422 VALIDATION_ERROR, 423 OTP_LOCKED, 429 RATE_LIMITED, other 5xx SERVER_ERROR.
+- Unknown URLs (404) and wrong methods (405) used to answer `{"detail": "Not Found"}` through the framework; they
+  now use the same shape.
+- Headers are kept (Retry-After on 429).
+Contract: `ErrorResponse` is now `{error: ErrorBody, detail?: deprecated}`. Generated clients should type errors
+with `ErrorResponse.error`.
+Also (safety): debug pages with full tracebacks now exist only when ENVIRONMENT=local, whatever DEBUG says (a
+production server that forgot DEBUG=false would have leaked tracebacks on a crash).
+Migration path: nothing breaks. Mobile: use `error` from day one. Web: move to `error` during the /admin move (T3-05);
+when no client reads `detail` any more, backend removes it.
+Clients affected: mobile (use `error`), web (migrate in T3-05).

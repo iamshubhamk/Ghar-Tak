@@ -722,3 +722,10 @@ What changed: Email-code reset per ADR 0003 §8: `/request` (always 202, same bo
 Why: AR-018 step 7.
 Action needed in this workstream: Check the result. Decide the email provider with the human. Next: T2-08 one error format.
 Contract ref: contracts/API_CHANGES.md#be-023
+
+## [OPEN] BE-024 — T2-08 done (AR-018 step 8): all of AR-018 is delivered
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Mechanism (your ADR 0006 §6 'keep `detail` as an alias for one release'): every error body is `{error: {code, message, details}, detail: <old body>}`, produced in one place (`core/error_format.py`) by the HTTP, validation and crash handlers; unknown URLs and wrong methods now use it too. No opt-in header was needed because the change is purely additive. Side finding fixed: Starlette debug mode returns a raw traceback page instead of our JSON when DEBUG is true, so debug is now forced off outside ENVIRONMENT=local (a production server missing DEBUG=false would have leaked tracebacks). AR-018 summary: IN-005 (BE-016), T2-01 (BE-017), T2-06 (BE-018), T2-04 (BE-019), T2-05 (BE-020), T2-07 (BE-021), T2-03 (BE-022), T2-02 (BE-023), T2-08 (BE-024). Open for you: Hindi wording review (BE-020), SMTP provider for password reset (BE-023), when to drop the access token to 15 minutes (needs web admin on refresh), removal date for `detail`.
+Why: AR-018 step 8.
+Action needed in this workstream: Check the results and the open decisions listed.
+Contract ref: contracts/API_CHANGES.md#be-024

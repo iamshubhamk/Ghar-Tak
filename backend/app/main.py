@@ -3,14 +3,16 @@ import os
 import traceback
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.api.v1.router import api_router
 from app.core.config import get_settings
+from app.core.error_format import error_content
 from app.core.errors import AppErrorCode
 from app.core.logger import setup_logger
 from app.db.init_db import create_database_tables
@@ -41,7 +43,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title=settings.app_name,
-    debug=settings.debug,
+    debug=settings.debug_enabled,
     lifespan=lifespan,
 )
 
@@ -65,8 +67,8 @@ else:
     app.mount("/uploads", PublicUploadFiles(directory=public_upload_dir), name="uploads")
 
 
-@app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
+@app.exception_handler(StarletteHTTPException)  # also covers FastAPI's own and unknown URLs
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
     if exc.status_code >= 500:
         logger.error(f"HTTP 500 error on {request.method} {request.url.path}: {exc.detail}")
     else:
@@ -76,7 +78,7 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
 
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail},
+        content=error_content(exc.status_code, exc.detail),
         headers=getattr(exc, "headers", None),  # for example Retry-After on a 429
     )
 
@@ -88,7 +90,7 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     )
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error. Please try again later."},
+        content=error_content(500, "Internal server error. Please try again later."),
     )
 
 
@@ -100,15 +102,16 @@ async def validation_exception_handler(
     logger.warning(f"Validation error on {request.method} {request.url.path}: {exc.errors()}")
     return JSONResponse(
         status_code=422,
-        content={
-            "detail": {
+        content=error_content(
+            422,
+            {
                 "error": {
                     "code": AppErrorCode.VALIDATION_ERROR,
                     "message": "Please check the highlighted fields and try again.",
                     "details": {"errors": jsonable_encoder(exc.errors())},
                 }
-            }
-        },
+            },
+        ),
     )
 
 
