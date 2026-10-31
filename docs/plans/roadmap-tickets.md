@@ -1,7 +1,7 @@
 # GharTak — phased development tickets
 
 Status: **proposed** (2026-10-28). Owner: architect (AR-004). Needs the human's approval, one phase at a
-time. **Phase 0 approved and dispatched 2026-10-29. Phase 1 + policies P-1..P-4 approved 2026-10-29 (P-2 changed to the ₹99 launch offer). ADRs 0003–0006 accepted.** **Phases 2–3: the human said to hold until Phase 1 is done and verified (2026-10-29).** **Direction change (AR-016, 2026-11-01): the human wants to continue mobile and hold the web app. Mobile design mockup published for review; Phase 2 and the mobile tickets of Phase 3 aren't dispatched until the human approves. Web tickets are on hold.**
+time. **Phase 0 approved and dispatched 2026-10-29. Phase 1 + policies P-1..P-4 approved 2026-10-29 (P-2 changed to the ₹99 launch offer). ADRs 0003–0006 accepted.** **Phases 2–3: the human said to hold until Phase 1 is done and verified (2026-10-29).** **Direction change (AR-016, 2026-11-01): the human wants to continue mobile and hold the web app. Mobile design mockup published for review; Phase 2 and the mobile tickets of Phase 3 aren't dispatched until the human approves. Web tickets are on hold, except admin-only work (AR-017: T3-05 admin part, T4-09, T4-10, and admin follow-ups to backend changes).**
 
 ## How to read this
 
@@ -139,6 +139,8 @@ it. Because admins assign by hand, a push notification on assignment is part of 
 | T4-05 | App: addresses, booking request form, "Awaiting assignment" with expected time, my bookings, booking detail + timeline + start OTP, cancel | mobile | T4-01, T4-02, T3-02 | L (split in 2) | A customer can book and follow every status | mobile plan M2 |
 | T4-06 | App: push registration + tap → opens the booking | mobile | T4-04, T4-05 | S | Tapping a push opens the right booking | ADR 0004 |
 | T4-08 | Idempotency key on booking creation, so a retry on patchy 3G can't create a duplicate | backend | T1-05 | S | Same key twice creates one booking | test plan §6 Q6 |
+| T4-09 | Admin alerts for new requests: browser Web Push (works on phone Chrome without an app, free), plus an in-panel sound while it's open; alert again when a job passes 30 min | backend + web | T4-04 | M | An admin gets an alert within ~10 s with the panel closed, and again at 30 min | human, AR-017 |
+| T4-10 | Admin job queue that works on a phone: only jobs needing a provider first, waiting time per job, count in the header, call buttons, availability shown when picking a provider | web | T3-05, T4-01 | M | Matches the mockup; a job can be assigned from a phone browser | human, AR-017 |
 | T4-07 | Lifecycle tests on the app build + 3G checks | support | T4-05 | M | Test plan §4 checks pass | OR-005 |
 
 ---
@@ -152,7 +154,7 @@ found.
 |---|---|---|---|---|---|---|
 | T5-01 | App: provider registration + document upload + "pending verification" screen + resubmit | mobile | T3-02, T1-13 | M | A provider gets verified end to end | mobile plan M3 |
 | T5-02 | App: jobs list, accept/reject/on-the-way/start (OTP)/complete/cash-paid, release job, availability toggle, skill requests | mobile | T5-01, T1-09 | L (split in 2) | A full job runs on two phones | mobile plan M3 |
-| T5-03 | Push to providers on new assignment; push/notification to admins on new request | backend | T4-04 | S | Providers and admins notified in real time | MO-001 #2 |
+| T5-03 | Push to providers on new assignment (admin alerts moved to T4-09) | backend | T4-04 | S | Providers notified in real time | MO-001 #2 |
 | T5-04 | Admin backlog: status override (allowed targets only), mark cash paid, hide/show reviews, category edit/enable, customer search | web | T3-05, T1-04, Q-W6 | M | Each action works in `/admin` | web gap review |
 | T5-05 | Provider earnings summary (computed in the app first; endpoint optional) | mobile | T5-02 | S | Earnings by week/month shown | mobile plan #11 |
 

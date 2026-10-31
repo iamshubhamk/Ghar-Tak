@@ -49,3 +49,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | AR-015 | architect | Real-MongoDB CI job; prod dry run of index migration; AR-007 Part A reminder | inbox: infrastructure
 - 2026-10-31 | BE-015 | backend | AR-014: SU-015 documents response fix; SU-016 partial unique contact indexes (startup-safe) + scripts/migrate_contact_indexes.py (dry-run default, not applied) | inbox: infrastructure, support, architect
 - 2026-11-01 | AR-016 | architect | Human direction: continue mobile, hold web; app design mockup published for review | inbox: web (info)
+- 2026-11-01 | AR-017 | architect | Human approved: admin alerts (T4-09) and phone-friendly admin queue (T4-10) move to Phase 4; admin-only exception to the web hold; not dispatched yet | inbox: none
