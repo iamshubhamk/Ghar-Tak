@@ -1,10 +1,11 @@
 # Plan — GharTak Android app
 
-Status: **proposed** (2026-10-27). Owner: mobile. Needs the human's approval before any code is written.
+Status: **approved** (human, 2026-11-01; ADRs 0003, 0004, 0006; answers in `docs/plans/open-questions.md`). Owner: mobile.
+Updated 2026-11-01 (MO-002) to match ADR 0004: demand-first booking, no provider browsing in M1, push on assignment in M2.
 
 ## 1. Recommendation in one paragraph
 
-Build **one** Expo (managed) + TypeScript app on the current SDK (58), with expo-router, TanStack Query,
+Build **one** Expo (managed) + TypeScript app on the current SDK (58, confirmed `npm view expo version` = 58.0.22 on 2026-11-01), with expo-router, TanStack Query,
 Zustand, expo-secure-store, expo-notifications, and EAS Build for Android. API types are generated from
 `.coordination/contracts/openapi.json`. Start a **fresh project** instead of upgrading the existing
 `mobile/` app (Expo SDK 51, seven SDKs behind). Port its screens and components where they're useful.
@@ -35,7 +36,7 @@ the server.
 **One app**, with the experience picked by role after login (`GET /auth/me` → `role`):
 
 - `app/(auth)/…` for login and register (choose customer or provider)
-- `app/(customer)/…` tabs: Home, Bookings, Notifications, Profile
+- `app/(customer)/…` tabs: Home, Bookings, Notifications, Profile (no provider list or provider profile in M1)
 - `app/(provider)/…` tabs: Jobs, Earnings, Notifications, Profile
 - Admins aren't supported in the app. They're sent to the web `/admin`.
 
@@ -52,24 +53,26 @@ All paths are under `/api/v1`.
 |---|---|
 | Splash / session restore | `GET /auth/me`, `GET /health` |
 | Language picker (first launch) | — (local) |
-| Login (phone or email + password) | `POST /auth/login` |
-| Register customer | `POST /auth/register/customer` |
+| Login (phone + password primary) | `POST /auth/login` |
+| Register customer (phone required, email optional) | `POST /auth/register/customer` |
 | Register provider (multi-step) | `GET /categories`, `POST /auth/register/provider` |
 | Forgot password | `POST /auth/password-reset/verify`, `POST /auth/password-reset` |
 | Notifications | `GET /notifications`, `PATCH /notifications/{id}/read` |
-| Push registration (background) | `POST /notifications/push-token` |
+| Push registration + language (background) | `POST /notifications/push-token` (also sends `preferred_language`) |
 
-### Customer
+### Customer (demand-first, ADR 0004 item 8)
 | Screen | Endpoints |
 |---|---|
-| Home (categories, search) | `GET /categories` |
-| Category → provider list | `GET /providers?category_id&locality` |
-| Provider profile + reviews | `GET /providers/{id}`, `GET /providers/{id}/reviews` |
-| Book: address, time, issue, confirm | `GET/POST/PUT/DELETE /customer/me/addresses`, `POST /bookings` |
+| Home (services, ₹99 visit offer, assignment promise) | `GET /categories` (localised names), `GET /app/config` |
+| Service info | `GET /categories` |
+| Request a service: address/locality, preferred time, issue | `GET/POST/PUT/DELETE /customer/me/addresses`, `POST /bookings` (no `provider_id`) |
 | My bookings | `GET /bookings/my` |
-| Booking detail / tracker (status timeline, start OTP, cancel) | `GET /bookings/my` (filtered on the client, see MISSING #4), `PATCH /bookings/{id}/cancel` |
+| Booking detail / tracker: **"Awaiting assignment"** with expected response time, status timeline, start OTP, cancel; once assigned: provider name, photo, rating | `GET /bookings/{id}` (MISSING #4), `PATCH /bookings/{id}/cancel` |
 | Leave review | `POST /bookings/{id}/review` |
-| Profile (photo, addresses, language, logout) | `GET /auth/me`, `POST /customer/me/photo`, addresses endpoints |
+| Profile (photo, addresses, language, logout, delete account) | `GET /auth/me`, `POST /customer/me/photo`, addresses endpoints |
+
+Dropped from M1: category → provider list, provider profile page, provider reviews list (`/providers*`). The
+customer never chooses a provider in MVP.
 
 ### Provider
 | Screen | Endpoints |
@@ -95,15 +98,15 @@ shown.**
 | 1 | `POST /auth/refresh`, `POST /auth/logout` (rotating refresh tokens) | M1 | P0 | Today there's a 60-minute access token only, so users would be logged out every hour on mobile. **Auth change → human approval + ADR (Rule 11).** |
 | 2 | `GET /app/config`: `min_supported_version`, `latest_version`, `play_store_url`, `support_phone`, feature flags | M1 | P0 | The force-update path that Rule 7 relies on. Without it we can't retire old builds. |
 | 3 | Localised category names (`name_hi` or `names: {en, hi}`) | M1 | P0 | Rule 16. Additive, not breaking. |
-| 4 | `GET /bookings/{id}`, for the customer, the assigned provider, and admin | M2 | P0 | Today the client has to fetch the whole list to show one booking. Push deep links need it too. |
+| 4 | `GET /bookings/{id}`, for the customer, the assigned provider, and admin, with `status_history[]` | M2 | P0 | Today the client has to fetch the whole list, and there's no history to draw a timeline from. Push deep links need it too. |
 | 5 | Pagination (`limit`, `cursor`) on `/bookings/my`, `/provider/bookings`, `/providers`, `/notifications` | M2 | P1 | Payload size on 3G. Additive: keep the current unpaginated behaviour as the default. |
 | 6 | `PATCH /customer/me` (name, phone, default locality) | M2 | P1 | Today only the photo can be changed. |
-| 7 | Send pushes on booking status changes (Expo Push API) + `DELETE /notifications/push-token` on logout | M4 | P0 | Tokens are stored today but nothing sends a push. Needs an Expo access token (env secret, release). |
+| 7 | Push on assignment and every status change, **localised on the server** (`preferred_language` + template keys, ADR 0004 item 9), receipt checks pruning `DeviceNotRegistered`, `DELETE /notifications/push-token` on logout | **M2** | P0 | Sending already exists (`send_expo_push`); the gaps are the Expo access token, pruning, logout removal and localisation. |
 | 8 | **Account deletion**: `POST /auth/me/delete-request` (or `DELETE /auth/me`) + a web page | M5 | P0 | **Google Play requires** in-app account deletion and a web URL for apps that create accounts. |
 | 9 | One error format for every error (`{error: {code, message, details}}`) | M1 | P1 | Today validation errors and other errors are shaped differently (see API_CHANGES baseline). |
 | 10 | Drop the duplicate `/start` vs `/in_progress` (keep `/start`, deprecate the other) | M3 | P2 | Rule 7: deprecate, don't remove. |
 | 11 | `GET /provider/me/earnings?period=` | M3 | P2 | Optional. The client can compute it for MVP. |
-| 12 | Phone + OTP login | later | **open question** | Patna users expect OTP login, but SMS costs money (the MVP rule is "no paid SMS"). Options: Firebase Phone Auth (free quota) or MSG91 (~₹0.15–0.25/SMS). Phone + password for M1. |
+| 12 | Phone + OTP login | later | decided: later (Q-M2) | Patna users expect OTP login, but SMS costs money (the MVP rule is "no paid SMS"). Options: Firebase Phone Auth (free quota) or MSG91 (~₹0.15–0.25/SMS). Phone + password for M1. |
 | 13 | Provider time-slot availability | later | P2 | Today it's an AVAILABLE/UNAVAILABLE toggle only. Fine for MVP. |
 
 ## 6. Keeping types in sync with the backend
@@ -136,7 +139,7 @@ The web admin panel can follow the same pattern later.
 ## 8. What happens to the existing `mobile/` app
 
 - Tag the current commit `mobile-v0`, then move the folder to `archive/mobile-v0/`, kept as reference
-  until M3. (Moving files needs the human's OK, Rule 11.)
+  until M3. (Human approved the move, Q-M1.) `ProviderCard` is no longer needed in M1.
 - Worth porting: `StatusBadge`, `RatingStars`, `ProviderCard`, `CategoryCard`, `AddressPickerModal` (with
   expo-location), and the screen flows. Not ported: AsyncStorage token storage, the axios client,
   React Navigation setup, hardcoded URLs.
@@ -145,17 +148,17 @@ The web admin panel can follow the same pattern later.
 
 | Milestone | Scope | Backend dependencies | Done when |
 |---|---|---|---|
-| **M1: Auth + browse** | Fresh Expo app, i18n (hi/en), theme, typed API client, login/register (both roles), session restore via secure store, Home → category → providers → provider profile, force-update gate | #1 refresh/logout, #2 app config, #3 localised categories | Works on a low-end Android device over throttled 3G. Debug APK shared via EAS internal distribution. |
-| **M2: Booking + tracking** | Addresses, create booking, my bookings, booking detail with status timeline and start OTP, cancel, pull to refresh, offline banner | #4 booking by id, #5 pagination, #6 customer profile | A customer can book and see each status the provider sets. qa-monitoring's lifecycle tests pass. |
+| **M1: Auth + home** | Fresh Expo app, i18n (hi/en), theme, typed API client, login/register (both roles, phone-first), session restore via secure store, refresh on 401, Home with services + offer + assignment promise, service info, force-update gate, offline banner | #1 refresh/logout, #2 app config, #3 localised categories | Works on a low-end Android device over throttled 3G. Debug APK shared via EAS internal distribution. |
+| **M2: Booking + tracking** | Addresses, create booking (no provider), my bookings, booking detail with "Awaiting assignment", status timeline and start OTP, cancel, pull to refresh, **push on assignment/status change with deep link** | #4 booking by id + history, #5 pagination, #6 customer profile, #7 localised push | A customer can book and see each status the provider sets. qa-monitoring's lifecycle tests pass. |
 | **M3: Provider flow** | Provider onboarding and document upload, pending-verification screen, jobs list, accept/reject/on-the-way/start (OTP)/complete/cash-paid, availability toggle, skills | #10 deprecation (optional), #11 (optional) | A full booking lifecycle runs end to end on two phones. |
-| **M4: Reviews + push** | Leave review, provider reviews list, push notifications with deep links to booking detail, notification centre | #7 push sending + token removal | A push arrives within about 10 s of a status change, and tapping it opens the booking. |
+| **M4: Reviews + notification centre** | Leave review, notification centre, provider-side push | - | A review can be left after completion; provider receives pushes for new assignments. |
 | **M5: Play Store** | Release AAB, signing, store listing (hi/en), privacy policy, data-safety form, account deletion, Sentry, internal → closed → production tracks (release leads) | #8 account deletion | App is live on Play production. Crash-free sessions above 99% in closed testing. |
 
-## 10. Open questions for the human
+## 10. Decisions (answered by the human, 2026-10-29 to 2026-11-01)
 
-1. OK to start fresh on SDK 58 and archive the existing `mobile/` app?
-2. Phone + OTP login: needed at launch, or is phone + password fine until after the Play launch?
-3. Package name: `com.ghartak.app`? (It can't be changed after the first Play upload.)
-4. Do you already have a Google Play developer account (one-time US$25) and an Expo account?
-5. Is Hindi the default language, or should it follow the device locale? (Proposed: device locale, with a
-   choice on first launch.)
+1. Fresh start on SDK 58 and archive the old `mobile/` app: **yes** (Q-M1).
+2. Phone + OTP login: **later**; phone + password at launch (Q-M2).
+3. Package name: **`com.ghartak.app`**.
+4. Play developer and Expo accounts: infrastructure tracks this.
+5. Language: **follows the device locale**, with a choice on first launch.
+6. Booking is **demand-first**; a provider who wants to book uses a different phone number (Q-M6).
