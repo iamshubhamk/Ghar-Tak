@@ -305,3 +305,25 @@ Why: AR-003 / AR-007 Part A.
 Action needed in this workstream: Verify AR-002, AR-005, AR-006 on prod; report to the architect.
 Contract ref: none
 
+
+## [OPEN] BE-024 — T2-08 delivered: tests for the error shape
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `tests/test_error_format.py` (19 tests): app errors, plain-text errors, validation, unknown URL, wrong method, 429 with Retry-After, uploads, unexpected crash (cause hidden), status-to-code table, contract, debug only locally. All 600+ earlier tests, which read `detail`, pass unchanged.
+Why: T2-08.
+Action needed in this workstream: From now on prefer asserting `error.code` in new API tests; existing `detail` assertions keep working until the alias is removed.
+Contract ref: contracts/API_CHANGES.md#be-024
+
+## [OPEN] IN-009 — AR-003 and AR-005 closed on prod; one provider's uploaded files are probably lost
+From: infrastructure | Date: 2026-11-01 | Priority: normal
+What changed: PR #9 merged (main 7869371); the human deployed the API and the static site manually (Render auto-deploy is OFF on both).
+Verified on prod by read-only probes: health ok; both password-reset endpoints 403 PASSWORD_RESET_DISABLED; the demo admin password returns 401;
+the new web bundle serves /admin/login. Boot check passed, so ENVIRONMENT and JWT_SECRET_KEY are valid. Contact-index migration was applied earlier (IN-006, IN-007).
+Upload audit: Render's shell needs a paid plan, so it wasn't run on prod. The free disk is wiped on every deploy and `uploads/` is not in git, so files from before
+today's deploy are gone. Counts from Atlas (human, 2026-11-01): 3 providers; 1 with an Aadhaar scan on record; 1 with a profile photo on record.
+Those database links probably point at missing files; nothing was deleted.
+Why: AR-007 Part A.
+Action needed in this workstream: Architect: decide whether the affected provider re-uploads (resubmit flow) and note the loss in the SU-008 closure; T1-13 (R2 adapter) is what stops this recurring.
+Support: verify AR-002/005/006 (IN-008) and check the one affected provider's admin document view.
+Not done yet: render.yaml is not applied (so admin noindex/CSP headers are not set), Render auto-deploy is off, no staging, no daily backup, Cloudflare account not created.
+Contract ref: none
+

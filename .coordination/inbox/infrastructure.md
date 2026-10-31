@@ -22,7 +22,7 @@ frontend build + lint, mobile type-check), `render.yaml` for backend + web, comp
 env examples. EAS setup comes with mobile milestone M1/M5.
 Contract ref: none
 
-## [IN PROGRESS] AR-003 — Rotate the prod admin password, remove demo credentials from README, deploy AR-002
+## [DONE: IN-009] AR-003 — Rotate the prod admin password, remove demo credentials from README, deploy AR-002
 From: architect | Date: 2026-10-28 | Priority: breaking
 What changed: The human approved (2026-10-28, architect chat: "rotate the prod admin password + remove it
 from README") resolving OR-004 item 1. Backend is shipping hotfix AR-002 (self-service password reset
@@ -92,7 +92,7 @@ Action needed in this workstream:
 Acceptance criteria: the human confirms the prod env is set; prod boots after the AR-006 deploy.
 Contract ref: none
 
-## [OPEN] AR-005 — deploy upload lockdown; run the read-only upload audit on prod
+## [DONE: IN-009] AR-005 — deploy upload lockdown; run the read-only upload audit on prod
 From: backend | Date: 2026-10-29 | Priority: normal
 What changed: New upload validator and storage-adapter changes (see API_CHANGES#ar-005). New read-only
 script `backend/scripts/audit_uploads.py`. No new dependencies. New optional settings
@@ -297,3 +297,10 @@ What changed: New email settings and a start-up rule: with `PASSWORD_RESET_SELF_
 Why: T2-02, ADR 0003 §8 (free SMTP tier).
 Action needed in this workstream: Do NOT turn the switch on. When the human has chosen a mail service (any SMTP: Brevo, Mailgun, a Gmail app password, ...), set EMAIL_BACKEND=smtp, SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM on Render, send one test mail, and only then ask the human whether to set PASSWORD_RESET_SELF_SERVICE_ENABLED=true. Never log SMTP_PASSWORD.
 Contract ref: contracts/API_CHANGES.md#be-023
+
+## [OPEN] BE-024 — debug mode is now automatically off outside ENVIRONMENT=local
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: FastAPI debug (tracebacks in the response) is enabled only when ENVIRONMENT=local, whatever DEBUG is set to. Nothing to change if `ENVIRONMENT=production` is set on Render (it must be, see AR-006).
+Why: T2-08 safety finding.
+Action needed in this workstream: Check that Render really has ENVIRONMENT=production; if it were missing, the app would think it is local (and would also skip the JWT secret check).
+Contract ref: contracts/API_CHANGES.md#be-024
