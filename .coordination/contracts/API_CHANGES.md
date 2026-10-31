@@ -248,3 +248,25 @@ on `token_hash`, indexes on `user_id` and `family_id`, and a TTL index on `famil
 is dropped or rewritten.
 Clients affected: mobile (M1 login/session, logout button), web admin (use refresh before the access token
 expires and send `X-Client: admin_web`).
+
+## BE-018
+Date: 2026-11-01 | Breaking: yes, for registration without a phone number only (see migration path)
+Changed: `POST /api/v1/auth/register/customer` and `POST /api/v1/auth/register/provider` (JSON and the
+multipart form) now REQUIRE `phone`; `email` is optional. A missing or invalid phone returns 422
+`VALIDATION_ERROR` ("Enter a valid 10-digit mobile number.").
+- Accepted input: any common way of typing an Indian mobile number: `9876543210`, `+91 98765 43210`,
+  `09876543210`, `919876543210`, with spaces/dashes/brackets. The server stores and returns it as **10 digits**
+  (`9876543210`). The number must start with 6, 7, 8 or 9.
+- Duplicates are detected across formats: registering `9876543210` when `+919876543210` already exists gives
+  409 `DUPLICATE_ACCOUNT`.
+Changed: `POST /api/v1/auth/login` still takes `email` OR `phone` (unchanged), but a `phone` is now matched in any
+format, including accounts created earlier with `+91`, `91`, a leading `0`, or `+91 ` in front. Existing users
+are NOT rewritten, so `user.phone` of an older account can still be in its old format: do not assume 10 digits.
+Fixed: `POST /auth/register/provider` with an invalid JSON body answered 500; it now answers 422 like every
+other validation error.
+Migration path (Rule 7): the web sign-up form already sends `phone`; the old Android build is archived and is
+not distributed, so no shipped client registers without a phone. Email-only registration stops working with
+this change. If a client does register without a phone it gets a clear 422 and no data is created.
+Not changed: password reset (still `email` + `phone`, disabled in production), existing accounts, the stored
+format of existing phones. Email is still unique when present; a missing email is fine for any number of accounts.
+Clients affected: mobile (phone-first sign-up and login screens), web (make the phone field required on sign-up).

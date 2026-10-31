@@ -680,3 +680,10 @@ What changed: `services/sessions.py` + `/auth/refresh` + `/auth/logout`, per ADR
 Why: AR-018 step 1.
 Action needed in this workstream: Check the result. Next: T2-06 phone-first registration.
 Contract ref: contracts/API_CHANGES.md#be-017
+
+## [OPEN] BE-018 — T2-06 done (AR-018 step 2) + Q3
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Phone required for customer and provider registration (JSON and form), email optional; input normalised to 10 digits (+91, 91, leading 0, separators, must start 6-9); duplicate detection and login match every stored variant (`phone_variants`), existing data is not rewritten (Rule 11). 54 tests on mongomock and real MongoDB 7. Decision to note: this is a breaking change for email-only registration, justified by 'no shipped client registers without a phone' (web form sends it, Android app archived); say so if you want a transition period. Also fixed an unrelated 500 (invalid JSON provider registration). Test infrastructure: the shared test client auto-fills a phone, `strict_client` does not. Not touched: password reset `email`+`phone` (T2-02).
+Why: AR-018 step 2.
+Action needed in this workstream: Check the result. Next: T2-04 /app/config.
+Contract ref: contracts/API_CHANGES.md#be-018

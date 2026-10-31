@@ -14,6 +14,7 @@ Real mode needs care with event loops: a Motor client belongs to the loop it is 
 """
 
 import asyncio
+import itertools
 import os
 import uuid
 from collections.abc import AsyncGenerator, Callable, Generator
@@ -105,8 +106,34 @@ def db(_real_database: AsyncIOMotorDatabase | None) -> Generator[AsyncIOMotorDat
     client.close()
 
 
-@pytest.fixture
-def client(db: AsyncIOMotorDatabase) -> Generator[TestClient, None, None]:
+_phone_counter = itertools.count(1)
+REGISTER_PATHS = ("/auth/register/customer", "/auth/register/provider")
+
+
+def unique_phone() -> str:
+    """A valid, never-repeated mobile number for tests that do not care about the phone."""
+    return f"9{next(_phone_counter):09d}"
+
+
+class PhoneFillingClient(TestClient):
+    """Registration now requires a phone number (T2-06). Most tests are about something else, so
+    this client adds a unique phone to a registration that has none. Tests of the phone rule itself
+    use the `strict_client` fixture, which does not."""
+
+    def request(self, method, url, **kwargs):  # type: ignore[no-untyped-def]
+        if method.upper() == "POST" and str(url).split("?")[0].endswith(REGISTER_PATHS):
+            body = kwargs.get("json")
+            form = kwargs.get("data")
+            if isinstance(body, dict) and "phone" not in body:
+                kwargs["json"] = {**body, "phone": unique_phone()}
+            elif isinstance(form, dict) and "phone" not in form:
+                kwargs["data"] = {**form, "phone": unique_phone()}
+            elif body is None and form is None and kwargs.get("files") is not None:
+                kwargs["data"] = {"phone": unique_phone()}
+        return super().request(method, url, **kwargs)
+
+
+def _api_client(db: AsyncIOMotorDatabase, client_class: type[TestClient]):
     if REAL_URL:
         url, name = db.test_url, db.name
 
@@ -124,7 +151,19 @@ def client(db: AsyncIOMotorDatabase) -> Generator[TestClient, None, None]:
 
     app.dependency_overrides[get_db] = override_get_db
     # Not used as a context manager on purpose: skips the lifespan (which would connect).
-    yield TestClient(app)
+    return client_class(app)
+
+
+@pytest.fixture
+def strict_client(db: AsyncIOMotorDatabase) -> Generator[TestClient, None, None]:
+    """The API exactly as a real client sees it (no test conveniences)."""
+    yield _api_client(db, TestClient)
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client(db: AsyncIOMotorDatabase) -> Generator[TestClient, None, None]:
+    yield _api_client(db, PhoneFillingClient)
     app.dependency_overrides.clear()
 
 

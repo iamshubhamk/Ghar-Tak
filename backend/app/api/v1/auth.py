@@ -1,7 +1,9 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, Request, Response
+from fastapi.exceptions import RequestValidationError
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from pydantic import ValidationError
 
 from app.api.deps import get_current_user
 from app.core.config import get_settings
@@ -52,7 +54,11 @@ async def register_provider(
         token = await AuthService(db).register_provider_form(form)
     else:
         body = await request.json()
-        payload = ProviderRegisterRequest.model_validate(body)
+        try:
+            payload = ProviderRegisterRequest.model_validate(body)
+        except ValidationError as error:
+            # Answer 422 in the standard validation format instead of crashing with a 500.
+            raise RequestValidationError(error.errors()) from error
         token = await AuthService(db).register_provider(payload)
     return await SessionService(db).start_session(token, x_client)
 

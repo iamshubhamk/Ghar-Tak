@@ -18,6 +18,7 @@ from app.schemas.auth import (
     ProviderRegisterRequest,
     TokenResponse,
     clean_optional,
+    phone_variants,
 )
 from app.services.notifications import NotificationService
 from app.services.sessions import SessionService
@@ -465,7 +466,7 @@ class AuthService:
         if email:
             filters.append({"email": email.lower()})
         if phone:
-            filters.append({"phone": phone})
+            filters.append({"phone": {"$in": phone_variants(phone)}})
         if not filters:
             return None
             

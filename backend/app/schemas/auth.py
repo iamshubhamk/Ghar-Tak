@@ -1,3 +1,4 @@
+import re
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, model_validator
@@ -13,6 +14,41 @@ def clean_optional(value: str | None) -> str | None:
     return stripped or None
 
 
+MOBILE_PATTERN = re.compile(r"[6-9]\d{9}")
+
+
+def normalize_phone_number(value: str | None) -> str | None:
+    """Indian mobile numbers are kept as 10 digits: '+91 98765 43210', '09876543210' and
+    '919876543210' all become '9876543210'. Text that is not a number is returned cleaned but
+    unchanged, so login simply finds no account instead of failing validation."""
+    cleaned = clean_optional(value)
+    if not cleaned:
+        return None
+    digits = re.sub(r"[\s\-().]", "", cleaned)
+    digits = digits[1:] if digits.startswith("+") else digits
+    if not digits.isdigit():
+        return cleaned
+    if len(digits) == 12 and digits.startswith("91"):
+        return digits[2:]
+    if len(digits) == 11 and digits.startswith("0"):
+        return digits[1:]
+    return digits
+
+
+def phone_variants(phone: str) -> list[str]:
+    """Every way an existing account may have stored this number (older data is not rewritten)."""
+    normalised = normalize_phone_number(phone) or phone
+    if not MOBILE_PATTERN.fullmatch(normalised):
+        return [phone]
+    return [
+        normalised,
+        f"+91{normalised}",
+        f"91{normalised}",
+        f"0{normalised}",
+        f"+91 {normalised}",
+    ]
+
+
 class ContactMixin(BaseModel):
     email: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=30)
@@ -26,7 +62,7 @@ class ContactMixin(BaseModel):
     @field_validator("phone", mode="before")
     @classmethod
     def normalize_phone(cls, value: str | None) -> str | None:
-        return clean_optional(value)
+        return normalize_phone_number(value)
 
     @model_validator(mode="after")
     def require_email_or_phone(self):
@@ -35,7 +71,17 @@ class ContactMixin(BaseModel):
         return self
 
 
-class CustomerRegisterRequest(ContactMixin):
+class PhoneFirstMixin(ContactMixin):
+    """Registration (T2-06): a valid mobile number is required, the email is optional."""
+
+    @model_validator(mode="after")
+    def require_mobile_number(self):
+        if not self.phone or not MOBILE_PATTERN.fullmatch(self.phone):
+            raise ValueError("Enter a valid 10-digit mobile number.")
+        return self
+
+
+class CustomerRegisterRequest(PhoneFirstMixin):
     name: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=8, max_length=128)
     default_address: str | None = Field(default=None, max_length=500)
@@ -47,7 +93,7 @@ class CustomerRegisterRequest(ContactMixin):
         return clean_optional(value)
 
 
-class ProviderRegisterRequest(ContactMixin):
+class ProviderRegisterRequest(PhoneFirstMixin):
     name: str = Field(min_length=2, max_length=120)
     password: str = Field(min_length=8, max_length=128)
     bio: str | None = Field(default=None, max_length=1000)
