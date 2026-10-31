@@ -687,3 +687,10 @@ What changed: Phone required for customer and provider registration (JSON and fo
 Why: AR-018 step 2.
 Action needed in this workstream: Check the result. Next: T2-04 /app/config.
 Contract ref: contracts/API_CHANGES.md#be-018
+
+## [OPEN] BE-019 — T2-04 done (AR-018 step 3): GET /app/config
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Public endpoint, values from settings, validated at start-up (version format, min <= latest, HH:MM window). `flags.password_reset_enabled` mirrors the AR-002 setting so the app knows whether to show forgot-password. Left `play_store_url` and `support_phone` nullable as you said. 16 tests.
+Why: AR-018 step 3.
+Action needed in this workstream: Check the result. Next: T2-05 Hindi category names.
+Contract ref: contracts/API_CHANGES.md#be-019

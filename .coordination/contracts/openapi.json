@@ -213,6 +213,115 @@
         "title": "AdminDashboardSummary",
         "type": "object"
       },
+      "AppConfigResponse": {
+        "description": "Public settings the mobile app reads on start-up (T2-04). No login needed.",
+        "properties": {
+          "assignment_promise": {
+            "$ref": "#/components/schemas/AssignmentPromise"
+          },
+          "flags": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "description": "Feature switches, for example password_reset_enabled.",
+            "title": "Flags",
+            "type": "object"
+          },
+          "latest_version": {
+            "description": "The newest released version (gentle update prompt).",
+            "title": "Latest Version",
+            "type": "string"
+          },
+          "min_supported_version": {
+            "description": "Versions below this must be blocked with an 'update the app' screen.",
+            "title": "Min Supported Version",
+            "type": "string"
+          },
+          "offer_ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the launch offer ends, if it has an end date.",
+            "title": "Offer Ends At"
+          },
+          "play_store_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Where the update button goes.",
+            "title": "Play Store Url"
+          },
+          "support_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Phone number for the help button.",
+            "title": "Support Phone"
+          },
+          "visit_charge_inr": {
+            "description": "Visit charge in rupees (launch offer).",
+            "title": "Visit Charge Inr",
+            "type": "number"
+          }
+        },
+        "required": [
+          "min_supported_version",
+          "latest_version",
+          "visit_charge_inr",
+          "assignment_promise"
+        ],
+        "title": "AppConfigResponse",
+        "type": "object"
+      },
+      "AssignmentPromise": {
+        "description": "What the app tells the customer about how fast a provider is assigned (ADR 0004).",
+        "properties": {
+          "minutes": {
+            "description": "Expected time to assign a provider, in minutes.",
+            "title": "Minutes",
+            "type": "integer"
+          },
+          "timezone": {
+            "description": "IANA time zone of the window, for example Asia/Kolkata.",
+            "title": "Timezone",
+            "type": "string"
+          },
+          "window_end": {
+            "description": "Local end of the service window, HH:MM (24 hour).",
+            "title": "Window End",
+            "type": "string"
+          },
+          "window_start": {
+            "description": "Local start of the service window, HH:MM (24 hour).",
+            "title": "Window Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "minutes",
+          "window_start",
+          "window_end",
+          "timezone"
+        ],
+        "title": "AssignmentPromise",
+        "type": "object"
+      },
       "AvailabilityStatus": {
         "enum": [
           "AVAILABLE",
@@ -3797,6 +3906,28 @@
         "summary": "Search Users",
         "tags": [
           "admin"
+        ]
+      }
+    },
+    "/api/v1/app/config": {
+      "get": {
+        "description": "Public values for the mobile app: force-update versions, support contact, visit charge,\nassignment promise and feature flags. Everything comes from settings (environment variables).",
+        "operationId": "get_app_config",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppConfigResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get App Config",
+        "tags": [
+          "app"
         ]
       }
     },

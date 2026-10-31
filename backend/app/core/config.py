@@ -30,6 +30,18 @@ class Settings(BaseSettings):
     refresh_admin_web_hours: int = Field(default=12, ge=1)
     refresh_grace_seconds: int = Field(default=60, ge=0, le=600)
 
+    # App configuration served to the mobile app by GET /app/config (T2-04). All optional; the
+    # human has not supplied the Play Store link or the support phone yet, so those stay empty.
+    app_min_supported_version: str = Field(default="1.0.0", pattern=r"^\d+\.\d+\.\d+$")
+    app_latest_version: str = Field(default="1.0.0", pattern=r"^\d+\.\d+\.\d+$")
+    play_store_url: str | None = None
+    support_phone: str | None = None
+    assignment_promise_minutes: int = Field(default=30, ge=1, le=1440)
+    service_window_start: str = Field(default="08:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    service_window_end: str = Field(default="22:00", pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
+    service_timezone: str = "Asia/Kolkata"
+    app_flags: dict[str, bool] = Field(default_factory=dict)  # APP_FLAGS='{"some_flag": true}'
+
     # Interim hotfix (AR-002): reset has no OTP, so it stays off unless enabled for local dev.
     password_reset_self_service_enabled: bool = False
 
@@ -57,6 +69,18 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def min_version_not_above_latest(self) -> "Settings":
+        def parts(value: str) -> tuple[int, ...]:
+            return tuple(int(piece) for piece in value.split("."))
+
+        if parts(self.app_min_supported_version) > parts(self.app_latest_version):
+            raise ValueError(
+                "APP_MIN_SUPPORTED_VERSION cannot be higher than APP_LATEST_VERSION "
+                "(that would lock every user out)."
+            )
+        return self
 
     @model_validator(mode="after")
     def require_r2_settings_when_selected(self) -> "Settings":

@@ -270,3 +270,20 @@ this change. If a client does register without a phone it gets a clear 422 and n
 Not changed: password reset (still `email` + `phone`, disabled in production), existing accounts, the stored
 format of existing phones. Email is still unique when present; a missing email is fine for any number of accounts.
 Clients affected: mobile (phone-first sign-up and login screens), web (make the phone field required on sign-up).
+
+## BE-019
+Date: 2026-11-01 | Breaking: no (new public endpoint)
+Added: `GET /api/v1/app/config` (no login; `Cache-Control: public, max-age=60`; operationId `get_app_config`).
+Returns: `min_supported_version`, `latest_version` ("X.Y.Z"), `play_store_url` (nullable), `support_phone`
+(nullable), `visit_charge_inr` (99.0), `offer_ends_at` (nullable ISO time), `assignment_promise`
+`{minutes: 30, window_start: "08:00", window_end: "22:00", timezone: "Asia/Kolkata"}`, and `flags`
+(object of booleans; `password_reset_enabled` is always present and says whether the "forgot password" screen
+should be shown).
+The values come from environment settings (APP_MIN_SUPPORTED_VERSION, APP_LATEST_VERSION, PLAY_STORE_URL,
+SUPPORT_PHONE, LAUNCH_VISIT_CHARGE_INR, LAUNCH_OFFER_ENDS_AT, ASSIGNMENT_PROMISE_MINUTES,
+SERVICE_WINDOW_START/END, SERVICE_TIMEZONE, APP_FLAGS). `play_store_url` and `support_phone` are empty (null)
+until the human supplies them. The server refuses to start if the minimum version is higher than the latest.
+Force-update rule for clients: if the app's own version is lower than `min_supported_version`, block the app
+with an update screen; if lower than `latest_version`, show a dismissible prompt. Compare the three numbers
+as numbers (1.10.0 is newer than 1.9.0).
+Clients affected: mobile (start-up gate, home screen text, support button, forgot-password visibility).
