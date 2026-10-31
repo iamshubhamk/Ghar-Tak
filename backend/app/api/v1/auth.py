@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Header, Request, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
 from app.api.deps import get_current_user
@@ -10,44 +10,85 @@ from app.db.session import get_db
 from app.schemas.auth import (
     CustomerRegisterRequest,
     LoginRequest,
+    LogoutRequest,
     PasswordResetSubmitRequest,
     PasswordResetVerifyRequest,
     PasswordResetVerifyResponse,
     ProviderRegisterRequest,
+    RefreshRequest,
     TokenResponse,
     UserResponse,
 )
 from app.services.auth import AuthService
+from app.services.sessions import SessionService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+CLIENT_HEADER_HELP = (
+    "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including "
+    "`admin_web` or no header) gets the 12-hour admin one."
+)
 
 
 @router.post("/register/customer", response_model=TokenResponse, status_code=201)
 async def register_customer(
     payload: CustomerRegisterRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
+    x_client: str | None = Header(default=None, description=CLIENT_HEADER_HELP),
 ) -> TokenResponse:
-    return await AuthService(db).register_customer(payload)
+    token = await AuthService(db).register_customer(payload)
+    return await SessionService(db).start_session(token, x_client)
 
 
 @router.post("/register/provider", response_model=TokenResponse, status_code=201)
 async def register_provider(
     request: Request,
     db: AsyncIOMotorDatabase = Depends(get_db),
+    x_client: str | None = Header(default=None, description=CLIENT_HEADER_HELP),
 ) -> TokenResponse:
     content_type = request.headers.get("content-type", "")
     if "multipart/form-data" in content_type:
         form = await request.form()
-        return await AuthService(db).register_provider_form(form)
-
-    body = await request.json()
-    payload = ProviderRegisterRequest.model_validate(body)
-    return await AuthService(db).register_provider(payload)
+        token = await AuthService(db).register_provider_form(form)
+    else:
+        body = await request.json()
+        payload = ProviderRegisterRequest.model_validate(body)
+        token = await AuthService(db).register_provider(payload)
+    return await SessionService(db).start_session(token, x_client)
 
 
 @router.post("/login", response_model=TokenResponse)
-async def login(payload: LoginRequest, db: AsyncIOMotorDatabase = Depends(get_db)) -> TokenResponse:
-    return await AuthService(db).login(payload)
+async def login(
+    payload: LoginRequest,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+    x_client: str | None = Header(default=None, description=CLIENT_HEADER_HELP),
+) -> TokenResponse:
+    token = await AuthService(db).login(payload)
+    return await SessionService(db).start_session(token, x_client)
+
+
+@router.post(
+    "/refresh",
+    response_model=TokenResponse,
+    responses={
+        401: {"description": "AUTH_REFRESH_INVALID, AUTH_REFRESH_EXPIRED or AUTH_REFRESH_REUSED."},
+        403: {"description": "The account is disabled (ACCOUNT_DISABLED)."},
+    },
+)
+async def refresh(
+    payload: RefreshRequest, db: AsyncIOMotorDatabase = Depends(get_db)
+) -> TokenResponse:
+    """Swap a refresh token for a new access + refresh pair. The old refresh token stops working
+    (a retry within 60 seconds is tolerated for bad mobile connections)."""
+    return await SessionService(db).refresh(payload.refresh_token)
+
+
+@router.post("/logout", status_code=204)
+async def logout(payload: LogoutRequest, db: AsyncIOMotorDatabase = Depends(get_db)) -> Response:
+    """End this login (all tokens of the session) and optionally forget the push token.
+    Always answers 204, even for an unknown token."""
+    await SessionService(db).logout(payload.refresh_token, payload.push_token)
+    return Response(status_code=204)
 
 
 @router.get("/me", response_model=UserResponse)
@@ -92,6 +133,8 @@ async def verify_password_reset_identity(
 async def reset_password(
     payload: PasswordResetSubmitRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
+    x_client: str | None = Header(default=None, description=CLIENT_HEADER_HELP),
 ) -> TokenResponse:
-    return await AuthService(db).reset_password(payload)
+    token = await AuthService(db).reset_password(payload)
+    return await SessionService(db).start_session(token, x_client)
 

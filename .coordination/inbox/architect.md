@@ -673,3 +673,10 @@ What changed: Suite on real MongoDB 7: 515 passed (2m14s); on mongomock: 500 pas
 Why: AR-018 step 0.
 Action needed in this workstream: Check the result. Next: T2-01 refresh tokens.
 Contract ref: none
+
+## [OPEN] BE-017 — T2-01 done (AR-018 step 1): refresh tokens + logout, access stays 60 min
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: `services/sessions.py` + `/auth/refresh` + `/auth/logout`, per ADR 0003 §1-7: opaque 32-byte tokens stored as SHA-256 hashes, rotation with the 60 s grace window and family revocation on reuse, mobile 30 d sliding / 90 d absolute, admin_web 12 h fixed, revoke-all on password change and provider disable (`tokens_valid_after` also invalidates earlier access tokens). 29 new tests on mongomock and real MongoDB 7. Decisions you may want to confirm: (1) a rotated token reused inside the grace window cancels the child issued first, so only the newest pair works; (2) the retry window is a setting (`REFRESH_GRACE_SECONDS`, default 60); (3) the access-token second-granularity check means an access token issued in the very same second as a password change stays valid; (4) account deletion (ADR 0003 §6) is not built yet because there is no delete endpoint; `SessionService.revoke_all_for_user` is ready for it. Lifetime settings: REFRESH_MOBILE_SLIDING_DAYS, REFRESH_MOBILE_ABSOLUTE_DAYS, REFRESH_ADMIN_WEB_HOURS.
+Why: AR-018 step 1.
+Action needed in this workstream: Check the result. Next: T2-06 phone-first registration.
+Contract ref: contracts/API_CHANGES.md#be-017

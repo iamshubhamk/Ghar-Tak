@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from datetime import UTC
 from typing import Any
 
 from fastapi import Depends, status
@@ -32,6 +33,14 @@ async def get_current_user(
             "Invalid or expired token.",
         )
 
+    # Tokens issued before T2-01 have no `typ`; they stay valid until they expire (ADR 0003 §7).
+    if payload.get("typ", "access") != "access":
+        raise app_http_error(
+            status.HTTP_401_UNAUTHORIZED,
+            AppErrorCode.AUTH_REQUIRED,
+            "Invalid or expired token.",
+        )
+
     user = await db.users.find_one({"id": payload["sub"]})
     if not user:
         raise app_http_error(
@@ -39,6 +48,18 @@ async def get_current_user(
             AppErrorCode.AUTH_REQUIRED,
             "User not found.",
         )
+
+    valid_after = user.get("tokens_valid_after")
+    if valid_after is not None:
+        if valid_after.tzinfo is None:
+            valid_after = valid_after.replace(tzinfo=UTC)
+        issued_at = payload.get("iat")
+        if issued_at is None or int(issued_at) < int(valid_after.timestamp()):
+            raise app_http_error(
+                status.HTTP_401_UNAUTHORIZED,
+                AppErrorCode.AUTH_REQUIRED,
+                "Your session ended. Please log in again.",
+            )
 
     if not user.get("is_active"):
         raise app_http_error(

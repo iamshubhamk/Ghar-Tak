@@ -80,6 +80,16 @@ async def create_database_tables(db: AsyncIOMotorDatabase) -> None:
     await _warn_about_old_contact_indexes(db)
     await _ensure_index(db.users, [("role", pymongo.ASCENDING)])
 
+    # Refresh tokens (ADR 0003): new collection, new indexes only.
+    await _ensure_index(
+        db.refresh_tokens, [("token_hash", pymongo.ASCENDING)], unique=True
+    )
+    await _ensure_index(db.refresh_tokens, [("user_id", pymongo.ASCENDING)])
+    await _ensure_index(db.refresh_tokens, [("family_id", pymongo.ASCENDING)])
+    await _ensure_index(
+        db.refresh_tokens, [("family_expires_at", pymongo.ASCENDING)], expireAfterSeconds=0
+    )
+
     await _ensure_index(db.categories, [("name", pymongo.ASCENDING)], unique=True)
     await _ensure_index(db.bookings, [("customer_id", pymongo.ASCENDING)])
     await _ensure_index(db.bookings, [("provider_id", pymongo.ASCENDING)])

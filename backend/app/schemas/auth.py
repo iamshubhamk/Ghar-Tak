@@ -140,7 +140,19 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
+    # T2-01: present on login, register, reset and refresh (the client keeps it in secure storage).
+    refresh_token: str | None = None
+    expires_in: int | None = None  # seconds the access token is valid
     user: UserResponse
+
+
+class RefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=10, max_length=200)
+
+
+class LogoutRequest(BaseModel):
+    refresh_token: str | None = Field(default=None, max_length=200)
+    push_token: str | None = Field(default=None, max_length=300)
 
 
 class PasswordResetVerifyRequest(BaseModel):

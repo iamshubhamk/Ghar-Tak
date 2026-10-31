@@ -1391,6 +1391,36 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "LogoutRequest": {
+        "properties": {
+          "push_token": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Push Token"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
+          }
+        },
+        "title": "LogoutRequest",
+        "type": "object"
+      },
       "NotificationResponse": {
         "properties": {
           "created_at": {
@@ -2126,6 +2156,21 @@
         "title": "PushTokenRequest",
         "type": "object"
       },
+      "RefreshRequest": {
+        "properties": {
+          "refresh_token": {
+            "maxLength": 200,
+            "minLength": 10,
+            "title": "Refresh Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "refresh_token"
+        ],
+        "title": "RefreshRequest",
+        "type": "object"
+      },
       "ReviewCreateRequest": {
         "properties": {
           "comment": {
@@ -2368,6 +2413,28 @@
           "access_token": {
             "title": "Access Token",
             "type": "string"
+          },
+          "expires_in": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires In"
+          },
+          "refresh_token": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refresh Token"
           },
           "token_type": {
             "default": "bearer",
@@ -3736,6 +3803,26 @@
     "/api/v1/auth/login": {
       "post": {
         "operationId": "login_api_v1_auth_login_post",
+        "parameters": [
+          {
+            "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+            "in": "header",
+            "name": "x-client",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+              "title": "X-Client"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3774,6 +3861,41 @@
         ]
       }
     },
+    "/api/v1/auth/logout": {
+      "post": {
+        "description": "End this login (all tokens of the session) and optionally forget the push token.\nAlways answers 204, even for an unknown token.",
+        "operationId": "logout_api_v1_auth_logout_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Logout",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/me": {
       "get": {
         "operationId": "me_api_v1_auth_me_get",
@@ -3803,6 +3925,26 @@
     "/api/v1/auth/password-reset": {
       "post": {
         "operationId": "reset_password_api_v1_auth_password_reset_post",
+        "parameters": [
+          {
+            "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+            "in": "header",
+            "name": "x-client",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+              "title": "X-Client"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3888,9 +4030,77 @@
         ]
       }
     },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "description": "Swap a refresh token for a new access + refresh pair. The old refresh token stops working\n(a retry within 60 seconds is tolerated for bad mobile connections).",
+        "operationId": "refresh_api_v1_auth_refresh_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefreshRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "description": "AUTH_REFRESH_INVALID, AUTH_REFRESH_EXPIRED or AUTH_REFRESH_REUSED."
+          },
+          "403": {
+            "description": "The account is disabled (ACCOUNT_DISABLED)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refresh",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/v1/auth/register/customer": {
       "post": {
         "operationId": "register_customer_api_v1_auth_register_customer_post",
+        "parameters": [
+          {
+            "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+            "in": "header",
+            "name": "x-client",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+              "title": "X-Client"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -3932,6 +4142,26 @@
     "/api/v1/auth/register/provider": {
       "post": {
         "operationId": "register_provider_api_v1_auth_register_provider_post",
+        "parameters": [
+          {
+            "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+            "in": "header",
+            "name": "x-client",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
+              "title": "X-Client"
+            }
+          }
+        ],
         "responses": {
           "201": {
             "content": {
@@ -3942,6 +4172,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Register Provider",

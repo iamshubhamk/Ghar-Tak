@@ -57,3 +57,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-11-01 | MO-003 | mobile | Tagged `mobile-v0`; old SDK 51 app archived to `archive/mobile-v0/`; human's package edits kept in a named stash | inbox: architect
 - 2026-11-01 | MO-004 | mobile | T3-01: fresh Expo SDK 58 app in `mobile/` (expo-router, hi/en i18n, theme, secure-store tokens, typed API client from `openapi.json`); tsc + expo-doctor clean, Android bundle 2.8 MB | inbox: infrastructure, support, architect
 - 2026-11-01 | BE-016 | backend | IN-005: whole test suite runs on real MongoDB (515 pass); tests can never reach the DB in backend/.env | inbox: infrastructure, support, architect
+- 2026-11-01 | BE-017 | backend | T2-01: refresh tokens (rotation, 60 s grace, reuse detection) + logout; revoke on password change/disable; access stays 60 min | inbox: mobile, web, support, architect

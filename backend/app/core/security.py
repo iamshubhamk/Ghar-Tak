@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
@@ -22,12 +23,16 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 def create_access_token(subject: str, role: str, expires_delta: timedelta | None = None) -> str:
     settings = get_settings()
-    expires_at = datetime.now(UTC) + (
+    issued_at = datetime.now(UTC)
+    expires_at = issued_at + (
         expires_delta or timedelta(minutes=settings.jwt_access_token_minutes)
     )
     payload: dict[str, Any] = {
         "sub": subject,
         "role": role,
+        "typ": "access",
+        "iat": issued_at,
+        "jti": uuid.uuid4().hex,
         "exp": expires_at,
     }
     return jwt.encode(payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm)

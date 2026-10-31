@@ -20,6 +20,7 @@ from app.schemas.auth import (
     clean_optional,
 )
 from app.services.notifications import NotificationService
+from app.services.sessions import SessionService
 from app.services.uploads import has_file, store_upload, validate_upload
 
 logger = setup_logger("ghartak.auth")
@@ -403,6 +404,8 @@ class AuthService:
             {"id": user["id"]},
             {"$set": {"password_hash": new_hash, "updated_at": now}},
         )
+        # ADR 0003 §6: a new password ends every existing session of this account.
+        await SessionService(self.db).revoke_all_for_user(user["id"], "password_changed")
 
         await NotificationService(self.db).notify_user(
             user_id=user["id"],

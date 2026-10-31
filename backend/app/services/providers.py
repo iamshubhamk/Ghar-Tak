@@ -13,6 +13,7 @@ from app.schemas.auth import clean_optional
 from app.schemas.provider import ProviderProfileUpdateRequest
 from app.services.bookings import BookingService
 from app.services.notifications import NotificationService
+from app.services.sessions import SessionService
 from app.services.uploads import has_file, store_upload
 
 logger = setup_logger("ghartak.providers")
@@ -453,6 +454,7 @@ class ProviderService:
             "is_active": False,
         }
         await self.db.users.update_one({"id": provider_id}, {"$set": update_data})
+        await SessionService(self.db).revoke_all_for_user(provider_id, "user_disabled")
         await BookingService(self.db).release_open_bookings(
             provider_id, "The provider was disabled by an admin."
         )

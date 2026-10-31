@@ -22,7 +22,13 @@ class Settings(BaseSettings):
 
     jwt_secret_key: str = "change-this-local-secret"
     jwt_algorithm: str = "HS256"
-    jwt_access_token_minutes: int = 60
+    jwt_access_token_minutes: int = 60  # stays 60 until web and mobile both refresh (ADR 0003 §7)
+
+    # Refresh tokens (T2-01, ADR 0003)
+    refresh_mobile_sliding_days: int = Field(default=30, ge=1)
+    refresh_mobile_absolute_days: int = Field(default=90, ge=1)
+    refresh_admin_web_hours: int = Field(default=12, ge=1)
+    refresh_grace_seconds: int = Field(default=60, ge=0, le=600)
 
     # Interim hotfix (AR-002): reset has no OTP, so it stays off unless enabled for local dev.
     password_reset_self_service_enabled: bool = False

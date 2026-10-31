@@ -215,3 +215,36 @@ one-time database step described in `backend/scripts/migrate_contact_indexes.py`
 dry run first). Until it has run, an old database keeps its old indexes and the old behaviour; the API starts
 normally either way and logs a warning.
 Clients affected: none need to change. Web: the provider documents screen can trust the response now.
+
+## BE-017
+Date: 2026-11-01 | Breaking: no (additive; ADR 0003 §1-7)
+Added: `POST /api/v1/auth/refresh` body `{"refresh_token"}` -> `TokenResponse` (new `access_token`, new
+`refresh_token`, `expires_in`, `user`). Each refresh token works ONCE: use the new one next time.
+- Errors (401 unless noted): `AUTH_REFRESH_INVALID` (unknown token), `AUTH_REFRESH_EXPIRED`,
+  `AUTH_REFRESH_REUSED` (an already-used or revoked token came back: the whole login is ended, log in again),
+  403 `ACCOUNT_DISABLED`. On any 401 from this endpoint the client must clear its tokens and show login.
+- Retry tolerance: if the SAME refresh token is sent again within 60 seconds (the reply got lost on a bad
+  connection) the server issues a fresh pair and cancels the pair it issued the first time. So always keep and
+  use the newest pair; never use an older one.
+Added: `POST /api/v1/auth/logout` body `{"refresh_token"?, "push_token"?}` -> **204**, no body. Ends that login
+(the token and everything it was rotated into) and removes `push_token` from the user. Always 204, even for an
+unknown or missing token. No auth header needed. The access token already issued stays valid until it expires
+(60 minutes now), so also forget it on the device.
+Changed: `TokenResponse` (login, `register/customer`, `register/provider`, `password-reset`) now also has
+`refresh_token` and `expires_in` (seconds the access token lives; 3600 now). Old clients ignore them.
+Added: request header `X-Client: mobile | admin_web` on login, both register endpoints and password reset. It
+picks the refresh lifetime: `mobile` = 30 days sliding (renewed on every refresh), never more than 90 days from
+login; anything else (including no header) = `admin_web` = 12 hours from login, not extended by refreshing.
+Changed: access tokens now carry `typ: "access"`, `iat` and `jti`. Tokens issued before this change (no `typ`)
+keep working until they expire. A refresh token is NOT accepted as an access token.
+Changed: a password change or an admin disabling a provider ends all sessions of that user: their refresh
+tokens are revoked, and access tokens issued before that moment are rejected with 401 `AUTH_REQUIRED`
+(after a password reset the same call returns a new, working session).
+Unchanged on purpose: the access token still lives 60 minutes. It drops to 15 only when mobile and web admin
+both use refresh (ADR 0003 §7 step 3); that will be announced in its own entry.
+Database: new collection `refresh_tokens` (only the SHA-256 hash of each token is stored) with a unique index
+on `token_hash`, indexes on `user_id` and `family_id`, and a TTL index on `family_expires_at`. New
+`users.tokens_valid_after` field is set only when a password changes or an account is disabled. Nothing existing
+is dropped or rewritten.
+Clients affected: mobile (M1 login/session, logout button), web admin (use refresh before the access token
+expires and send `X-Client: admin_web`).
