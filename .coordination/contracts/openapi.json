@@ -1748,6 +1748,48 @@
         "title": "NotificationResponse",
         "type": "object"
       },
+      "PasswordResetConfirmRequest": {
+        "properties": {
+          "code": {
+            "description": "The 6-digit code from the email.",
+            "pattern": "^\\d{6}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          },
+          "new_password": {
+            "maxLength": 128,
+            "minLength": 8,
+            "title": "New Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email",
+          "code",
+          "new_password"
+        ],
+        "title": "PasswordResetConfirmRequest",
+        "type": "object"
+      },
+      "PasswordResetRequestRequest": {
+        "properties": {
+          "email": {
+            "format": "email",
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "PasswordResetRequestRequest",
+        "type": "object"
+      },
       "PasswordResetSubmitRequest": {
         "properties": {
           "email": {
@@ -5785,7 +5827,110 @@
     },
     "/api/v1/auth/password-reset": {
       "post": {
+        "deprecated": true,
         "operationId": "auth_reset_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetSubmitRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request cannot be done (bad value)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Login required, or the token is invalid."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Self-service password reset is disabled (code PASSWORD_RESET_DISABLED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict (duplicate or state changed)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
+          }
+        },
+        "summary": "Removed: always 403 (use /password-reset/confirm)",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password-reset/confirm": {
+      "post": {
+        "description": "Set a new password with the emailed code (400 `RESET_CODE_INVALID` if wrong or expired).\nEvery other session of the account is ended; the answer is a fresh login.",
+        "operationId": "auth_confirm_password_reset",
         "parameters": [
           {
             "description": "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including `admin_web` or no header) gets the 12-hour admin one.",
@@ -5810,7 +5955,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PasswordResetSubmitRequest"
+                "$ref": "#/components/schemas/PasswordResetConfirmRequest"
               }
             }
           },
@@ -5905,7 +6050,116 @@
             }
           }
         },
-        "summary": "Reset Password",
+        "summary": "Confirm Password Reset",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/v1/auth/password-reset/request": {
+      "post": {
+        "description": "Email a 6-digit code to the address if a normal account uses it. The answer is always the\nsame, so it never reveals whether an account exists. Admin accounts and accounts without an\nemail cannot reset themselves: they contact support.",
+        "operationId": "auth_request_password_reset",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PasswordResetRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "The request cannot be done (bad value)."
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Login required, or the token is invalid."
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Self-service password reset is disabled (code PASSWORD_RESET_DISABLED)."
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not found."
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict (duplicate or state changed)."
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (code RATE_LIMITED). Wait the `Retry-After` seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "summary": "Request Password Reset",
         "tags": [
           "auth"
         ]
@@ -5913,6 +6167,7 @@
     },
     "/api/v1/auth/password-reset/verify": {
       "post": {
+        "deprecated": true,
         "operationId": "auth_verify_password_reset_identity",
         "requestBody": {
           "content": {
@@ -6003,17 +6258,10 @@
                 }
               }
             },
-            "description": "Too many attempts (code RATE_LIMITED). Wait the `Retry-After` seconds.",
-            "headers": {
-              "Retry-After": {
-                "schema": {
-                  "type": "integer"
-                }
-              }
-            }
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
-        "summary": "Verify Password Reset Identity",
+        "summary": "Removed: always 403 (use /password-reset/request)",
         "tags": [
           "auth"
         ]

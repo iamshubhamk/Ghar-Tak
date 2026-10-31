@@ -359,3 +359,32 @@ Known trade-off: someone who keeps failing logins for a victim's number from the
 (account + IP) for 15 minutes; the victim on a different IP can still log in, until the account-wide cap of 20 per
 hour is reached.
 Clients affected: mobile and web (handle 429 on login/refresh/reset with the Retry-After seconds).
+
+## BE-023
+Date: 2026-11-01 | Breaking: no for running clients (the old reset was already off in production since AR-002)
+Added: `POST /api/v1/auth/password-reset/request` body `{"email"}` -> **202** `{"message"}`. Emails a 6-digit code
+(valid 15 minutes, usable once) if a normal account uses that email. The answer is ALWAYS the same, whether or not
+the account exists, so it reveals nothing. Admin accounts never get a code (they reset through support), nor do
+accounts without an email or disabled accounts. At most 3 codes per email per hour (further requests still answer
+202 but send nothing). Rate limited per IP (429 `RATE_LIMITED`).
+Added: `POST /api/v1/auth/password-reset/confirm` body `{"email", "code" (6 digits), "new_password" (min 8)}` ->
+`TokenResponse` (a fresh login with `refresh_token`; send `X-Client` like on login). Errors: **400**
+`RESET_CODE_INVALID` for a wrong, expired, used or unknown code (the same answer in every case), 422 for a code
+that is not 6 digits or a password shorter than 8. After 5 wrong tries the code is burned and a new one must be
+requested. A successful reset ends EVERY other session of that user (refresh tokens revoked, older access tokens
+rejected). Rate limited per IP.
+Both new routes answer 403 `PASSWORD_RESET_DISABLED` while the switch `PASSWORD_RESET_SELF_SERVICE_ENABLED` is off
+(still the default and still OFF in production; do not switch it on without the human's OK). `GET /app/config`
+`flags.password_reset_enabled` mirrors the switch: show "Forgot password" only when it is true.
+Removed (closed for good): `POST /auth/password-reset/verify` and `POST /auth/password-reset` (the old email + phone
+reset with no proof of ownership, SU-002) now ALWAYS answer 403 `PASSWORD_RESET_DISABLED`, even if the switch is
+on, and are marked `deprecated`. They will be deleted in a later release; do not call them.
+Phone-only accounts have no email, so they cannot reset by themselves yet: show "Contact GharTak support". An SMS
+code can be added later.
+Start-up rule: in any non-local environment, `PASSWORD_RESET_SELF_SERVICE_ENABLED=true` is refused unless
+`EMAIL_BACKEND=smtp` with `SMTP_HOST` and `SMTP_FROM` set, so a code can never be only written to a log.
+New settings: EMAIL_BACKEND (log|memory|smtp, default log = prints only), SMTP_HOST, SMTP_PORT (587),
+SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM, SMTP_STARTTLS (true), RESET_CODE_MINUTES (15), RESET_CODE_MAX_ATTEMPTS (5).
+Database: new collection `password_resets` (one row per user, only a keyed hash of the code), unique index on
+`user_id` and a TTL index on `expires_at`. Nothing existing is changed.
+Clients affected: mobile and web ("Forgot password" screens: email -> code + new password).

@@ -12,16 +12,12 @@ from app.core.security import create_access_token, hash_password, verify_passwor
 from app.schemas.auth import (
     CustomerRegisterRequest,
     LoginRequest,
-    PasswordResetSubmitRequest,
-    PasswordResetVerifyRequest,
-    PasswordResetVerifyResponse,
     ProviderRegisterRequest,
     TokenResponse,
     clean_optional,
     phone_variants,
 )
 from app.services.notifications import NotificationService
-from app.services.sessions import SessionService
 from app.services.uploads import has_file, store_upload, validate_upload
 
 logger = setup_logger("ghartak.auth")
@@ -334,92 +330,6 @@ class AuthService:
 
         logger.info(f"User logged in successfully: {user['id']} ({user['role']})")
         return self._token_for_user(user)
-
-    async def verify_password_reset_identity(
-        self, payload: PasswordResetVerifyRequest
-    ) -> PasswordResetVerifyResponse:
-        email = payload.email.lower().strip()
-        phone = payload.phone.strip()
-
-        clean_phone_10 = phone[-10:] if len(phone) >= 10 else phone
-        user = await self.db.users.find_one({
-            "email": email,
-            "$or": [
-                {"phone": phone},
-                {"phone": clean_phone_10},
-                {"phone": f"+91{clean_phone_10}"},
-                {"phone": f"0{clean_phone_10}"},
-            ],
-        })
-
-        if not user:
-            logger.warning(f"Password reset failed identity check: {email} / {phone}")
-            raise app_http_error(
-                404,
-                AppErrorCode.NOT_FOUND,
-                "No account found matching this email and phone number.",
-            )
-
-        if not user.get("is_active", True):
-            raise app_http_error(
-                403,
-                AppErrorCode.ACCOUNT_DISABLED,
-                "Account is disabled. Please contact support.",
-            )
-
-        logger.info(f"Password reset identity verified for user {user['id']} ({email})")
-        return PasswordResetVerifyResponse(name=user.get("name", "User"), verified=True)
-
-    async def reset_password(self, payload: PasswordResetSubmitRequest) -> TokenResponse:
-        email = payload.email.lower().strip()
-        phone = payload.phone.strip()
-
-        clean_phone_10 = phone[-10:] if len(phone) >= 10 else phone
-        user = await self.db.users.find_one({
-            "email": email,
-            "$or": [
-                {"phone": phone},
-                {"phone": clean_phone_10},
-                {"phone": f"+91{clean_phone_10}"},
-                {"phone": f"0{clean_phone_10}"},
-            ],
-        })
-
-        if not user:
-            raise app_http_error(
-                404,
-                AppErrorCode.NOT_FOUND,
-                "No account found matching this email and phone number.",
-            )
-
-        if not user.get("is_active", True):
-            raise app_http_error(
-                403,
-                AppErrorCode.ACCOUNT_DISABLED,
-                "Account is disabled. Please contact support.",
-            )
-
-        new_hash = hash_password(payload.new_password)
-        now = datetime.now(UTC)
-        await self.db.users.update_one(
-            {"id": user["id"]},
-            {"$set": {"password_hash": new_hash, "updated_at": now}},
-        )
-        # ADR 0003 §6: a new password ends every existing session of this account.
-        await SessionService(self.db).revoke_all_for_user(user["id"], "password_changed")
-
-        await NotificationService(self.db).notify_user(
-            user_id=user["id"],
-            title="Password Changed",
-            message="Your GharTak account password was successfully updated.",
-            event_type="PASSWORD_RESET_SUCCESS",
-            related_entity_type="user",
-            related_entity_id=user["id"],
-        )
-
-        logger.info(f"Password reset successfully for user {user['id']} ({email})")
-        updated_user = await self.db.users.find_one({"id": user["id"]})
-        return self._token_for_user(updated_user or user)
 
     async def create_admin_user(
         self,

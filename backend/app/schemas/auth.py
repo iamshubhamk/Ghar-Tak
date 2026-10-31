@@ -201,6 +201,16 @@ class LogoutRequest(BaseModel):
     push_token: str | None = Field(default=None, max_length=300)
 
 
+class PasswordResetRequestRequest(BaseModel):
+    email: EmailStr
+
+
+class PasswordResetConfirmRequest(BaseModel):
+    email: EmailStr
+    code: str = Field(pattern=r"^\d{6}$", description="The 6-digit code from the email.")
+    new_password: str = Field(min_length=8, max_length=128)
+
+
 class PasswordResetVerifyRequest(BaseModel):
     email: EmailStr
     phone: str = Field(min_length=10, max_length=15)

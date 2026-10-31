@@ -90,6 +90,12 @@ async def create_database_tables(db: AsyncIOMotorDatabase) -> None:
         db.refresh_tokens, [("family_expires_at", pymongo.ASCENDING)], expireAfterSeconds=0
     )
 
+    # Password reset codes (T2-02): one active code per user, removed when it expires.
+    await _ensure_index(db.password_resets, [("user_id", pymongo.ASCENDING)], unique=True)
+    await _ensure_index(
+        db.password_resets, [("expires_at", pymongo.ASCENDING)], expireAfterSeconds=0
+    )
+
     await _ensure_index(db.categories, [("name", pymongo.ASCENDING)], unique=True)
     await _ensure_index(db.bookings, [("customer_id", pymongo.ASCENDING)])
     await _ensure_index(db.bookings, [("provider_id", pymongo.ASCENDING)])

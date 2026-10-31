@@ -6,6 +6,8 @@ from app.main import app
 
 VERIFY_URL = "/api/v1/auth/password-reset/verify"
 RESET_URL = "/api/v1/auth/password-reset"
+REQUEST_URL = "/api/v1/auth/password-reset/request"
+CONFIRM_URL = "/api/v1/auth/password-reset/confirm"
 IDENTITY = {"email": "victim@example.com", "phone": "9876543210"}
 RESET_PAYLOAD = {**IDENTITY, "new_password": "attacker-pass-1"}
 
@@ -37,6 +39,10 @@ def test_flag_defaults_to_off() -> None:
         (RESET_URL, RESET_PAYLOAD),
         (VERIFY_URL, {"email": "not-an-email"}),
         (RESET_URL, {}),
+        (REQUEST_URL, {"email": "victim@example.com"}),
+        (REQUEST_URL, {}),
+        (CONFIRM_URL, {"email": "victim@example.com", "code": "123456", "new_password": "x" * 8}),
+        (CONFIRM_URL, {}),
     ],
 )
 def test_reset_endpoints_return_403_when_disabled(
@@ -95,7 +101,10 @@ def test_password_unchanged_after_blocked_reset(client: TestClient, flag_off: No
     assert attacker_login.status_code == 401
 
 
-def test_reset_still_works_when_enabled(client: TestClient, flag_on: None) -> None:
+def test_old_email_and_phone_endpoints_stay_closed_even_when_the_flag_is_on(
+    client: TestClient, flag_on: None
+) -> None:
+    """The old reset had no proof of ownership (SU-002). Switching the flag on must not revive it."""
     client.post(
         "/api/v1/auth/register/customer",
         json={
@@ -108,10 +117,9 @@ def test_reset_still_works_when_enabled(client: TestClient, flag_on: None) -> No
 
     verify = client.post(VERIFY_URL, json=IDENTITY)
     reset = client.post(RESET_URL, json=RESET_PAYLOAD)
-    login = client.post(
+    attacker_login = client.post(
         "/api/v1/auth/login", json={"email": IDENTITY["email"], "password": "attacker-pass-1"}
     )
 
-    assert verify.status_code == 200
-    assert reset.status_code == 200
-    assert login.status_code == 200
+    assert verify.status_code == reset.status_code == 403
+    assert attacker_login.status_code == 401

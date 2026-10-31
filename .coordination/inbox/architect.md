@@ -715,3 +715,10 @@ What changed: In-process sliding-window limiter (`core/rate_limit.py`), as ADR 0
 Why: AR-018 step 6.
 Action needed in this workstream: Check the result. Next: T2-02 real password reset.
 Contract ref: contracts/API_CHANGES.md#be-022
+
+## [OPEN] BE-023 — T2-02 done (AR-018 step 7); the feature stays OFF until the human decides on email
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Email-code reset per ADR 0003 §8: `/request` (always 202, same body) and `/confirm` (400 RESET_CODE_INVALID for every failure); 6 digits, 15 min, single use, 5 tries, 3 codes per email per hour, keyed hash only, admins excluded, phone-only accounts excluded (they use support), all sessions revoked on success, min length 8. Email goes through a small adapter (`log` dev-only, `memory` tests, `smtp` real) with no new dependency. DECISIONS FOR YOU/THE HUMAN: (1) I permanently closed the OLD email+phone endpoints (always 403, deprecated) instead of letting the switch re-enable them, so flipping the switch can never reopen SU-002; (2) turning the feature on in production needs an SMTP provider and a human OK (the app refuses to start with the switch on and no SMTP); (3) phone-only users cannot self-reset until an SMS option exists. The switch was NOT touched; production behaviour is unchanged. 33 new tests.
+Why: AR-018 step 7.
+Action needed in this workstream: Check the result. Decide the email provider with the human. Next: T2-08 one error format.
+Contract ref: contracts/API_CHANGES.md#be-023

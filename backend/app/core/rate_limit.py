@@ -38,6 +38,7 @@ POLICIES: dict[str, Policy] = {
     "login_account_failures": Policy(20, 60 * 60),
     "refresh_ip": Policy(60, 60),
     "reset_ip": Policy(10, 10 * 60),
+    "reset_request_account": Policy(3, 60 * 60),  # codes per email per hour
 }
 
 

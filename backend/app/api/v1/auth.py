@@ -19,6 +19,8 @@ from app.schemas.auth import (
     CustomerRegisterRequest,
     LoginRequest,
     LogoutRequest,
+    PasswordResetConfirmRequest,
+    PasswordResetRequestRequest,
     PasswordResetSubmitRequest,
     PasswordResetVerifyRequest,
     PasswordResetVerifyResponse,
@@ -27,8 +29,9 @@ from app.schemas.auth import (
     TokenResponse,
     UserResponse,
 )
-from app.schemas.errors import ErrorResponse
+from app.schemas.errors import ErrorResponse, MessageResponse
 from app.services.auth import AuthService
+from app.services.password_reset import PasswordResetService
 from app.services.sessions import SessionService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -155,30 +158,75 @@ def require_password_reset_enabled() -> None:
         )
 
 
+def legacy_reset_removed() -> None:
+    """The old email + phone reset (no proof of ownership) was an account-takeover hole (SU-002).
+    It can never be switched back on; use /password-reset/request and /password-reset/confirm."""
+    raise app_http_error(
+        403,
+        AppErrorCode.PASSWORD_RESET_DISABLED,
+        "Password reset is not available in the app yet. Please contact GharTak support.",
+    )
+
+
 @router.post(
     "/password-reset/verify",
     response_model=PasswordResetVerifyResponse,
-    responses={**RESET_DISABLED_RESPONSE, **RATE_LIMITED_RESPONSE},
-    dependencies=[Depends(require_password_reset_enabled), Depends(ip_limit("reset_ip"))],
+    deprecated=True,
+    summary="Removed: always 403 (use /password-reset/request)",
+    responses=RESET_DISABLED_RESPONSE,
+    dependencies=[Depends(legacy_reset_removed)],
 )
 async def verify_password_reset_identity(
     payload: PasswordResetVerifyRequest,
-    db: AsyncIOMotorDatabase = Depends(get_db),
 ) -> PasswordResetVerifyResponse:
-    return await AuthService(db).verify_password_reset_identity(payload)
+    raise legacy_reset_removed()  # never reached: the dependency answers first
 
 
 @router.post(
     "/password-reset",
     response_model=TokenResponse,
+    deprecated=True,
+    summary="Removed: always 403 (use /password-reset/confirm)",
+    responses=RESET_DISABLED_RESPONSE,
+    dependencies=[Depends(legacy_reset_removed)],
+)
+async def reset_password(payload: PasswordResetSubmitRequest) -> TokenResponse:
+    raise legacy_reset_removed()  # never reached: the dependency answers first
+
+
+@router.post(
+    "/password-reset/request",
+    response_model=MessageResponse,
+    status_code=202,
     responses={**RESET_DISABLED_RESPONSE, **RATE_LIMITED_RESPONSE},
     dependencies=[Depends(require_password_reset_enabled), Depends(ip_limit("reset_ip"))],
 )
-async def reset_password(
-    payload: PasswordResetSubmitRequest,
+async def request_password_reset(
+    payload: PasswordResetRequestRequest, db: AsyncIOMotorDatabase = Depends(get_db)
+) -> MessageResponse:
+    """Email a 6-digit code to the address if a normal account uses it. The answer is always the
+    same, so it never reveals whether an account exists. Admin accounts and accounts without an
+    email cannot reset themselves: they contact support."""
+    await PasswordResetService(db).request_code(payload.email)
+    return MessageResponse(
+        message="If an account uses this email, a code has been sent. It works for 15 minutes."
+    )
+
+
+@router.post(
+    "/password-reset/confirm",
+    response_model=TokenResponse,
+    responses={**RESET_DISABLED_RESPONSE, **RATE_LIMITED_RESPONSE},
+    dependencies=[Depends(require_password_reset_enabled), Depends(ip_limit("reset_ip"))],
+)
+async def confirm_password_reset(
+    payload: PasswordResetConfirmRequest,
     db: AsyncIOMotorDatabase = Depends(get_db),
     x_client: str | None = Header(default=None, description=CLIENT_HEADER_HELP),
 ) -> TokenResponse:
-    token = await AuthService(db).reset_password(payload)
+    """Set a new password with the emailed code (400 `RESET_CODE_INVALID` if wrong or expired).
+    Every other session of the account is ended; the answer is a fresh login."""
+    token = await PasswordResetService(db).confirm(
+        payload.email, payload.code, payload.new_password
+    )
     return await SessionService(db).start_session(token, x_client)
-

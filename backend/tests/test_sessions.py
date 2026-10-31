@@ -282,25 +282,6 @@ def test_logout_only_ends_that_login_not_the_other_device(client: TestClient) ->
 # ---------- revocation on password change / disable ----------
 
 
-def test_password_reset_ends_every_other_session(client: TestClient, monkeypatch) -> None:
-    monkeypatch.setattr(get_settings(), "password_reset_self_service_enabled", True)
-    register(client, phone="9876500123")
-    old = login(client, client_header="mobile").json()
-    time.sleep(1.1)  # access-token issue times have one-second precision
-
-    reset = client.post(
-        f"{API}/auth/password-reset",
-        json={"email": "sess@example.com", "phone": "9876500123", "new_password": "brandnewpass1"},
-        headers={"X-Client": "mobile"},
-    )
-
-    assert reset.status_code == 200 and reset.json()["refresh_token"]
-    assert refresh(client, old["refresh_token"]).status_code == 401
-    assert me(client, old["access_token"]).status_code == 401  # old access token is dead too
-    assert me(client, reset.json()["access_token"]).status_code == 200  # the new session works
-    assert refresh(client, reset.json()["refresh_token"]).status_code == 200
-
-
 def test_admin_disabling_a_provider_ends_their_sessions(client: TestClient, admin_token) -> None:
     body = client.post(
         f"{API}/auth/register/provider",

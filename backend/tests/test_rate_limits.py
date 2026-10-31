@@ -182,20 +182,21 @@ def test_refresh_is_limited_per_ip(client: TestClient, tight) -> None:
 
 def test_password_reset_is_limited_per_ip(client: TestClient, tight, monkeypatch) -> None:
     monkeypatch.setattr(get_settings(), "password_reset_self_service_enabled", True)
-    body = {"email": "nobody@example.com", "phone": "9876543210"}
+    monkeypatch.setattr(get_settings(), "email_backend", "memory")
+    body = {"email": "nobody@example.com"}
 
     statuses = [
-        client.post(f"{API}/auth/password-reset/verify", json=body).status_code for _ in range(4)
+        client.post(f"{API}/auth/password-reset/request", json=body).status_code for _ in range(4)
     ]
 
-    assert statuses == [404, 404, 429, 429]
+    assert statuses == [202, 202, 429, 429]
 
 
 def test_a_disabled_reset_stays_a_403_and_is_not_counted(client: TestClient, tight) -> None:
-    body = {"email": "nobody@example.com", "phone": "9876543210"}
+    body = {"email": "nobody@example.com"}
 
     statuses = [
-        client.post(f"{API}/auth/password-reset/verify", json=body).status_code for _ in range(5)
+        client.post(f"{API}/auth/password-reset/request", json=body).status_code for _ in range(5)
     ]
 
     assert statuses == [403] * 5

@@ -47,6 +47,19 @@ class Settings(BaseSettings):
     rate_limit_enabled: bool = True
     trusted_proxy_count: int = Field(default=1, ge=0, le=5)
 
+    # Email (T2-02). "log" only prints messages (local development); "smtp" really sends them.
+    email_backend: str = "log"
+    smtp_host: str = ""
+    smtp_port: int = Field(default=587, ge=1, le=65535)
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from: str = ""
+    smtp_starttls: bool = True
+
+    # Password reset by email code (T2-02)
+    reset_code_minutes: int = Field(default=15, ge=1, le=60)
+    reset_code_max_attempts: int = Field(default=5, ge=1, le=10)
+
     # Interim hotfix (AR-002): reset has no OTP, so it stays off unless enabled for local dev.
     password_reset_self_service_enabled: bool = False
 
@@ -74,6 +87,21 @@ class Settings(BaseSettings):
         case_sensitive=False,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def email_settings_are_complete(self) -> "Settings":
+        backend = self.email_backend.strip().lower()
+        if backend not in {"log", "memory", "smtp"}:
+            raise ValueError("EMAIL_BACKEND must be log, memory or smtp.")
+        if backend == "smtp" and not (self.smtp_host.strip() and self.smtp_from.strip()):
+            raise ValueError("EMAIL_BACKEND=smtp needs SMTP_HOST and SMTP_FROM.")
+        deployed = self.environment.strip().lower() != "local"
+        if self.password_reset_self_service_enabled and deployed and backend != "smtp":
+            raise ValueError(
+                "PASSWORD_RESET_SELF_SERVICE_ENABLED=true outside local needs EMAIL_BACKEND=smtp "
+                "(a reset code must really be emailed, never only logged)."
+            )
+        return self
 
     @model_validator(mode="after")
     def min_version_not_above_latest(self) -> "Settings":
