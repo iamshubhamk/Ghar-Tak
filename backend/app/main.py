@@ -74,7 +74,11 @@ async def http_exception_handler(request: Request, exc: HTTPException) -> JSONRe
             f"HTTP {exc.status_code} on {request.method} {request.url.path}: {exc.detail}"
         )
 
-    return JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=getattr(exc, "headers", None),  # for example Retry-After on a 429
+    )
 
 
 @app.exception_handler(Exception)

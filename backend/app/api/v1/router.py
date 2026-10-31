@@ -20,6 +20,7 @@ ERROR_RESPONSES: dict[int | str, dict] = {
     404: {"model": ErrorResponse, "description": "Not found."},
     409: {"model": ErrorResponse, "description": "Conflict (duplicate or state changed)."},
     422: {"model": ErrorResponse, "description": "Validation error (`details.errors`)."},
+    429: {"model": ErrorResponse, "description": "Too many attempts (RATE_LIMITED); see Retry-After."},
 }
 
 api_router = APIRouter(prefix="/api/v1", responses=ERROR_RESPONSES)

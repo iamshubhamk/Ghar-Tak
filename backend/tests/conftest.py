@@ -26,6 +26,7 @@ from fastapi.testclient import TestClient
 from mongomock_motor import AsyncMongoMockClient
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 
+from app.core.rate_limit import limiter
 from app.core.security import create_access_token, password_context
 from app.db.init_db import create_database_tables
 from app.db.session import get_db
@@ -67,6 +68,12 @@ def run(awaitable: Any) -> Any:
     if LOOP is not None:
         return LOOP.run_until_complete(_await(awaitable))
     return asyncio.run(awaitable)
+
+
+@pytest.fixture(autouse=True)
+def fresh_rate_limits() -> None:
+    """Rate-limit counters live in memory; every test starts from zero."""
+    limiter.reset()
 
 
 @pytest.fixture(autouse=True, scope="session")

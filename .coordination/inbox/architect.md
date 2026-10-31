@@ -708,3 +708,10 @@ What changed: All 72 operations have `<tag>_<function>` ids and declared respons
 Why: AR-018 step 5.
 Action needed in this workstream: Check the result. Confirm the pydantic pin is acceptable for production.
 Contract ref: contracts/API_CHANGES.md#be-021
+
+## [OPEN] BE-022 — T2-03 done (AR-018 step 6)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: In-process sliding-window limiter (`core/rate_limit.py`), as ADR 0003 §9 proposed ('in-process for one instance, Mongo-backed if we scale out'). Login: per-IP 30/min plus WRONG-password limits per (account, IP) 5/15 min and per account 20/h; refresh 60/min/IP; reset 10/10 min/IP. 429 `RATE_LIMITED` + Retry-After. Design choices to confirm: (1) per-(account, IP) locking so an attacker cannot lock the real owner out from another address; (2) client IP = last X-Forwarded-For entry (`TRUSTED_PROXY_COUNT`, default 1 for Render); (3) counters reset on restart (acceptable at one instance). Registration is NOT limited (not in the ticket); say if you want it. Also fixed: the error handler dropped headers.
+Why: AR-018 step 6.
+Action needed in this workstream: Check the result. Next: T2-02 real password reset.
+Contract ref: contracts/API_CHANGES.md#be-022

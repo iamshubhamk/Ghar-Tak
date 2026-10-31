@@ -76,7 +76,7 @@ def test_the_error_body_is_a_named_schema_used_by_every_operation(spec: dict) ->
     for method, path, operation in operations(spec):
         if not path.startswith("/api/v1"):
             continue  # the plain `GET /` service banner has no error cases
-        for code in ("401", "403", "404", "409", "422"):
+        for code in ("401", "403", "404", "409", "422", "429"):
             schema = operation["responses"].get(code, {}).get("content", {})
             ref = schema.get("application/json", {}).get("schema", {}).get("$ref", "")
             assert ref.endswith("/ErrorResponse"), f"{method} {path} {code}"

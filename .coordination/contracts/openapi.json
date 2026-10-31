@@ -3003,6 +3003,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3110,6 +3120,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3224,6 +3244,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3322,6 +3352,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3429,6 +3469,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3519,6 +3569,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3613,6 +3673,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3720,6 +3790,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3827,6 +3907,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -3917,6 +4007,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4025,6 +4125,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4139,6 +4249,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4253,6 +4373,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4367,6 +4497,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4457,6 +4597,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4554,6 +4704,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4651,6 +4811,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4741,6 +4911,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4838,6 +5018,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -4952,6 +5142,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -5038,6 +5238,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -5139,6 +5349,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -5226,6 +5446,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "Get Config",
@@ -5337,6 +5567,23 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (code RATE_LIMITED). Wait the `Retry-After` seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         },
         "summary": "Login",
@@ -5422,6 +5669,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "Logout",
@@ -5503,6 +5760,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -5619,6 +5886,23 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (code RATE_LIMITED). Wait the `Retry-After` seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         },
         "summary": "Reset Password",
@@ -5710,6 +5994,23 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (code RATE_LIMITED). Wait the `Retry-After` seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         },
         "summary": "Verify Password Reset Identity",
@@ -5802,6 +6103,23 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (code RATE_LIMITED). Wait the `Retry-After` seconds.",
+            "headers": {
+              "Retry-After": {
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
           }
         },
         "summary": "Refresh",
@@ -5913,6 +6231,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "Register Customer",
@@ -6014,6 +6342,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "Register Provider",
@@ -6105,6 +6443,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6195,6 +6543,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6309,6 +6667,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6416,6 +6784,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6506,6 +6884,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "List Categories",
@@ -6591,6 +6979,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6685,6 +7083,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6782,6 +7190,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6887,6 +7305,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -6977,6 +7405,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7071,6 +7509,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7168,6 +7616,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7264,6 +7722,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7350,6 +7818,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7440,6 +7918,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "Health Check",
@@ -7525,6 +8013,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7621,6 +8119,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7718,6 +8226,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7808,6 +8326,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -7922,6 +8450,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8036,6 +8574,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8151,6 +8699,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8265,6 +8823,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8379,6 +8947,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8493,6 +9071,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8601,6 +9189,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8715,6 +9313,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8801,6 +9409,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8895,6 +9513,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -8991,6 +9619,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -9086,6 +9724,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -9172,6 +9820,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -9262,6 +9920,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -9356,6 +10024,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -9480,6 +10158,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "List Public Providers",
@@ -9572,6 +10260,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "Get Public Provider",
@@ -9678,6 +10376,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -9789,6 +10497,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [
@@ -9890,6 +10608,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "summary": "List Provider Reviews",
@@ -9996,6 +10724,16 @@
               }
             },
             "description": "Validation error (`details.errors`)."
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too many attempts (RATE_LIMITED); see Retry-After."
           }
         },
         "security": [

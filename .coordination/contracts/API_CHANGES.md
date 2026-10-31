@@ -337,3 +337,25 @@ Guard: `backend/tests/test_contract.py` fails when a route has no declared respo
 embeds the URL, the error schema is missing, or `openapi.json` is stale (same check as the CI drift gate).
 Clients affected: mobile and web (generate types from `.coordination/contracts/openapi.json`; use the named error
 schema and enums).
+
+## BE-022
+Date: 2026-11-01 | Breaking: no (new 429 answer on three existing groups of routes)
+Added: rate limits (ADR 0003 §9). A limited call answers **429** with `{"detail": {"error": {"code":
+"RATE_LIMITED", "message": "Too many attempts. Please try again in N seconds.", "details":
+{"retry_after_seconds": N}}}}` and a `Retry-After: N` header. Clients must wait that long, show the message, and
+not retry automatically in a loop. 429 is documented (as `ErrorResponse`) on every `/api/v1` operation.
+Limits (per server process; counters reset when the server restarts):
+- `POST /auth/login`: 30 calls per minute per IP; and WRONG passwords: 5 per 15 minutes for the same account from
+  the same IP, 20 per hour for the same account from anywhere. While an account is locked even the right password
+  gets 429. A successful login clears that IP's failure count. Unknown accounts are limited exactly like real ones,
+  so the answer never reveals whether an account exists. Phone numbers are counted by their normalised 10 digits.
+- `POST /auth/refresh`: 60 calls per minute per IP.
+- `POST /auth/password-reset/verify` and `POST /auth/password-reset`: 10 calls per 10 minutes per IP (these routes
+  still answer 403 `PASSWORD_RESET_DISABLED` first while the reset is switched off).
+The caller's IP is the address the hosting proxy appended to `X-Forwarded-For` (setting `TRUSTED_PROXY_COUNT`,
+default 1, right for Render); forged earlier entries are ignored. `RATE_LIMIT_ENABLED=false` switches all limits off.
+Fixed: the app's HTTP error handler dropped response headers; errors now keep their headers (needed for Retry-After).
+Known trade-off: someone who keeps failing logins for a victim's number from their own IP locks only that pair
+(account + IP) for 15 minutes; the victim on a different IP can still log in, until the account-wide cap of 20 per
+hour is reached.
+Clients affected: mobile and web (handle 429 on login/refresh/reset with the Retry-After seconds).

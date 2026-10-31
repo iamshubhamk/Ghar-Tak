@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, Header, Request, Response
+from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import ValidationError
@@ -8,6 +8,12 @@ from pydantic import ValidationError
 from app.api.deps import get_current_user
 from app.core.config import get_settings
 from app.core.errors import AppErrorCode, app_http_error
+from app.core.rate_limit import (
+    clear_login_failures,
+    ensure_login_not_locked,
+    ip_limit,
+    record_login_failure,
+)
 from app.db.session import get_db
 from app.schemas.auth import (
     CustomerRegisterRequest,
@@ -26,6 +32,14 @@ from app.services.auth import AuthService
 from app.services.sessions import SessionService
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+RATE_LIMITED_RESPONSE: dict[int | str, dict[str, Any]] = {
+    429: {
+        "model": ErrorResponse,
+        "description": "Too many attempts (code RATE_LIMITED). Wait the `Retry-After` seconds.",
+        "headers": {"Retry-After": {"schema": {"type": "integer"}}},
+    }
+}
 
 CLIENT_HEADER_HELP = (
     "`mobile` gets a 30-day sliding / 90-day absolute refresh token; anything else (including "
@@ -64,20 +78,37 @@ async def register_provider(
     return await SessionService(db).start_session(token, x_client)
 
 
-@router.post("/login", response_model=TokenResponse)
+@router.post(
+    "/login",
+    response_model=TokenResponse,
+    responses=RATE_LIMITED_RESPONSE,
+    dependencies=[Depends(ip_limit("login_ip"))],
+)
 async def login(
     payload: LoginRequest,
+    request: Request,
     db: AsyncIOMotorDatabase = Depends(get_db),
     x_client: str | None = Header(default=None, description=CLIENT_HEADER_HELP),
 ) -> TokenResponse:
-    token = await AuthService(db).login(payload)
+    identifier = payload.email or payload.phone or ""
+    ensure_login_not_locked(identifier, request)
+    try:
+        token = await AuthService(db).login(payload)
+    except HTTPException as error:
+        detail = error.detail if isinstance(error.detail, dict) else {}
+        if detail.get("error", {}).get("code") == AppErrorCode.INVALID_CREDENTIALS:
+            record_login_failure(identifier, request)
+        raise
+    clear_login_failures(identifier, request)
     return await SessionService(db).start_session(token, x_client)
 
 
 @router.post(
     "/refresh",
     response_model=TokenResponse,
+    dependencies=[Depends(ip_limit("refresh_ip"))],
     responses={
+        429: RATE_LIMITED_RESPONSE[429],
         401: {
             "model": ErrorResponse,
             "description": "AUTH_REFRESH_INVALID, AUTH_REFRESH_EXPIRED or AUTH_REFRESH_REUSED.",
@@ -127,8 +158,8 @@ def require_password_reset_enabled() -> None:
 @router.post(
     "/password-reset/verify",
     response_model=PasswordResetVerifyResponse,
-    responses=RESET_DISABLED_RESPONSE,
-    dependencies=[Depends(require_password_reset_enabled)],
+    responses={**RESET_DISABLED_RESPONSE, **RATE_LIMITED_RESPONSE},
+    dependencies=[Depends(require_password_reset_enabled), Depends(ip_limit("reset_ip"))],
 )
 async def verify_password_reset_identity(
     payload: PasswordResetVerifyRequest,
@@ -140,8 +171,8 @@ async def verify_password_reset_identity(
 @router.post(
     "/password-reset",
     response_model=TokenResponse,
-    responses=RESET_DISABLED_RESPONSE,
-    dependencies=[Depends(require_password_reset_enabled)],
+    responses={**RESET_DISABLED_RESPONSE, **RATE_LIMITED_RESPONSE},
+    dependencies=[Depends(require_password_reset_enabled), Depends(ip_limit("reset_ip"))],
 )
 async def reset_password(
     payload: PasswordResetSubmitRequest,

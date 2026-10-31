@@ -42,6 +42,11 @@ class Settings(BaseSettings):
     service_timezone: str = "Asia/Kolkata"
     app_flags: dict[str, bool] = Field(default_factory=dict)  # APP_FLAGS='{"some_flag": true}'
 
+    # Rate limits (T2-03). Behind Render's proxy keep trusted_proxy_count=1 so the caller's real
+    # address is used; with 0, X-Forwarded-For is ignored and everyone shares the proxy address.
+    rate_limit_enabled: bool = True
+    trusted_proxy_count: int = Field(default=1, ge=0, le=5)
+
     # Interim hotfix (AR-002): reset has no OTP, so it stays off unless enabled for local dev.
     password_reset_self_service_enabled: bool = False
 
