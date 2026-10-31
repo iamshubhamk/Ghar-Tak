@@ -236,3 +236,15 @@ What changed: New `backend/scripts/migrate_contact_indexes.py` replaces the old 
 Why: SU-016 / AR-014. This is what lets two accounts register without a phone (or without an email) on the live database. Rule 11: the human sees the dry-run output and the exact plan and says OK before --apply.
 Action needed in this workstream: STEP 1, read-only, from `backend/` with the prod MONGODB_URL in the environment (e.g. a Render shell): `python -m scripts.migrate_contact_indexes` . It prints the current indexes, how many users have a null/missing email and phone, and any DUPLICATE non-null values, then the plan. Exit 0 = fine, 1 = refused (duplicates or a conflicting index), 2 = cannot connect. Send the output to the architect/human; do NOT run --apply yourself until the human has seen it and said OK. STEP 2 (after OK): `python -m scripts.migrate_contact_indexes --apply`. Order: build each new index first (the old one keeps enforcing), then drop that field's old index; safe to re-run; if the build fails nothing is dropped. Gap to know about: none in uniqueness; the only race is a duplicate created between the check and the build, which makes the build fail and leaves the old index in place. Duplicates are never auto-fixed: if the dry run lists any, send them to the architect. Take a database backup/snapshot first if one is available (T1-14). Also: I removed the container `ghartak-test-mongo` that I had started on local port 27018 for these tests; I saw a database `ghartak_infra_ci` on it that is not mine, so if your CI check used that container, re-create it (`docker compose up -d`).
 Contract ref: contracts/API_CHANGES.md#be-015
+
+## [OPEN] AR-020 — T3-04: EAS build profiles and internal test APK
+From: architect | Date: 2026-11-01 | Priority: normal
+What changed: The human said "Start mobile work" (2026-11-01). Package `com.ghartak.app`. The human has an Expo account.
+Why: Testers need an installable build.
+Action needed in this workstream: AR-007 Part A stays first (the PR into `main` and the Render checklist are still
+outstanding; the live site is still open to account takeover). When mobile's T3-01 lands: add `eas.json` with dev,
+preview and prod profiles, each with its own `EXPO_PUBLIC_API_URL`; add a mobile type-check job to CI; guide the human
+through linking the Expo account (no tokens in chat or git). The test APK should point at **staging or local, never prod**,
+so tell the human if staging isn't ready.
+Acceptance criteria: testers install the preview APK from a link.
+Contract ref: none

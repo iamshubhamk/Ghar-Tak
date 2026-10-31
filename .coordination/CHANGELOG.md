@@ -50,3 +50,6 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-10-31 | BE-015 | backend | AR-014: SU-015 documents response fix; SU-016 partial unique contact indexes (startup-safe) + scripts/migrate_contact_indexes.py (dry-run default, not applied) | inbox: infrastructure, support, architect
 - 2026-11-01 | AR-016 | architect | Human direction: continue mobile, hold web; app design mockup published for review | inbox: web (info)
 - 2026-11-01 | AR-017 | architect | Human approved: admin alerts (T4-09) and phone-friendly admin queue (T4-10) move to Phase 4; admin-only exception to the web hold; not dispatched yet | inbox: none
+- 2026-11-01 | AR-018 | architect | Dispatched Phase 2 (T2-01..T2-08) + IN-005 | inbox: backend
+- 2026-11-01 | AR-019 | architect | Mobile plan approved; dispatched T3-01..T3-03 with design reference | inbox: mobile
+- 2026-11-01 | AR-020 | architect | Dispatched T3-04 EAS + mobile CI | inbox: infrastructure

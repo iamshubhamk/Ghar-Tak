@@ -22,7 +22,7 @@ Put the open questions to the human in one batch. Once the human approves, re-se
 with acceptance criteria. Mobile M1 depends on backend #1–#3 in the mobile plan.
 Contract ref: contracts/API_CHANGES.md#baseline
 
-## [IN PROGRESS] MO-001 — Mobile plan review: architecture points to settle before approval
+## [DONE: AR-019] MO-001 — Mobile plan review: architecture points to settle before approval
 From: mobile | Date: 2026-10-28 | Priority: normal
 What changed: Nothing in code. Mobile reviewed `docs/plans/mobile-app.md` against the contract, backend
 code and phase-7 docs. Points below are architecture-level; mobile-only fixes stay in the plan.

@@ -312,3 +312,34 @@ Action needed in this workstream: Until the new code is deployed, the old API's 
 Backend/architect: also note that the human's local `backend/.env` points at prod, so local tests and dev servers can write to prod; I've told the human to repoint it at local Mongo.
 Contract ref: none
 
+
+## [OPEN] AR-018 — Phase 2 approved: platform for the mobile app (T2-01..T2-08)
+From: architect | Date: 2026-11-01 | Priority: normal
+What changed: The human said "Start mobile work" (2026-11-01), which lifts the hold on Phase 2 even though Phase 1 isn't
+fully verified. ADRs 0003, 0004 and 0006 are accepted. Ticket rows: `docs/plans/roadmap-tickets.md`, Phase 2.
+Why: Mobile M1 can't log in or browse without these. Mobile starts the same day and depends on your order below.
+Action needed in this workstream, in this order (one commit + `/handoff` per ticket, mobile told each time):
+0. **IN-005 first:** make the real-MongoDB run pass ("Event loop is closed"), so CI can trust it for auth work.
+1. **T2-01 Refresh tokens + logout** per ADR 0003 §1–7, including the 60 s grace window and revoke on password
+   change/disable. Access stays at **60 minutes**: don't switch to 15 until both clients use refresh (the web admin
+   hasn't yet). Include test-plan Q4 (existing sessions revoked on password change).
+2. **T2-06 Phone-first registration:** phone required, email optional, for customers and providers. Include test-plan
+   Q3: normalise `+91` / `0` prefixes to 10 digits for new input and when matching at login, so existing accounts in
+   other formats still log in. Don't rewrite existing user data without the human's OK (Rule 11).
+3. **T2-04 `GET /app/config`:** public, from settings: `min_supported_version`, `latest_version`, `play_store_url`,
+   `support_phone`, `visit_charge_inr`, `offer_ends_at`, `assignment_promise` (30 minutes, 8am–10pm, Asia/Kolkata), `flags`.
+   Leave `support_phone` and `play_store_url` as nullable env settings; the human hasn't supplied them.
+4. **T2-05 Category names:** additive `names: {en, hi}`, seeded for the default categories. Keep `name`. Hindi wording
+   to start from: `docs/` none yet, so use the mockup's terms (इलेक्ट्रीशियन, प्लंबर, बढ़ई, पेंटर, एसी मरम्मत, उपकरण मरम्मत,
+   घर की सफ़ाई, ड्राइवर); flag the list for a native-speaker check. Seeding existing categories must only add the new
+   field, nothing else.
+5. **T2-07 Complete contract** per ADR 0006 §3.
+6. **T2-03 Rate limits**, then **T2-02 Real password reset:** per ADR 0003 §8 and its acceptance note (email code where
+   there's an email; phone-only accounts reset through support). Don't turn the flag back on in prod without the
+   human's OK.
+7. **T2-08 One error format**, Rule 7 way: the old shape stays until the web admin moves.
+**Safety:** the human's `backend/.env` has pointed at the **prod** database (IN-007). Never run a dev server, seed or
+script against it. Check where a URL points before running anything that writes.
+Acceptance criteria: each ticket's "Done when" in the roadmap; suite green on mongomock and real MongoDB; contract
+re-exported and `API_CHANGES.md` updated per ticket. Changing auth is approved through ADR 0003; anything beyond it, ask.
+Contract ref: contracts/API_CHANGES.md (one section per ticket)
