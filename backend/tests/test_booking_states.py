@@ -554,7 +554,7 @@ def test_two_admins_assigning_different_providers_only_one_wins(ctx: Ctx) -> Non
             return_exceptions=True,
         )
 
-    results = asyncio.run(both())
+    results = run(both())
 
     winners = [r for r in results if isinstance(r, dict)]
     assert len(winners) >= 1
@@ -582,7 +582,7 @@ def test_provider_accept_and_reject_race_has_exactly_one_winner(ctx: Ctx) -> Non
             return_exceptions=True,
         )
 
-    results = asyncio.run(both())
+    results = run(both())
 
     winners = [r for r in results if isinstance(r, dict)]
     losers = [r for r in results if not isinstance(r, dict)]

@@ -8,9 +8,7 @@ MongoDB. Run locally, for example:
 Every test uses its own throwaway database and drops it afterwards.
 """
 
-import asyncio
 import logging
-import os
 import uuid
 from collections.abc import Generator
 
@@ -23,27 +21,10 @@ from app.db.init_db import CONTACT_INDEXES, create_database_tables
 from app.db.session import get_db
 from app.main import app
 from scripts.migrate_contact_indexes import run as migrate
+from tests.conftest import LOOP, REAL_URL, database_url, run
 
-# Motor binds a client to the event loop it first runs on, so these tests share one loop
-# (the mongomock tests can use a throwaway loop per call; a real client cannot).
-LOOP = asyncio.new_event_loop()
-
-
-async def _await(awaitable):
-    return await awaitable
-
-
-def run(awaitable):
-    return LOOP.run_until_complete(_await(awaitable))
-
-
-URL = os.environ.get("TEST_MONGODB_URL")
+URL = REAL_URL
 pytestmark = pytest.mark.skipif(not URL, reason="needs a real MongoDB: set TEST_MONGODB_URL")
-
-
-def database_url(name: str) -> str:
-    assert URL and "?" not in URL, "use a plain mongodb://host:port/db TEST_MONGODB_URL"
-    return URL.rsplit("/", 1)[0] + "/" + name
 
 
 @pytest.fixture

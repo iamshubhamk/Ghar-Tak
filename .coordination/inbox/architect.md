@@ -666,3 +666,10 @@ Why / notes:
   netinfo, expo-image, react-hook-form, zod and the query persister until the ticket that uses them.
 - Not verified: the app has not run on a device or emulator (none here); only typecheck, doctor and an export bundle.
 Contract ref: none
+
+## [OPEN] BE-016 — IN-005 done (AR-018 step 0)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Suite on real MongoDB 7: 515 passed (2m14s); on mongomock: 500 passed + 15 skipped. Fixture design: one persistent loop for test code, a short-lived client created inside the API's loop per request, one throwaway database per session. Safety (IN-007): `tests/__init__.py` points MONGODB_URL at an unreachable address for the whole test process, and real mode only accepts localhost URLs. I did not run any server, seed or script against the database in backend/.env (it is an Atlas cluster; I only checked its host name).
+Why: AR-018 step 0.
+Action needed in this workstream: Check the result. Next: T2-01 refresh tokens.
+Contract ref: none
