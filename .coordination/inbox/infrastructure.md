@@ -54,7 +54,7 @@ Acceptance criteria: the old password no longer logs in on prod (the human confi
 credentials; AR-002 is live and verified. Commit as `AR-003`, `/handoff` to architect + support.
 Contract ref: none
 
-## [OPEN] AR-002 — backend hotfix ready to deploy (password reset disabled)
+## [DONE: IN-008] AR-002 — backend hotfix ready to deploy (password reset disabled)
 From: backend | Date: 2026-10-28 | Priority: breaking
 What changed: New setting `PASSWORD_RESET_SELF_SERVICE_ENABLED` (default false). While false, both
 `/api/v1/auth/password-reset/verify` and `/api/v1/auth/password-reset` return 403 `PASSWORD_RESET_DISABLED`
@@ -75,7 +75,7 @@ Why: OR-001 items 1 and 2.
 Action needed in this workstream: Add a backend test job to CI (OR-004).
 Contract ref: none
 
-## [OPEN] AR-006 — T0-06: confirm prod JWT secret + ENVIRONMENT before backend's boot check deploys
+## [DONE: IN-008] AR-006 — T0-06: confirm prod JWT secret + ENVIRONMENT before backend's boot check deploys
 From: architect | Date: 2026-10-29 | Priority: normal
 What changed: Phase 0 ticket T0-06 (approved by the human 2026-10-29). Backend will make the API refuse
 to start outside `local` when `JWT_SECRET_KEY` is the default or weak (backend inbox AR-006). AR-005
@@ -105,7 +105,7 @@ what to remove. Expect legacy skill proofs in the `uploads/` root; they stay rea
 the new route. Note: Render's disk is ephemeral, so the audit only sees files since the last deploy (T1-13).
 Contract ref: contracts/API_CHANGES.md#ar-005
 
-## [OPEN] AR-006 — CONFIRM prod env BEFORE deploying: the app now refuses to start with a weak JWT secret
+## [DONE: IN-008] AR-006 — CONFIRM prod env BEFORE deploying: the app now refuses to start with a weak JWT secret
 From: backend | Date: 2026-10-29 | Priority: breaking
 What changed: At startup, if `ENVIRONMENT` is anything other than `local` and `JWT_SECRET_KEY` is the
 default (`change-this-local-secret`), empty or shorter than 32 characters, or `MONGODB_URL` is empty, the app
@@ -262,3 +262,38 @@ Action needed in this workstream:
   TypeScript 6, so it is not a project dependency.
 - The template's `expo-doctor` run passes 20/20; add `npx expo-doctor` to CI if you like.
 Contract ref: none
+
+## [OPEN] BE-016 — IN-005 fixed: the whole suite passes on real MongoDB; remove continue-on-error
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `tests/conftest.py` now supports `TEST_MONGODB_URL` properly: 515 passed, 0 failed on a local `mongo:7` (2 min 14 s), and 500 passed + 15 skipped on the in-memory mock (the 15 skipped are the real-Mongo-only index tests, which only run when the variable is set). The shared fixtures use one persistent event loop for test code and a short-lived Motor client per API request, one throwaway database per session (`ghartak_t_<random>`, emptied before each test, dropped at the end). The database name in the URL is ignored (any name works, `ghartak_ci` is fine).
+Why: IN-005 / AR-018 step 0.
+Action needed in this workstream: Remove `continue-on-error: true` from the `backend-mongo` job in `.github/workflows/ci.yml` (your file). Safety I added: the URL must be plain `mongodb://` on localhost, 127.0.0.1, ::1 or the compose host `mongo`; anything else (Atlas, a remote host) makes the test run refuse to start. Also `tests/__init__.py` now overrides MONGODB_URL for the whole test process with an unreachable address, so a test that forgets to override the database can never reach whatever backend/.env points at (IN-007). `pip install -r requirements.txt` on Linux CI is unaffected by the Windows long-path problem with moto.
+Contract ref: none
+
+## [OPEN] BE-019 — new optional env vars for the app config (nothing required)
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: New optional settings: APP_MIN_SUPPORTED_VERSION, APP_LATEST_VERSION, PLAY_STORE_URL, SUPPORT_PHONE, ASSIGNMENT_PROMISE_MINUTES, SERVICE_WINDOW_START, SERVICE_WINDOW_END, SERVICE_TIMEZONE, APP_FLAGS (JSON), plus the existing LAUNCH_VISIT_CHARGE_INR / LAUNCH_OFFER_ENDS_AT. Defaults are safe. Documented (commented) in `backend/.env.example`.
+Why: T2-04.
+Action needed in this workstream: When the app is released: set APP_LATEST_VERSION, PLAY_STORE_URL and SUPPORT_PHONE in Render (the human supplies the values). Raising APP_MIN_SUPPORTED_VERSION is how old builds get blocked; do it only on the human's say-so. The server will not start if the minimum is above the latest.
+Contract ref: contracts/API_CHANGES.md#be-019
+
+## [OPEN] BE-021 — contract drift gate: pydantic is now pinned; the committed openapi.json matches a fresh export
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `backend/requirements.txt` now pins `pydantic==2.13.4`. Before, an unpinned pydantic added/removed three regex `pattern` lines in the exported contract depending on its version, so `git diff --exit-code .coordination/contracts/openapi.json` could fail between machines. The committed file is now exactly what `python -m scripts.export_openapi` produces with the pinned versions. `tests/test_contract.py` runs the same comparison in the normal test job.
+Why: Rule 6 / ADR 0006 §4 (drift gates).
+Action needed in this workstream: Nothing to change in CI. If the drift job was failing for the pattern lines, it should be green now. Render will install pydantic 2.13.4 on the next deploy (the version the tests ran with); no other dependency changed in this entry.
+Contract ref: contracts/API_CHANGES.md#be-021
+
+## [OPEN] BE-022 — rate limits: check TRUSTED_PROXY_COUNT on Render
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: New settings `RATE_LIMIT_ENABLED` (default true) and `TRUSTED_PROXY_COUNT` (default 1). The limits use the real caller address from the last `X-Forwarded-For` entry the proxy adds. Counters are in server memory (single instance), so they reset on every deploy/restart.
+Why: T2-03.
+Action needed in this workstream: Render puts one proxy in front of the app, so the default 1 is right; do not set it to 0 on Render (then every user would share the proxy's address and the per-IP limits would hit everybody at once). If a CDN or second proxy is ever added in front, raise it to 2. If you move to more than one API instance, tell backend: the counters need to move to MongoDB. After deploy, smoke test: 6 wrong logins for a throwaway number should give 429 on the 6th.
+Contract ref: contracts/API_CHANGES.md#be-022
+
+## [OPEN] BE-023 — to turn password reset on later you need an SMTP service (human decision)
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: New email settings and a start-up rule: with `PASSWORD_RESET_SELF_SERVICE_ENABLED=true` outside local the app refuses to start unless `EMAIL_BACKEND=smtp`, `SMTP_HOST` and `SMTP_FROM` are set. Nothing changes in production now: the switch stays false and EMAIL_BACKEND defaults to `log`.
+Why: T2-02, ADR 0003 §8 (free SMTP tier).
+Action needed in this workstream: Do NOT turn the switch on. When the human has chosen a mail service (any SMTP: Brevo, Mailgun, a Gmail app password, ...), set EMAIL_BACKEND=smtp, SMTP_HOST, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SMTP_FROM on Render, send one test mail, and only then ask the human whether to set PASSWORD_RESET_SELF_SERVICE_ENABLED=true. Never log SMTP_PASSWORD.
+Contract ref: contracts/API_CHANGES.md#be-023

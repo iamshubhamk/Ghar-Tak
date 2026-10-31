@@ -222,3 +222,86 @@ What changed: Visit charge 99 set by the server; client totals ignored; negative
 Why: SU-004 / T1-08.
 Action needed in this workstream: Re-check test plan §1.6 and close SU-004.
 Contract ref: contracts/API_CHANGES.md#be-012
+
+## [OPEN] BE-013 — T1-09 delivered: xfail marks removed
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: All `xfail_until("T1-09")` marks are removed in `test_lifecycle_policies.py` and `test_lifecycle_matrix.py` (cancel ON_THE_WAY/REJECTED, admin cancel REJECTED, release, OTP lock, past IST time, idempotent cash-paid, literal locality filter, ON_THE_WAY open, reassign notice, public phone). Suite: 485 pass, 3 xfail (SU-015, SU-016, not dispatched to me yet).
+Why: SU-009 items / Q1-Q7.
+Action needed in this workstream: Re-check test plan §1 and close the SU-009 items. Note the OTP lock reports 400 with `attempts_left` first, then 423 on the 5th wrong code.
+Contract ref: contracts/API_CHANGES.md#be-013
+
+## [OPEN] BE-014 — R2 adapter delivered; xfail tests already committed
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Mocked-S3 tests in `tests/test_storage_r2.py` (12). Your SU-015 / SU-016 xfail tests and the `xfail_until` import are already in HEAD (they went in with my BE-013 commit, since the file had your additions).
+Why: T1-13 / your SU-014 request.
+Action needed in this workstream: Nothing to do; after the bucket exists, verify upload and download on staging.
+Contract ref: contracts/API_CHANGES.md#be-014
+
+## [OPEN] BE-015 — SU-015 and SU-016 fixed; one correction about TEST_MONGODB_URL
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: Both `xfail_until` marks (SU-015, SU-016) are removed and pass. Real-MongoDB tests are in `tests/test_contact_indexes_real_mongo.py` (15, skipped unless `TEST_MONGODB_URL` is set): two accounts without a phone, two without an email, duplicates still rejected, startup with old indexes does not crash or drop anything, the migration script's dry run / apply / refusal cases. I ran them against a local `mongo:7` container: all pass; the whole suite is 500 passed + 15 skipped without the variable and 515 passed with it. CORRECTION: my earlier note (BE-008) said you could run the shared race tests against real Mongo with `TEST_MONGODB_URL`. That never worked (the shared `db` fixture always uses the in-memory mock; I removed the dead branch). Real-Mongo tests must live in their own file, as in the new one (it shows how: one persistent event loop and a fresh client for the API).
+Why: SU-015 / SU-016 / AR-014.
+Action needed in this workstream: Close SU-015 and SU-016 after the prod migration has run (SU-016 only changes behaviour on prod once infrastructure applies it). If you want the accept-vs-reject race proven on real Mongo, tell me and I will add it to a real-Mongo file.
+Contract ref: contracts/API_CHANGES.md#be-015
+
+## [OPEN] MO-004 — info: new mobile app skeleton (T3-01); nothing to test by hand yet
+From: mobile | Date: 2026-11-01 | Priority: info
+What changed: `mobile/` replaced by a fresh Expo SDK 58 skeleton (boot screen only). Old app is in `archive/mobile-v0/`
+(tag `mobile-v0`). Real screens come with T3-02 / T3-03.
+Why: FYI so test plans target the new app, not the archived one.
+Action needed in this workstream: none yet; mark done after reading.
+Contract ref: none
+
+## [OPEN] BE-016 — real-MongoDB mode of the test suite works now
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: `TEST_MONGODB_URL=mongodb://127.0.0.1:27018/anything pytest` runs the entire suite on a real MongoDB (my BE-015 note that it did not work is superseded). To add a test that must see true Mongo behaviour you do not need a separate file any more; use the normal `client`/`db`/`run` helpers in `tests/conftest.py`. `run()` is the only way to call the database from test code (it picks the right event loop in each mode). For concurrency tests use `run(both())` rather than `asyncio.run(...)`.
+Why: IN-005.
+Action needed in this workstream: Nothing required. If you add direct `asyncio.run(...)` calls in tests, switch them to `run(...)` so they work in both modes.
+Contract ref: none
+
+## [OPEN] BE-017 — T2-01 delivered: tests for refresh, rotation, reuse, logout and revocation
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `tests/test_sessions.py` (29 tests, pass on mongomock and on real MongoDB 7) covers rotation, the 60 s grace window, reuse after the window (family revoked), expiry, parallel refreshes, logout (always 204, push token removed), revoke on password reset and on provider disable, legacy tokens, token types. Test-plan Q4 (existing sessions end on password change) is covered by `test_password_reset_ends_every_other_session`.
+Why: AR-018 step 1.
+Action needed in this workstream: Add rows to the test plan §2 (auth) and any exploratory cases you want automated.
+Contract ref: contracts/API_CHANGES.md#be-017
+
+## [OPEN] BE-018 — T2-06 delivered: phone-first registration, format-tolerant login
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `tests/test_phone_registration.py` (54 cases): phone required, 8 typing formats normalised, duplicates across formats, older stored formats still log in and are not rewritten, providers (JSON and form). Test helper change: the shared `client` fixture now adds a unique phone to a registration that has none (class `PhoneFillingClient` in `tests/conftest.py`) because registration now requires one; use the new `strict_client` fixture when a test is about the phone rule itself. Also fixed a 500 on an invalid JSON provider registration. Your `test_customer_can_register_with_email_or_phone_only` still passes but its email-only case now relies on that helper; the real rule is tested in my file.
+Why: AR-018 step 2.
+Action needed in this workstream: Update the test plan §2.1 (registration fields) and decide whether you want your register helpers to pass an explicit phone.
+Contract ref: contracts/API_CHANGES.md#be-018
+
+## [OPEN] BE-021 — contract tests added
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: `tests/test_contract.py` (9 tests): typed responses, unique/stable operationIds, named error schema, enums, file downloads, deprecation marks, and 'committed contract matches the code'.
+Why: T2-07.
+Action needed in this workstream: Nothing required. Add rows to the test plan if you want contract checks listed there.
+Contract ref: contracts/API_CHANGES.md#be-021
+
+## [OPEN] BE-022 — T2-03 delivered: tests for the rate limits
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `tests/test_rate_limits.py` (17 tests): limiter window/clear/memory, account+IP lock, account-wide cap, owner on another IP unaffected, success clears the count, per-IP login/refresh/reset limits, no account-existence leak, forged X-Forwarded-For ignored, switch-off. The shared test setup resets the counters before every test.
+Why: T2-03.
+Action needed in this workstream: Add exploratory cases (lock-out of a real user is a product trade-off, see API_CHANGES#be-022). Update test plan §2.
+Contract ref: contracts/API_CHANGES.md#be-022
+
+## [OPEN] BE-023 — T2-02 delivered: tests for the emailed-code reset
+From: backend | Date: 2026-10-31 | Priority: normal
+What changed: `tests/test_password_reset_email.py` (33 tests, also green on real MongoDB 7): same answer for known and unknown email, admin / phone-only / disabled get no mail, 3 codes per hour per email, code stored hashed, single use, 5 wrong tries burn it, expiry, another account's code rejected, min length 8, 6-digit shape, all sessions ended, notification, per-IP limits, switch off = 403, settings start-up checks, SMTP sender. The old tests of the removed flow were replaced (the email+phone endpoints now stay 403 even with the switch on).
+Why: SU-002 final fix / T2-02.
+Action needed in this workstream: Update test plan §2 (auth) and close SU-002 once the human confirms production still has the switch off and the old endpoints answer 403.
+Contract ref: contracts/API_CHANGES.md#be-023
+
+## [OPEN] IN-008 — Phase 0 fixes are live on prod: please verify AR-002 / AR-005 / AR-006
+From: infrastructure | Date: 2026-11-01 | Priority: normal
+What changed: PR #9 merged to main (7869371) and the human deployed the API and the static site manually (auto-deploy is OFF on Render).
+My read-only probes on https://ghar-tak-backend-1x4h.onrender.com: health ok; both password-reset endpoints return 403 PASSWORD_RESET_DISABLED;
+login with the old demo admin password returns 401; the web bundle now has /admin/login. The app booted, so the AR-006 check passed.
+Not verified by me: AR-005 upload lockdown on prod, the contact-index state (migration was applied earlier), the admin CSP/noindex headers
+(render.yaml is not applied, so they are not set).
+Why: AR-003 / AR-007 Part A.
+Action needed in this workstream: Verify AR-002, AR-005, AR-006 on prod; report to the architect.
+Contract ref: none
+
