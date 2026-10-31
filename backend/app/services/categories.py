@@ -5,7 +5,7 @@ from typing import Any
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
-from app.core.default_categories import DEFAULT_SERVICE_CATEGORIES
+from app.core.default_categories import DEFAULT_HINDI_NAMES, DEFAULT_SERVICE_CATEGORIES
 from app.core.errors import AppErrorCode, app_http_error
 from app.schemas.category import CategoryCreateRequest, CategoryStatusRequest, CategoryUpdateRequest
 
@@ -28,17 +28,25 @@ class CategoryService:
         cursor = self.db.categories.find({})
         existing_categories = await cursor.to_list(length=None)
         existing_slugs = {category["slug"] for category in existing_categories}
+        existing_by_slug = {category["slug"]: category for category in existing_categories}
         created_categories = []
 
         for display_order, category_definition in enumerate(DEFAULT_SERVICE_CATEGORIES, start=1):
             slug = self._normalize_slug(category_definition["name"])
             if slug in existing_slugs:
+                await self._add_missing_hindi_name(
+                    existing_by_slug[slug], DEFAULT_HINDI_NAMES.get(category_definition["name"])
+                )
                 continue
 
             now = datetime.now(UTC)
             category_doc = {
                 "id": str(uuid.uuid4()),
                 "name": category_definition["name"],
+                "names": {
+                    "en": category_definition["name"],
+                    "hi": DEFAULT_HINDI_NAMES.get(category_definition["name"]),
+                },
                 "slug": slug,
                 "description": category_definition["description"],
                 "icon": category_definition["icon"],
@@ -54,6 +62,24 @@ class CategoryService:
 
         return created_categories
 
+    async def _add_missing_hindi_name(
+        self, category: dict[str, Any], hindi_name: str | None
+    ) -> None:
+        """Seeding an existing category adds the new `names` field and nothing else: no other field,
+        not even `updated_at`, changes, and a Hindi name an admin already set is never replaced."""
+        names = category.get("names") or {}
+        if hindi_name is None or names.get("hi"):
+            if not names and category.get("name"):
+                await self.db.categories.update_one(
+                    {"id": category["id"], "names": {"$exists": False}},
+                    {"$set": {"names": {"en": category["name"], "hi": None}}},
+                )
+            return
+        await self.db.categories.update_one(
+            {"id": category["id"]},
+            {"$set": {"names": {"en": names.get("en") or category["name"], "hi": hindi_name}}},
+        )
+
     async def create(self, payload: CategoryCreateRequest) -> dict[str, Any]:
         slug = self._normalize_slug(payload.slug or payload.name)
         await self._ensure_unique_slug(slug)
@@ -62,6 +88,7 @@ class CategoryService:
         category_doc = {
             "id": str(uuid.uuid4()),
             "name": payload.name,
+            "names": {"en": payload.name, "hi": payload.name_hi},
             "slug": slug,
             "description": payload.description,
             "icon": payload.icon,
@@ -77,6 +104,12 @@ class CategoryService:
         category = await self._get(category_id)
         update_data = {}
 
+        if payload.name is not None or payload.name_hi is not None:
+            current = category.get("names") or {"en": category["name"], "hi": None}
+            update_data["names"] = {
+                "en": payload.name if payload.name is not None else current.get("en"),
+                "hi": payload.name_hi if payload.name_hi is not None else current.get("hi"),
+            }
         if payload.name is not None:
             update_data["name"] = payload.name
         if payload.slug is not None:

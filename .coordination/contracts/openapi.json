@@ -1162,6 +1162,18 @@
             "title": "Name",
             "type": "string"
           },
+          "name_hi": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Hi"
+          },
           "slug": {
             "anyOf": [
               {
@@ -1179,6 +1191,31 @@
           "name"
         ],
         "title": "CategoryCreateRequest",
+        "type": "object"
+      },
+      "CategoryNames": {
+        "description": "The category name in each supported language. `hi` is null until a Hindi name exists.",
+        "properties": {
+          "en": {
+            "title": "En",
+            "type": "string"
+          },
+          "hi": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hi"
+          }
+        },
+        "required": [
+          "en"
+        ],
+        "title": "CategoryNames",
         "type": "object"
       },
       "CategoryResponse": {
@@ -1226,6 +1263,9 @@
             "title": "Name",
             "type": "string"
           },
+          "names": {
+            "$ref": "#/components/schemas/CategoryNames"
+          },
           "price_label": {
             "anyOf": [
               {
@@ -1250,6 +1290,7 @@
         "required": [
           "id",
           "name",
+          "names",
           "slug",
           "is_active",
           "display_order",
@@ -1322,6 +1363,18 @@
               }
             ],
             "title": "Name"
+          },
+          "name_hi": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name Hi"
           },
           "slug": {
             "anyOf": [

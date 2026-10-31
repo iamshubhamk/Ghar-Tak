@@ -287,3 +287,22 @@ Force-update rule for clients: if the app's own version is lower than `min_suppo
 with an update screen; if lower than `latest_version`, show a dismissible prompt. Compare the three numbers
 as numbers (1.10.0 is newer than 1.9.0).
 Clients affected: mobile (start-up gate, home screen text, support button, forgot-password visibility).
+
+## BE-020
+Date: 2026-11-01 | Breaking: no (additive)
+Added: `names: {en, hi}` on every category in `GET /categories`, `GET /admin/categories` and the admin create /
+update responses. `en` is the English name (same as `name`); `hi` is the Hindi name, or null when none exists.
+`name` is unchanged and stays English. Show `names.hi` when the user's language is Hindi and fall back to
+`names.en` when it is null.
+Default categories (Electrician, Plumber, Carpenter, Painter, AC Repair, Appliance Repair, House Cleaning,
+Driver, Tutor, Event Staff, Other Service) get Hindi names. The wording of the last three, and of
+"Appliance Repair" (उपकरण मरम्मत), still needs a native speaker's check before launch.
+Added: optional `name_hi` on `POST /admin/categories` and `PATCH /admin/categories/{id}` to set or change the
+Hindi name (sending `name` alone keeps the existing Hindi name; there is no way to clear it, only to replace it).
+Data: on start-up (and on every category list) existing default categories get ONLY the new `names` field
+added. Nothing else on them changes, `updated_at` included, and a Hindi name an admin already set is never
+overwritten. Custom categories without `names` are not rewritten; the API answers `{en: name, hi: null}` for them.
+Not changed: `name`, `slug`, `price_label` (note: the default `price_label` texts such as "Starts at INR 199"
+predate the launch visit charge of 99 and should not be shown in the app), provider category lists (they still
+hold English names), booking `category_name` (English).
+Clients affected: mobile (home screen and service list in Hindi), web admin (optional Hindi name field).

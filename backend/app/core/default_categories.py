@@ -77,6 +77,24 @@ DEFAULT_SERVICE_CATEGORIES: list[DefaultCategory] = [
     },
 ]
 
+# Hindi names for the default categories (T2-05). The first eight come from the mobile mockup. The
+# last three (Tutor, Event Staff, Other Service) are the backend's own wording.
+# NEEDS A NATIVE-SPEAKER CHECK before launch; edit here (new databases) or with the admin category
+# editor (`name_hi`, existing databases).
+DEFAULT_HINDI_NAMES: dict[str, str] = {
+    "Electrician": "इलेक्ट्रीशियन",
+    "Plumber": "प्लंबर",
+    "Carpenter": "बढ़ई",
+    "Painter": "पेंटर",
+    "AC Repair": "एसी मरम्मत",
+    "Appliance Repair": "उपकरण मरम्मत",
+    "House Cleaning": "घर की सफ़ाई",
+    "Driver": "ड्राइवर",
+    "Tutor": "ट्यूटर",
+    "Event Staff": "इवेंट स्टाफ",
+    "Other Service": "अन्य सेवा",
+}
+
 DEFAULT_PRICE_LABEL_BY_NAME = {
     category["name"]: category["price_label"] for category in DEFAULT_SERVICE_CATEGORIES
 }

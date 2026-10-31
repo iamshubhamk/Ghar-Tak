@@ -694,3 +694,10 @@ What changed: Public endpoint, values from settings, validated at start-up (vers
 Why: AR-018 step 3.
 Action needed in this workstream: Check the result. Next: T2-05 Hindi category names.
 Contract ref: contracts/API_CHANGES.md#be-019
+
+## [OPEN] BE-020 — T2-05 done (AR-018 step 4): Hindi category names
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: Additive `names: {en, hi}`; Hindi seeded for all 11 default categories (first 8 from the mockup terms you gave, the last 3 plus 'उपकरण मरम्मत' are my wording: FLAGGED for a native-speaker check, listed in `default_categories.py` and in API_CHANGES). Seeding existing rows only adds `names` (tested: no other field and not `updated_at` changes; an admin-set Hindi name is never overwritten). Admin create/update accept `name_hi`. Side finding for you: default `price_label` texts ('Starts at INR 199', ...) are stale next to the 99 launch charge; I told mobile not to show them. Say if you want them removed or replaced.
+Why: AR-018 step 4.
+Action needed in this workstream: Check the result and get the Hindi wording reviewed. Next: T2-07 complete contract.
+Contract ref: contracts/API_CHANGES.md#be-020

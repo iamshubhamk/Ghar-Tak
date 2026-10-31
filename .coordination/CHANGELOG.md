@@ -60,3 +60,4 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-11-01 | BE-017 | backend | T2-01: refresh tokens (rotation, 60 s grace, reuse detection) + logout; revoke on password change/disable; access stays 60 min | inbox: mobile, web, support, architect
 - 2026-11-01 | BE-018 | backend | T2-06: phone-first registration (10-digit normalisation, format-tolerant duplicate check and login, no data rewritten); fix 500 on invalid JSON provider registration | inbox: mobile, web, support, architect
 - 2026-11-01 | BE-019 | backend | T2-04: public GET /app/config (versions, support, visit charge, assignment promise, flags) from settings | inbox: mobile, infrastructure, architect
+- 2026-11-01 | BE-020 | backend | T2-05: categories carry names {en, hi}; Hindi seeded (adds only the new field to existing rows); admin name_hi | inbox: mobile, architect
