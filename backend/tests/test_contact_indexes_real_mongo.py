@@ -30,9 +30,7 @@ pytestmark = pytest.mark.skipif(not URL, reason="needs a real MongoDB: set TEST_
 @pytest.fixture
 def real_db() -> Generator:
     name = f"ghartak_idx_{uuid.uuid4().hex[:10]}"
-    client = AsyncIOMotorClient(
-        database_url(name), serverSelectionTimeoutMS=8000, io_loop=LOOP
-    )
+    client = AsyncIOMotorClient(database_url(name), serverSelectionTimeoutMS=8000, io_loop=LOOP)
     database = client[name]
     database.url = database_url(name)  # for the migration script
     yield database
@@ -76,19 +74,23 @@ def test_old_sparse_index_really_fails_on_a_second_null(real_db) -> None:
         run(real_db.users.insert_one(user(email="b@example.com", phone=None)))
 
 
-def test_two_accounts_without_a_phone_can_register(real_db, api) -> None:
+def test_two_accounts_without_a_phone_can_exist(real_db, api) -> None:
+    """Registration needs a phone now (T2-06), but older accounts have none; the index allows it."""
     run(create_database_tables(real_db))
+    run(real_db.users.insert_one(user(email="old1@example.com", phone=None)))
+    run(real_db.users.insert_one(user(email="old2@example.com", phone=None)))
 
-    first = api.post(
+    registered = api.post(
         "/api/v1/auth/register/customer",
-        json={"name": "Asha Devi", "email": "asha@example.com", "password": "strongpass123"},
-    )
-    second = api.post(
-        "/api/v1/auth/register/customer",
-        json={"name": "Bina Devi", "email": "bina@example.com", "password": "strongpass123"},
+        json={
+            "name": "Asha Devi",
+            "phone": "9876543210",
+            "email": "asha@example.com",
+            "password": "strongpass123",
+        },
     )
 
-    assert first.status_code == 201 and second.status_code == 201
+    assert registered.status_code == 201
     assert run(real_db.users.count_documents({"phone": None})) == 2
 
 
@@ -120,7 +122,12 @@ def test_duplicate_real_values_are_still_rejected_by_the_database(real_db, field
 
 def test_duplicate_email_is_a_409_through_the_api(real_db, api) -> None:
     run(create_database_tables(real_db))
-    body = {"name": "Asha Devi", "email": "same@example.com", "password": "strongpass123"}
+    body = {
+        "name": "Asha Devi",
+        "email": "same@example.com",
+        "phone": "9876543210",
+        "password": "strongpass123",
+    }
 
     first = api.post("/api/v1/auth/register/customer", json=body)
     second = api.post("/api/v1/auth/register/customer", json=body)
@@ -236,11 +243,7 @@ def test_apply_is_repeatable_and_never_edits_users(real_db, capsys) -> None:
 def test_apply_refuses_when_a_wrong_index_already_has_the_new_name(real_db, capsys) -> None:
     make_old_indexes(real_db)
     # a conflicting index already occupies the new name, so the build fails
-    run(
-        real_db.users.create_index(
-            [("zzz", 1)], name=CONTACT_INDEXES["email"], unique=True
-        )
-    )
+    run(real_db.users.create_index([("zzz", 1)], name=CONTACT_INDEXES["email"], unique=True))
 
     code = run(migrate(real_db.url, apply=True))
 

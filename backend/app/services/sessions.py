@@ -58,13 +58,16 @@ class SessionService:
         return self._response(token, refresh)
 
     async def refresh(self, raw_token: str) -> TokenResponse:
-        record = await self.db.refresh_tokens.find_one({"token_hash": hash_refresh_token(raw_token)})
+        record = await self.db.refresh_tokens.find_one(
+            {"token_hash": hash_refresh_token(raw_token)}
+        )
         if record is None:
             raise self._error(401, AppErrorCode.AUTH_REFRESH_INVALID, "Please log in again.")
 
         now = datetime.now(UTC)
         if record.get("revoked_at") is not None:
-            # A revoked token came back: logout, an earlier theft response, or a thief. Close the family.
+            # A revoked token came back: logout, an earlier theft response, or a thief.
+            # Close the whole family.
             await self._revoke_family(record["family_id"], "reuse_of_revoked")
             raise self._error(
                 401, AppErrorCode.AUTH_REFRESH_REUSED, "This session ended. Please log in again."
@@ -94,8 +97,14 @@ class SessionService:
             return await self._handle_rotated(fresh, user, now)
 
         child = await self._issue(
-            user["id"], record["family_id"], record["client"], now, _aware(record["family_expires_at"])
+            user["id"],
+            record["family_id"],
+            record["client"],
+            now,
+            _aware(record["family_expires_at"]),
+            parent_id=record["id"],
         )
+        await self._keep_only_newest_child(child)
         await self.db.refresh_tokens.update_one(
             {"id": record["id"]}, {"$set": {"replaced_by": child["id"]}}
         )
@@ -119,12 +128,34 @@ class SessionService:
                 {"$set": {"revoked_at": now, "revoke_reason": "grace_retry"}},
             )
         child = await self._issue(
-            user["id"], record["family_id"], record["client"], now, _aware(record["family_expires_at"])
+            user["id"],
+            record["family_id"],
+            record["client"],
+            now,
+            _aware(record["family_expires_at"]),
+            parent_id=record["id"],
         )
+        await self._keep_only_newest_child(child)
         await self.db.refresh_tokens.update_one(
             {"id": record["id"]}, {"$set": {"replaced_by": child["id"]}}
         )
         return self._response(TokenResponse(access_token=self._access(user), user=user), child)
+
+    async def _keep_only_newest_child(self, child: dict[str, Any]) -> None:
+        """Two refreshes of the same token running at the same instant can each issue a child.
+        Whichever child is newest (time, then id) is kept and the older siblings are revoked, so
+        exactly one pair stays valid however the two calls interleave."""
+        await self.db.refresh_tokens.update_many(
+            {
+                "parent_id": child["parent_id"],
+                "revoked_at": None,
+                "$or": [
+                    {"created_at": {"$lt": child["created_at"]}},
+                    {"created_at": child["created_at"], "id": {"$lt": child["id"]}},
+                ],
+            },
+            {"$set": {"revoked_at": datetime.now(UTC), "revoke_reason": "superseded"}},
+        )
 
     # ---------- ending ----------
 
@@ -132,7 +163,9 @@ class SessionService:
         """Always succeeds, even for an unknown token, so it reveals nothing."""
         if not raw_token:
             return
-        record = await self.db.refresh_tokens.find_one({"token_hash": hash_refresh_token(raw_token)})
+        record = await self.db.refresh_tokens.find_one(
+            {"token_hash": hash_refresh_token(raw_token)}
+        )
         if record is None:
             return
         await self._revoke_family(record["family_id"], "logout")
@@ -165,7 +198,9 @@ class SessionService:
     def _child_expiry(client: str, now: datetime, family_expires_at: datetime) -> datetime:
         settings = get_settings()
         if client == "mobile":  # sliding window, capped by the family's absolute end
-            return min(now + timedelta(days=settings.refresh_mobile_sliding_days), family_expires_at)
+            return min(
+                now + timedelta(days=settings.refresh_mobile_sliding_days), family_expires_at
+            )
         return family_expires_at  # admin web: fixed, no sliding
 
     async def _issue(
@@ -175,6 +210,7 @@ class SessionService:
         client: str,
         now: datetime,
         family_expires_at: datetime,
+        parent_id: str | None = None,
     ) -> dict[str, Any]:
         raw = secrets.token_urlsafe(32)
         record = {
@@ -186,6 +222,7 @@ class SessionService:
             "created_at": now,
             "expires_at": self._child_expiry(client, now, family_expires_at),
             "family_expires_at": family_expires_at,
+            "parent_id": parent_id,
             "rotated_at": None,
             "replaced_by": None,
             "revoked_at": None,

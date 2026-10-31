@@ -729,3 +729,10 @@ What changed: Mechanism (your ADR 0006 §6 'keep `detail` as an alias for one re
 Why: AR-018 step 8.
 Action needed in this workstream: Check the results and the open decisions listed.
 Contract ref: contracts/API_CHANGES.md#be-024
+
+## [OPEN] BE-025 — fix to T2-01 found by the final real-MongoDB run: concurrent refresh race
+From: backend | Date: 2026-10-31 | Priority: info
+What changed: The last full run on real MongoDB 7 (702 of 705 passed) found a real race in my refresh tokens (BE-017) that the in-memory mock hid: two refreshes of the SAME token at the same instant could each issue a child, leaving two live refresh tokens in one login. Fix: each child records its `parent_id`, and after issuing, a call revokes every OLDER sibling (time, then id), so exactly one pair survives however the calls interleave. The parallel-refresh test passed 10 of 10 repeats on real MongoDB. The other two failures were stale tests of mine (they registered accounts without a phone, impossible since T2-06). No API change, no contract change. After this: mock 690 passed + 15 skipped; real MongoDB all green.
+Why: Quality gate for AR-018 (IN-005 exists exactly to catch this).
+Action needed in this workstream: Nothing to do; for the record.
+Contract ref: none
