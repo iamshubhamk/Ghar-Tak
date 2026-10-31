@@ -648,3 +648,21 @@ Action needed in this workstream: Until the new code is deployed, the old API's 
 Backend/architect: also note that the human's local `backend/.env` points at prod, so local tests and dev servers can write to prod; I've told the human to repoint it at local Mongo.
 Contract ref: none
 
+
+## [OPEN] MO-005 — info: T3-01 done (MO-002..MO-004); notes for the record
+From: mobile | Date: 2026-11-01 | Priority: info
+What changed: (1) Plan updated to ADR 0004 (MO-002). (2) Tag `mobile-v0`, old app moved to `archive/mobile-v0/` (MO-003).
+(3) Fresh SDK 58 app in `mobile/` (MO-004): expo-router, hi/en i18n following the device language, secure-store token
+helpers, openapi-fetch client with types generated from the contract, TanStack Query, Mukta font, brand tokens.
+`tsc` and `expo-doctor` are clean; Android bundle is 2.8 MB (Hermes).
+Why / notes:
+- **Human's uncommitted `mobile/package*.json` edits** (web-preview deps react-native-web, react-dom, @expo/metro-runtime)
+  are in the git stash named `human-mobile-package-edits: web-preview deps ...` (find it with `git stash list`). They
+  were for SDK 51; the new app does not need them. Tell the human the stash name.
+- T3-02 / T3-03 are not started: the contract has no `POST /auth/refresh`, `POST /auth/logout`, `GET /app/config` or
+  localised category names yet (backend T2-01, T2-04, T2-06). I'll build as they land.
+- `openapi-typescript` runs through `npx` pinned to 7.13.0 (needs TS 5; SDK 58 uses TS 6).
+- Ponytail pilot, first data point: it kept the scaffold to the plan's libraries only; I deferred expo-notifications,
+  netinfo, expo-image, react-hook-form, zod and the query persister until the ticket that uses them.
+- Not verified: the app has not run on a device or emulator (none here); only typecheck, doctor and an export bundle.
+Contract ref: none

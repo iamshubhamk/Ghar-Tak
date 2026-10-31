@@ -248,3 +248,17 @@ through linking the Expo account (no tokens in chat or git). The test APK should
 so tell the human if staging isn't ready.
 Acceptance criteria: testers install the preview APK from a link.
 Contract ref: none
+
+## [OPEN] MO-004 — T3-01 landed: `mobile/` is a fresh Expo SDK 58 app, ready for EAS (T3-04)
+From: mobile | Date: 2026-11-01 | Priority: normal
+What changed: New project in `mobile/`, package `com.ghartak.app`, scheme `ghartak`. Scripts: `npm run typecheck`,
+`npm run gen:api`. No `eas.json` yet (yours).
+Why: Unblocks AR-020.
+Action needed in this workstream:
+- `eas.json` profiles dev / preview / prod, each setting `EXPO_PUBLIC_API_URL` (the app throws at start if it is unset;
+  see `mobile/.env.example`). Value is the API base with `/api/v1`; the client strips it. Preview must not point at prod.
+- CI job in `mobile/`: `npm ci`, `npm run typecheck`, `npm run gen:api` then `git diff --exit-code src/api/schema.d.ts`
+  (ADR 0006). `gen:api` runs `npx openapi-typescript@7.13.0` on purpose: that tool needs TypeScript 5 but SDK 58 uses
+  TypeScript 6, so it is not a project dependency.
+- The template's `expo-doctor` run passes 20/20; add `npx expo-doctor` to CI if you like.
+Contract ref: none

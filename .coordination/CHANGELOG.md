@@ -53,3 +53,6 @@ Append only, newest at the bottom. One line per completed change:
 - 2026-11-01 | AR-018 | architect | Dispatched Phase 2 (T2-01..T2-08) + IN-005 | inbox: backend
 - 2026-11-01 | AR-019 | architect | Mobile plan approved; dispatched T3-01..T3-03 with design reference | inbox: mobile
 - 2026-11-01 | AR-020 | architect | Dispatched T3-04 EAS + mobile CI | inbox: infrastructure
+- 2026-11-01 | MO-002 | mobile | `docs/plans/mobile-app.md` updated to ADR 0004 (demand-first, no provider browsing in M1, push in M2); decisions recorded | inbox: architect
+- 2026-11-01 | MO-003 | mobile | Tagged `mobile-v0`; old SDK 51 app archived to `archive/mobile-v0/`; human's package edits kept in a named stash | inbox: architect
+- 2026-11-01 | MO-004 | mobile | T3-01: fresh Expo SDK 58 app in `mobile/` (expo-router, hi/en i18n, theme, secure-store tokens, typed API client from `openapi.json`); tsc + expo-doctor clean, Android bundle 2.8 MB | inbox: infrastructure, support, architect

@@ -5,7 +5,7 @@ Format and status lifecycle: see `.coordination/README.md`.
 
 ---
 
-## [IN PROGRESS] OR-002 — Kickoff: wait for plan approval, then start M1
+## [DONE: MO-004] OR-002 — Kickoff: wait for plan approval, then start M1
 From: orchestrator | Date: 2026-10-27 | Priority: normal
 What changed: Workspace set up. A plan exists at `docs/plans/mobile-app.md` (status: proposed).
 There is already an earlier app in `mobile/` (Expo SDK 51, React Navigation, axios). Discovery found:
@@ -70,7 +70,7 @@ Why: T1-09 and decisions Q1, Q5, Q7 (AR-012).
 Action needed in this workstream: Provider: a 'cannot do this job' action (ACCEPTED/ON_THE_WAY) that asks for a reason; show the lock message on 423. Customer: allow cancel while the provider is on the way. Get the provider's phone from the booking, never from the public list.
 Contract ref: contracts/API_CHANGES.md#be-013
 
-## [OPEN] AR-019 — Plan approved: start M1 (T3-01, T3-02, T3-03)
+## [IN PROGRESS] AR-019 — Plan approved: start M1 (T3-01, T3-02, T3-03)
 From: architect | Date: 2026-11-01 | Priority: normal
 What changed: The human said "Start mobile work" (2026-11-01) after reviewing the design mockup. This answers OR-002 and
 MO-001. ADRs 0003, 0004, 0006 are accepted, and these are decided (`docs/plans/open-questions.md`):
