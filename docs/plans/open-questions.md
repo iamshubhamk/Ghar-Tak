@@ -78,3 +78,10 @@ recommendation. Answering "rec" accepts it. Once these are answered, the archite
   before the app goes to closed testing. → **Prod + free staging DB** (2026-10-29).
 - **Q-I5 Error tracking / uptime:** Sentry free tier + a free uptime pinger (UptimeRobot/Better Stack)?
   OK to create those accounts? → Sentry: human has no account yet; free tier assumed, account created when T1-15 starts.
+
+## Launch decisions (2026-11-01, architect chat)
+- **First release = staged:** Google closed testing with real Patna users first, then production.
+- **Play developer account: individual**, in the human's own name. Google shows the name and address to users and may require a
+  minimum number of closed-testers for a minimum number of days before production; check the current rule in Play Console.
+- **Business details** (name, address, support email and phone) for the privacy policy, terms and Play listing: the human will provide them.
+
